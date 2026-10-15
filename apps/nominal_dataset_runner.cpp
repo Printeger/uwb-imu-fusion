@@ -3,6 +3,10 @@
 #include "uwb_imu_pl/estimation/estimation_tuning.hpp"
 #include "uwb_imu_pl/estimation/causal_initializer.hpp"
 #include "uwb_imu_pl/factors/realtime_factors.hpp"
+#include "uwb_imu_pl/integrity/integrity_monitor.hpp"
+#include <atomic>
+#include <thread>
+#include <memory>
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
@@ -360,7 +364,7 @@ std::vector<UwbBatch> batches(const std::vector<RangeRow>& ranges,
 
 void writeStatus(const boost::filesystem::path& output, const std::string& status,
                  const std::string& reason, std::size_t epochs, double wall_ms,
-                 double cpu_ms, double adapter_ms, double bootstrap_ms) {
+                 double cpu_ms, double adapter_ms, double bootstrap_ms, bool engineering) {
   std::string escaped;
   escaped.reserve(reason.size());
   for (const char character : reason) {
@@ -382,7 +386,7 @@ void writeStatus(const boost::filesystem::path& output, const std::string& statu
          << "  \"cpu_ms\": " << cpu_ms << ",\n"
          << "  \"adapter_ms\": " << adapter_ms << ",\n"
          << "  \"bootstrap_ms\": " << bootstrap_ms << ",\n"
-         << "  \"fde_constructed\": false,\n  \"pl_constructed\": false,\n"
+         << "  \"fde_constructed\": " << (engineering ? "true" : "false") << ",\n  \"pl_constructed\": false,\n"
          << "  \"initialization_provenance\": \"measurement_bootstrap\"\n}\n";
 }
 
@@ -390,7 +394,8 @@ int run(const boost::filesystem::path& config_path,
         const boost::filesystem::path& input,
         const boost::filesystem::path& output,
         const std::string& tag_policy, bool export_historical,
-        const std::string& oracle_times) {
+        const std::string& oracle_times,
+        const std::string& pipeline_mode, bool paced, bool causal_bootstrap) {
   const auto wall_start = Clock::now();
   const std::clock_t cpu_start = std::clock();
   boost::filesystem::create_directories(output);
@@ -400,6 +405,8 @@ int run(const boost::filesystem::path& config_path,
   try {
     const auto adapter_start = Clock::now();
     auto config = uwb_imu_pl::IntegrityConfigLoader::load(config_path.string());
+    if(pipeline_mode!="none" && ((pipeline_mode=="off") != (config.resolved_scope.profile==uwb_imu_pl::FdeProfile::Off)))
+      throw std::invalid_argument("PIPELINE_REQUESTED_EFFECTIVE_PROFILE_MISMATCH");
     const YAML::Node manifest = YAML::LoadFile((input / "manifest.json").string());
     const std::uint64_t primary_tag = manifest["primary_tag"].as<std::uint64_t>();
     const bool prefer_below_anchors = manifest["bootstrap_prefer_below_anchors"]
@@ -408,14 +415,25 @@ int run(const boost::filesystem::path& config_path,
         ? manifest["epoch_batch_window_s"].as<double>() : 0.0;
     auto imu = loadImu(input / "imu.csv");
     auto ranges = loadRanges(input / "uwb.csv");
-    const auto tuning = uwb_imu_pl::readEstimationTuningV1(config);
+    auto tuning = uwb_imu_pl::readEstimationTuningV1(config);
+    tuning.causal_bootstrap = tuning.causal_bootstrap || causal_bootstrap;
     auto uwb_batches = batches(ranges, primary_tag, tag_policy == "all", batch_window_s);
     adapter_ms = elapsedMs(adapter_start);
     const auto bootstrap_start = Clock::now();
     Eigen::Vector3d primary_lever;
     NavigationState initial;
     Eigen::Matrix<double,15,1> initial_priors=config.realtime.prior_sigmas;
-    if (tuning.causal_bootstrap) {
+    const bool supplied_observation=bool(manifest["initial_observation"]);
+    if (supplied_observation) {
+      // Independent noisy observation exported by Sc6Provider, never gt.csv.
+      const auto obs=manifest["initial_observation"];
+      auto vector=[&](const char* key){return Eigen::Vector3d(obs[key][0].as<double>(),obs[key][1].as<double>(),obs[key][2].as<double>());};
+      initial.timestamp=TimestampNs::fromSeconds(obs["t"].as<double>());
+      initial.position_world_m=vector("p");initial.velocity_world_mps=vector("v");
+      initial.accel_bias_mps2=vector("ba");initial.gyro_bias_radps=vector("bg");
+      initial.q_world_body=Eigen::Quaterniond(obs["q"][3].as<double>(),obs["q"][0].as<double>(),obs["q"][1].as<double>(),obs["q"][2].as<double>());
+      for(const auto& r:ranges)if(r.tag_id==primary_tag){primary_lever=r.lever;break;}
+    } else if (tuning.causal_bootstrap) {
       for(const auto& r:ranges)if(r.tag_id==primary_tag){primary_lever=r.lever;break;}
       std::vector<UwbMeasurement> startup_ranges;
       for(const auto& batch:uwb_batches)
@@ -473,6 +491,37 @@ int run(const boost::filesystem::path& config_path,
     }
     uwb_imu_pl::IncrementalUwbImuEstimator estimator(config, primary_lever);
     estimator.initialize(initial, initial_priors);
+    std::unique_ptr<uwb_imu_pl::RealtimeIntegrityPipeline> pipeline;
+    if (pipeline_mode != "none") {
+      uwb_imu_pl::IntegrityMonitor monitor(config.risk,config.snapshot.rank_tolerance,
+                                           config.snapshot.max_condition_number);
+      pipeline=std::make_unique<uwb_imu_pl::RealtimeIntegrityPipeline>(&estimator,monitor);
+    }
+    // SC8 exports only empirical estimator states from this general pipeline.
+    // Its Gaussian diagnostics never acquire SC7 raw-source qualification.
+    std::ofstream attempts((output/"attempts.csv").string());
+    attempts<<std::setprecision(17)<<"batch,t,committed,backend_updates,transaction_id,action_id,action,fde_status,core_ms,measurement_to_sink_ms,state_age_ms,max_sensor_stamp_used,published_wall_time,revision_index,scope,statistical_qualification\n";
+    const auto release_origin=Clock::now();
+    const double sensor_origin=initial.timestamp.seconds();
+    // Independent publisher: immutable source availability advances on absolute
+    // sensor time even while a solver is busy. Preload/init costs are separate.
+    struct Publisher {
+      std::atomic<bool> stop{false};std::atomic<double> watermark;
+      std::thread worker;
+      Publisher(double t):watermark(t){}
+      ~Publisher(){stop=true;if(worker.joinable())worker.join();}
+    } publisher(sensor_origin);
+    if(paced)publisher.worker=std::thread([&]{
+      for(const auto& sample:imu){
+        double t=sample.timestamp.seconds();if(t<=sensor_origin)continue;
+        auto deadline=release_origin+std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(t-sensor_origin));
+        // Small waits also allow prompt cancellation after solver failure.
+        while(!publisher.stop && Clock::now()<deadline)std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if(publisher.stop)return;
+        publisher.watermark=t;
+      }
+      publisher.watermark=imu.back().timestamp.seconds();
+    });
     std::set<double> pending_oracles;
     if(!oracle_times.empty())for(const auto& item:split(oracle_times))pending_oracles.insert(std::stod(item));
     std::ofstream oracle;
@@ -489,6 +538,8 @@ int run(const boost::filesystem::path& config_path,
     std::ofstream timing((output / "timing.csv").string());
     std::ofstream sensor_diagnostics((output/"sensor_diagnostics.csv").string());
     trajectory << std::setprecision(17);
+    states << std::setprecision(17);
+    timing << std::setprecision(17);
     states << "t,px,py,pz,qx,qy,qz,qw,vx,vy,vz,bax,bay,baz,bgx,bgy,bgz\n";
     timing << "epoch,t,imu_preintegration_ms,prepare_wall_ms,no_uwb_update_ms,commit_wall_ms,uwb_update_ms,state_query_wall_ms,state_query_internal_ms,snapshot_extraction_ms,warm_start_ms,epoch_total_ms\n";
     sensor_diagnostics << "t,range_count,prediction_whitened_sq,posterior_whitened_sq,accel_bias_norm,gyro_bias_norm\n";
@@ -502,23 +553,48 @@ int run(const boost::filesystem::path& config_path,
     while(imu_index<imu.size() && !(initial.timestamp<imu[imu_index].timestamp))
       boundary=imu[imu_index++];
     boundary.timestamp=initial.timestamp;
-    estimator.ingestImu(boundary);
+    if(pipeline)pipeline->ingestImu(boundary);else estimator.ingestImu(boundary);
     for (const auto& batch : uwb_batches) {
-      if (tuning.causal_bootstrap ? !(initial.timestamp<batch.timestamp) :
+      if ((tuning.causal_bootstrap || supplied_observation) ? !(initial.timestamp<batch.timestamp) :
           batch.timestamp.seconds() < initial.timestamp.seconds() + 2.0) continue;
       if (imu.back().timestamp < batch.timestamp) continue;
+      if(paced)while(publisher.watermark.load()<batch.timestamp.seconds() && !publisher.stop)
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
       const auto epoch_start=Clock::now();
       while (imu_index < imu.size() && !(batch.timestamp < imu[imu_index].timestamp)) {
-        estimator.ingestImu(imu[imu_index++]);
+        if(pipeline)pipeline->ingestImu(imu[imu_index++]);else estimator.ingestImu(imu[imu_index++]);
       }
-      const auto prepare_start = Clock::now();
-      auto transaction = estimator.prepareEpoch(batch, EpochPreparationOptions::nominalOnly());
-      const auto predicted=transaction.nominal_predicted_state;
-      const double prepare_wall = elapsedMs(prepare_start);
-      auto plan = EpochCommitPlan::nominalPlan(transaction);
-      const auto commit_start = Clock::now();
-      estimator.commitEpoch(std::move(transaction), plan);
-      const double commit_wall = elapsedMs(commit_start);
+      double prepare_wall=0,commit_wall=0;
+      NavigationState predicted;
+      uwb_imu_pl::IntegrityOutput pipeline_result;
+      if(pipeline) {
+        pipeline_result=pipeline->processUwbBatch(batch);
+      } else {
+        const auto prepare_start = Clock::now();
+        auto transaction = estimator.prepareEpoch(batch, EpochPreparationOptions::nominalOnly());
+        predicted=transaction.nominal_predicted_state;
+        prepare_wall=elapsedMs(prepare_start);
+        auto plan = EpochCommitPlan::nominalPlan(transaction);
+        const auto commit_start = Clock::now();
+        const auto receipt=estimator.commitEpoch(std::move(transaction), plan);
+        commit_wall=elapsedMs(commit_start);
+        pipeline_result.batch_committed=receipt.backend_updates==1;
+        pipeline_result.backend_updates=receipt.backend_updates;
+        pipeline_result.transaction_id=receipt.transaction_id.value();
+        pipeline_result.fde_status="NOMINAL_ONLY";
+      }
+      const auto sink=Clock::now();
+      const double core=std::chrono::duration<double,std::milli>(sink-epoch_start).count();
+      const double latency=std::chrono::duration<double,std::milli>(sink-release_origin).count()
+                         -(batch.timestamp.seconds()-sensor_origin)*1000;
+      const double max_used=std::max(initial.timestamp.seconds(),std::max(batch.timestamp.seconds(),imu[imu_index-1].timestamp.seconds()));
+      attempts<<batch.id.value()<<','<<batch.timestamp.seconds()<<','<<pipeline_result.batch_committed<<','
+        <<pipeline_result.backend_updates<<','<<pipeline_result.transaction_id<<','<<pipeline_result.selected_action_id<<','
+        <<pipeline_result.selected_action_type<<','<<pipeline_result.fde_status<<','<<core<<','
+        <<(paced?latency:NAN)<<','<<(paced?latency:NAN)<<','<<max_used<<','
+        <<std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count()
+        <<",0,GENERAL_PRODUCTION_PIPELINE,UNQUALIFIED_REAL_SOURCE\n";
+      if(!pipeline_result.batch_committed)continue;
       const auto state_start = Clock::now();
       const NavigationState state = estimator.currentState();
       const double state_wall = elapsedMs(state_start);
@@ -606,12 +682,12 @@ int run(const boost::filesystem::path& config_path,
           << "\noutput_semantics: online_current_state\n";
     writeStatus(output, "SUCCESS", "", committed, elapsedMs(wall_start),
                 1000.0 * (std::clock() - cpu_start) / CLOCKS_PER_SEC,
-                adapter_ms, bootstrap_ms);
+                adapter_ms, bootstrap_ms,pipeline_mode!="none");
     return 0;
   } catch (const std::exception& error) {
     writeStatus(output, "FAIL", error.what(), committed, elapsedMs(wall_start),
                 1000.0 * (std::clock() - cpu_start) / CLOCKS_PER_SEC,
-                adapter_ms, bootstrap_ms);
+                adapter_ms, bootstrap_ms,pipeline_mode!="none");
     std::cerr << error.what() << '\n';
     return 1;
   }
@@ -624,10 +700,14 @@ int main(int argc, char** argv) {
   namespace po = boost::program_options;
   po::options_description options("nominal_dataset_runner");
   std::string config, input, output, tag_policy;
-  std::string oracle_times;
+  std::string oracle_times,pipeline_mode;
+  bool paced=false,causal_bootstrap=false;
   bool export_historical=false;
   options.add_options()
       ("help,h", "show help")
+      ("pipeline-mode", po::value<std::string>(&pipeline_mode)->default_value("none"), "SC8 empirical general pipeline on/off; config profile must agree")
+      ("paced",po::bool_switch(&paced),"independent absolute sensor-time release")
+      ("causal-bootstrap",po::bool_switch(&causal_bootstrap),"same sensor-only initializer for all SC8 general pipeline profiles")
       ("export-historical", po::bool_switch(&export_historical), "separate smoothing diagnostic with information cutoff")
       ("local-oracle-times", po::value<std::string>(&oracle_times)->default_value(""), "diagnostic batch LM at comma-separated times; does not update online graph")
       ("config", po::value<std::string>(&config)->required(), "integrity config")
@@ -642,7 +722,9 @@ int main(int argc, char** argv) {
     po::notify(variables);
     if (tag_policy != "primary" && tag_policy != "all")
       throw std::invalid_argument("tag-policy must be primary or all");
-    return run(config, input, output, tag_policy, export_historical, oracle_times);
+    if(pipeline_mode!="none" && pipeline_mode!="on" && pipeline_mode!="off")
+      throw std::invalid_argument("pipeline-mode must be none/on/off");
+    return run(config, input, output, tag_policy, export_historical, oracle_times,pipeline_mode,paced,causal_bootstrap);
   } catch (const std::exception& error) {
     std::cerr << error.what() << "\n" << options << '\n';
     return 2;

@@ -10,4 +10,6 @@
   <depend>isas_msgs</depend>
   <depend>sfuise_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>rosgraph_msgs</depend>
+  <depend>rosbag</depend>
 </package>

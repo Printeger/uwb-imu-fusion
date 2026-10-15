@@ -1,0 +1,58 @@
+#include <rosbag/bag.h>
+#include <rosbag/view.h>
+#include <fstream>
+#include <iomanip>
+#include <chrono>
+#include <ctime>
+#include <cstdlib>
+@UPSTREAM_INCLUDES@
+#define private public
+#define SplineFusion Sc8Reference
+#define main sc8_reference_main_unused
+#include "@ORIGINAL@"
+#undef main
+#undef SplineFusion
+#define SplineFusion Sc8Observed
+#define main sc8_observed_main_unused
+#include "@OBSERVED@"
+#undef main
+#undef SplineFusion
+#undef private
+
+int main(int argc,char** argv){
+ try {
+  if(argc!=2)throw std::runtime_error("observer_checks INPUT_BAG");
+  ros::init(argc,argv,"sc8_observer_checks");
+  ros::NodeHandle nh("/SplineFusion");
+  Sc8Reference reference(nh);Sc8Observed observed(nh);
+  rosbag::Bag bag(argv[1],rosbag::bagmode::Read);rosbag::View view(bag);
+  size_t events=0,checks=0;bool have_imu=false;
+  auto require=[&](bool condition){if(!condition)throw std::runtime_error("SFUISE_OBSERVER_NUMERICAL_MISMATCH event="+std::to_string(events));};
+  for(const auto& item:view){
+   if(auto m=item.instantiate<sensor_msgs::Imu>()){reference.getImuCallback(m);observed.getImuCallback(m);have_imu=true;}
+   else if(auto m=item.instantiate<isas_msgs::RTLSStick>()){reference.getToaCallback(m);observed.getToaCallback(m);}
+   else if(auto m=item.instantiate<isas_msgs::Anchorlist>()){reference.getAnchorCallback(m);observed.getAnchorCallback(m);}
+   else continue;
+   reference.run();observed.run();++events;
+   // Upstream SplineState has no initialized scalar knot count until init().
+   if(!have_imu)continue;
+   require(reference.spline_local.numKnots()==observed.spline_local.numKnots());
+   require(reference.window_count==observed.window_count);
+   require(reference.imu_buff.size()==observed.imu_buff.size());
+   require(reference.toa_buff.size()==observed.toa_buff.size());
+   if(reference.spline_local.numKnots()>=2)require(reference.param.if_reject_uwb_in_optimization==observed.param.if_reject_uwb_in_optimization);
+   if(reference.spline_local.numKnots())require(reference.calib_param.q_nav_uwb.coeffs()==observed.calib_param.q_nav_uwb.coeffs());
+   if(reference.spline_local.numKnots())require(reference.calib_param.t_nav_uwb==observed.calib_param.t_nav_uwb);
+   if(reference.spline_local.numKnots())require(reference.calib_param.gravity==observed.calib_param.gravity);
+   for(size_t k=0;k<reference.spline_local.numKnots();++k){
+    require(reference.spline_local.getKnotPos(k)==observed.spline_local.getKnotPos(k));
+    require(reference.spline_local.getKnotOrt(k).coeffs()==observed.spline_local.getKnotOrt(k).coeffs());
+    require(reference.spline_local.getKnotBias(k)==observed.spline_local.getKnotBias(k));++checks;
+   }
+  }
+  require(events>100 && checks>100);
+  std::cout<<"SC8_OBSERVER_EXACT_NUMERICAL_EQUALITY events="<<events<<" knots_checked="<<checks
+           <<" final_window_count="<<reference.window_count<<std::endl;
+  return 0;
+ }catch(const std::exception& e){std::cerr<<e.what()<<std::endl;return 1;}
+}

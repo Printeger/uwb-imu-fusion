@@ -53,7 +53,13 @@ Sc6Provider::Sc6Provider(const std::string& path,const std::string& id,int seed,
   for(auto f:manifest["faults"]){int onset=f[0].as<int>(),axis=f[1].as<int>();int64_t begin=(onset-1)*50000000LL+5000000LL;if(m.timestamp.value()>=begin && m.timestamp.value()<begin+f[2].as<int>()*1000000LL){fault(axis)+=f[3].as<double>();if(axis<3)m.specific_force_mps2(axis)+=f[3].as<double>();else m.angular_velocity_radps(axis-3)+=f[3].as<double>();}}
   adc_.push_back(draw);injections_.push_back(fault);imu.push_back(m);
  }
- for(int e=1;e<=epochs;++e){auto b=ranges(cfg,e);auto s=truth(e*10,true);Eigen::Vector3d tag=s.position_world_m+s.q_world_body*lever;std::array<double,8> draws{},faults{};for(int a=0;a<8;++a){auto& m=b.measurements[a];draws[a]=normal(uwb_rng);m.range_m=(m.anchor_position_m-tag).norm()+cfg.realtime.range_sigma_m*draws[a];}for(auto f:manifest["faults"]){int onset=f[4].as<int>();if(e>=onset && e<onset+3){faults[0]+=2.25;b.measurements[0].range_m+=2.25;}}range_draws_.push_back(draws);range_faults_.push_back(faults);uwb.push_back(b);}
+ for(int e=1;e<=epochs;++e){auto b=ranges(cfg,e);auto s=truth(e*10,true);Eigen::Vector3d tag=s.position_world_m+s.q_world_body*lever;std::array<double,8> draws{},faults{};for(int a=0;a<8;++a){auto& m=b.measurements[a];draws[a]=normal(uwb_rng);m.range_m=(m.anchor_position_m-tag).norm()+cfg.realtime.range_sigma_m*draws[a];}
+  // SC8 separates physical UWB episodes from raw IMU episodes. Absence of
+  // this key preserves every SC6/SC7 fixture byte for byte. An explicit empty
+  // list means IMU-only. Entries are [onset_epoch, anchor_index, epochs, m].
+  if(manifest["uwb_faults"]){for(auto f:manifest["uwb_faults"]){int onset=f[0].as<int>(),a=f[1].as<int>(),duration=f[2].as<int>();double amplitude=f[3].as<double>();if(a<0 || a>=8 || onset<1 || duration<1 || !std::isfinite(amplitude))throw std::invalid_argument("SC8_UWB_EPISODE_INVALID");if(e>=onset && e<onset+duration){faults[a]+=amplitude;b.measurements[a].range_m+=amplitude;}}}
+  else for(auto f:manifest["faults"]){int onset=f[4].as<int>();if(e>=onset && e<onset+3){faults[0]+=2.25;b.measurements[0].range_m+=2.25;}}
+  range_draws_.push_back(draws);range_faults_.push_back(faults);uwb.push_back(b);}
 }
 Sc6Envelope Sc6Provider::certify(size_t epoch){
  // Privileged draw-based qualification is computed only for the arrived prefix,

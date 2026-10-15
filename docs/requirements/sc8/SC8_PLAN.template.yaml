@@ -1,0 +1,343 @@
+# DESIGN TEMPLATE ONLY: not an already supported runner schema.
+# Read the Handbook; resolve local paths and freeze actual registry before testing.
+schema: sc8-experiment-design-template-v1
+status: DESIGN_TEMPLATE_NOT_EXECUTABLE_RUNNER_CONFIG
+contract: docs/requirements/sc8/SC8_EXPERIMENT_HANDBOOK.md
+reviewed_repository:
+  name: Printeger/uwb-imu-fusion
+  branch: feature/realtime-uwb-imu-pl
+  head: fa5b3dc9ffe3c88492352491d79ba022f373bfb5
+  do_not_checkout_over_newer_local_changes: true
+execution:
+  work_packages:
+  - W0
+  - W1
+  - W2
+  - W3
+  - W4
+  goal_count: 1
+  local_commit_after_work_package: true
+  auto_push: false
+  nominal_worker_run_budget:
+  - 120
+  - 145
+  max_worker_runs: 160
+  deduplicate_by:
+  - input_digest
+  - method_sha
+  - binary_sha
+  - calibration_sha
+  - scope_id
+  - fault_manifest_sha
+  - window_pair
+  - seed
+  - release_schedule_sha
+  per_stage_research_changes: adapters/observer/evaluator and evidenced implementation fixes; no unqualified theorem
+    changes
+datasets:
+  simulation:
+    case_source: config/sc7.yaml plus registered SC8 cases
+    proof_track: T-SIM
+    new_seeds:
+    - 20261020
+    - 20261021
+    - 20261022
+  test_candidates:
+  - id: R1
+    family: SFUISE
+    sequence: ISAS-Walk2
+    reason: same-author baseline domain; held-out from Walk1 calibration
+  - id: R2
+    family: SFUISE
+    sequence: ISAS-Walk3
+    reason: independent walk; semi-synthetic overlay carrier
+  - id: R3
+    family: own_vicon
+    sequence: 2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle
+    reason: own hardware unobstructed longer recording
+  - id: R4
+    family: own_vicon
+    sequence: 2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle
+    reason: own hardware obstacle scenario; not NLOS per-range labels
+  - id: R5
+    family: starloc
+    sequence: loop-3d-z_s3
+    reason: independent rig; vertical 3D motion
+  - id: R6
+    family: starloc
+    sequence: loop-2d-fast_s3
+    reason: same setup faster motion; current-version interface recheck required
+  calibration_candidates:
+  - sequence: ISAS-Walk1
+    usage: independent interface development/calibration; supplementary results only
+  - sequence: 2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle
+    usage: candidate only; do not assume sufficient excitation
+  - sequence: loop-2d_s3
+    usage: independent development only if official STAR-loc calibration is insufficient
+  fallback_order:
+  - family: MILUV
+    sequence: default_1_circular3D_0
+  - family: MILUV
+    sequence: default_1_random3_0
+  deferred:
+  - HUEC full LOS/NLOS suite
+  - remaining STAR-loc setups
+  - multi-tag/multi-robot/vision/rangefinder additions
+  selection_gate:
+    primary_gt_coverage_target: 0.9
+    selection_on_algorithm_ape: false
+    old_failures_are_current_rejections: false
+    test_involved_calibration: separate disclosed supplementary table
+    local_files_must_be_resolved: true
+evidence_tracks:
+  T-SIM: registered physical source/fault/initialization law, conditional raw bounds
+  T-REAL: recorded data, empirical accuracy/timing/function; no automatic raw qualification
+  T-SEMI: recorded data plus identical known raw overlays; natural faults/noise remain unknown
+methods:
+- id: O-FULL
+  fde: true
+  pl: SC7 actual qualified or explicit refusal
+  state: current native committed tag
+- id: O-NOFDE
+  fde: false
+  fd_diagnostics: true
+  pl: same evidence pipeline/scope
+  state: current native committed tag
+- id: O-NOM
+  usage: limited estimator-only cost/control
+  fd_fde_pl: false
+- id: S-ONLINE
+  worker: SFUISE
+  state: first causal output with used-data cutoff
+  official_rejection: preserved
+- id: S-FINAL
+  worker: same SFUISE execution
+  state: last retained historical revision
+  online_rank: false
+- id: O-FDE-ENG
+  usage: only explicitly registered real-data engineering path if no raw certificate
+  substitute_for_full_qualified: false
+windows:
+  unit: UWB epochs, 50 ms in simulation
+  default:
+  - 30
+  - 30
+  follow_fgo_pairs:
+  - - 30
+    - 30
+  - - 100
+    - 100
+  - - 300
+    - 300
+  - - 600
+    - 600
+  - - 1000
+    - 1000
+  fixed_fgo_pairs:
+  - - 300
+    - 30
+  - - 300
+    - 100
+  - - 300
+    - 300
+  constraint: 2 <= L_I <= L_F <= 1000; runtime resize disabled
+  common_stream_epochs: 2100
+  common_scoring_epoch_range:
+  - 1101
+  - 2100
+  fault_onsets:
+  - 1201
+  - 1601
+  streams:
+  - healthy
+  - repeated_uwb_imu
+  noise_seeds:
+  - 20261020
+  primary_goal: measured accuracy/PL/resource/latency frontier, not all windows realtime
+faults:
+  logical_to_unique_sc8_case:
+    F0: SC8-H
+    FU: SC8-U
+    FA: SC8-A
+    FG: SC8-G
+    FJ: SC8-J
+  case_name_warning: Existing F0-F5 are six-axis fixtures, not logical healthy F0
+  amplitude_duration_source: Read and freeze the original SC7 source manifest; do not retune from outcomes
+  examples_only:
+    uwb_m: 2.25
+    accel_m_s2: 20.0
+    gyro_rad_s: 1.0
+    imu_duration_ms: 500
+  primary_onset_epoch: 121
+  primary_stream_epochs: 600
+  overlay_layer: raw before integration; preserve global IDs, sensor times, noise draws and GT
+  semi_real_datasets:
+  - R2
+  - R3
+  semi_real_types:
+  - FU
+  - FG
+  - FJ
+  boundary_cases: six axes + few pre-registered weak/short/negative/staggered cases, not cross product
+  natural_uninjected_is_known_healthy: false
+experiments:
+- id: E00
+  kind: implementation
+  data: six candidates + calibration + simulation
+  purpose: independent interface and causal evaluator checks
+- id: E01
+  data: D1 M3/G1 healthy x3 seeds; D0/S0 and G2/S3 x1
+  workers:
+  - O-FULL
+  - O-NOFDE
+  - SFUISE
+  exports:
+  - S-ONLINE
+  - S-FINAL
+- id: E02
+  data: R1-R6 raw recordings
+  workers:
+  - O-FULL or explicitly O-FDE-ENG
+  - O-NOFDE or explicitly ENG-NOFDE
+  - SFUISE
+- id: E03
+  data: D1 FU/FA/FG/FJ x3 seeds plus directional cases; R2/R3 overlays
+  reuse: F0 E01 and unmodified-real E02
+- id: E04
+  kind: evaluate_only
+  reuse:
+  - E01
+  - E03
+  - E05
+  - E07
+  - E08
+  purpose: Stanford/AL/SI/continuity
+- id: E05
+  data: windows section; 7 unique configurations x2 streams
+  workers:
+  - O-FULL
+  default_p95_required_for_all_stretch_windows: false
+- id: E06
+  kind: evaluate_and_limited_timing_confirmation
+  reuse:
+  - E01
+  - E02
+  - E03
+  - E05
+  - E08
+  max_additional_worker_runs: 4
+- id: E07
+  data: S0/D0 and D1/FJ one seed; G2 diagnostic
+  max_extra_ablation_families: 3
+  reuse: O-NOFDE from E03
+  components:
+  - terminal safe box reference
+  - joint/sample0 safe physical reference
+  - G2 old numerical candidate
+- id: E08
+  data:
+  - case: L0
+    epochs: 5000
+    workers:
+    - O-FULL
+  - case: L1
+    epochs: 10000
+    workers:
+    - O-FULL
+    - O-NOFDE
+  sfuise_long: optional only after registration within cap
+metrics:
+  position:
+  - world-tag APE RMSE/median/P95/max
+  - HPE
+  - VPE
+  rotation:
+  - SO3 ARE rad/deg
+  relative:
+  - tag translational RPE 0.5s/1s
+  - body SE3 RPE separate
+  - 0.05s simulation supplementary
+  auxiliary:
+  - velocity with true/qualified derivative GT
+  - bias only where independent GT exists
+  time:
+  - core
+  - measurement_to_sink
+  - output_state_age
+  - used_data_lookahead
+  - CPU/epoch
+  - CPU/sensor-second
+  - RTF processing definition
+  statistics_unit: simulation seed or independent recording; no epoch-level pseudo-replication
+  main_alignment: none after a shared independent interface calibration
+  SE3_aligned: secondary shape-only
+  Sim3: not default
+integrity:
+  production_publication: false
+  research_al_pairs_m:
+  - - 2
+    - 3
+  - - 5
+    - 5
+  - - 10
+    - 10
+  al_sweep: postprocess 0.1-10m, preserve trajectory and PL
+  stanford: classic actual-output, not all-geometries
+  unqualified_methods: NA or separate empirical diagnostic, never invented covariance PL
+  subregions:
+  - covered-admissible
+  - MI candidate
+  - HMI candidate
+  - AL-unavailable
+  additional_counts:
+  - underbound includes unavailable
+  - late spatial
+  - refused
+  - missing
+  - unqualified
+timing:
+  pace: simulation absolute 200Hz/20Hz; real original timestamps 1x
+  quantile: nearest-rank
+  primary_thresholds_ms:
+    core_p95: 40
+    measurement_to_sink_p95: 50
+  primary_timely_spatial_fraction: 0.95
+  stretch_windows: report misses; not a passing requirement
+  breakdown: sum exclusive means, never sum stage P95
+resource_stops:
+  rss_limit: min(8GiB,50% physical available RAM), fixed before results
+  max_wall_per_scaling_run_minutes: 20
+  consecutive_service_over_2s: 20
+  outcome: censored with actual prefix and unattempted denominator; never delete row
+figures:
+- F00 admission matrix
+- F01 paired accuracy
+- F02 trajectories
+- F03 fault timeline
+- F04 episode/gain forest
+- F05-H horizontal Stanford
+- F05-V vertical Stanford
+- F06 AL/SI
+- F07 window Pareto
+- F08 latency/breakdown
+- F09 ablation
+- F10 long-run
+delivery:
+  report: docs/sc8/SC8_RESULTS.md
+  registry: config/sc8_experiments.yaml
+  metrics: docs/sc8/SC8_METRICS.json
+  figures: docs/sc8/figures
+  temporary: .cache/sc8
+  preserve: necessary code/tests/config/report/compact plot summaries/PNG+SVG; no raw dataset or proof-matrix backups
+  outcomes:
+  - SC8_EVALUATION_COMPLETE_FOR_REGISTERED_MATRIX
+  - SC8_EVALUATED_WITH_EXECUTION_GAPS
+source_documents:
+  uwb_imu_accuracy_timing_report.md:
+    sha256: 8f11b783ba8370f163418edd7588015e970ef5a58b7a9cef65c8b605b555c74c
+    role: historical inventory/interface evidence
+    is_SC8_measurement: false
+  SC7_RESULTS.md:
+    sha256: 4954500c66b33d0e3451d84c0f282ab2b626e799a968607690f9f7980f754a54
+    role: SC7 scoped result evidence
+    is_SC8_measurement: false

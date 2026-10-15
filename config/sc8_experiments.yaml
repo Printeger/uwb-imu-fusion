@@ -1,0 +1,2438 @@
+schema: sc8-experiments-v1
+entry_head: fa5b3dc9ffe3c88492352491d79ba022f373bfb5
+phase: W0_INTERFACE_VALIDATION
+contract: docs/requirements/sc8/SC8_EXPERIMENT_HANDBOOK.md
+seeds:
+- 20261020
+- 20261021
+- 20261022
+solver_processes: 143
+maximum_solver_processes: 160
+resource_stops:
+  rss_bytes: 7172827136
+  scaling_wall_s: 1200
+  consecutive_core_over_2s: 20
+  general_solver_wall_s: 1200
+  general_limit_scope: Frozen during W0 before formal runs; retain all inputs, partial
+    outputs and unattempted denominator; no precision-based cancellation.
+evaluation:
+  main_alignment: NONE
+  statistics_unit: seed_or_recording
+  rpe_s:
+  - 0.5
+  - 1.0
+  research_AL_m:
+  - - 2
+    - 3
+  - - 5
+    - 5
+  - - 10
+    - 10
+  core_p95_ms: 40.0
+  sink_p95_ms: 50.0
+  timely_spatial_min: 0.95
+  scaling_common_epochs:
+  - 1101
+  - 2100
+  own_calibration: R3_FIXED_FIRST_20_PERCENT_THEN_2S_ISOLATION_TEST_INVOLVED
+  SFUISE_initialization: OFFICIAL_NATIVE_SENSOR_ONLY; independent prior not consumed;
+    separate initial-information contract
+  real_effective_on: O-FDE-ENG_GENERAL_PRODUCTION_PIPELINE_NOT_SC7
+  real_effective_off: O-ENG-NOFDE_GENERAL_PRODUCTION_PIPELINE
+  real_raw_source: REFUSED; no noise/frame/anchor/rate theorem extension
+inventory:
+- id: R1
+  family: sfuise
+  sequence: ISAS-Walk2
+  cache: .cache/sc8/data/R1
+  manifest_sha256: 1b188817a10ad7f328cae8c9916e82bae9f9ce0bc4ff79bd98e1f5b44cd8b040
+  files:
+    imu.csv:
+      rows: 6229
+      sha256: b2c7a2baff2b546559cdc4c9bb8cf12899b4bb072c5db13b5d682e27953ef349
+    uwb.csv:
+      rows: 6205
+      sha256: 0b0ad442db969437710f7776955b43c16900ef59bed3b20e949e0a3498fe23c6
+    anchors.csv:
+      rows: 5
+      sha256: 2ed105d802ad985a0bef02b8312b7e8a4f632abfb8546da0246f10781fcc87c5
+    gt.csv:
+      rows: 3969
+      sha256: 79801b2860a3d0562601a903e497710a1d6ed554dd77fdd99f4201ad68780816
+  provenance:
+    range: raw_plus_official_toa_offset
+    toa_offset_by_anchor:
+      '7475': -0.07
+      '9524': 0.1539
+      '10548': -0.0751
+      '15155': 0.1409
+      '20276': -0.0247
+    sfuise_rejection: official_enabled
+    gt_reference: vive_body_projected_to_physical_uwb_tag
+    source_file_sha256:
+      /home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk2.bag: dea07fd11d5776226be6b390574c4b3789c48cfdce6a1731996981f3f91c453c
+    gt_world_transform: joint_GT_assisted_frozen
+    world_calibration_artifact: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/calibration/walk1_world.json
+  calibration_scope: CAL-W_ONLY
+  source: /home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk2.bag
+  audit:
+    status: PASS
+    errors: []
+    imu_count: 6229
+    uwb_count: 6205
+    valid_uwb_count: 5544
+    imu_frequency_hz: 81.89280902825234
+    imu_max_gap_s: 0.012806892395019531
+    initial_accel_norm_median: 9.968182350137571
+    gt_time_coverage: 1.0
+    range_geometry_abs_residual_median: 0.0773664094873392
+    range_geometry_abs_residual_p95: 0.27718534897844954
+    transform_orthogonality_error: null
+    manifest: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/data/R1/manifest.json
+  anchors: 5
+  tags: 1
+  imu_hz: 81.89280902825234
+  imu_duration_s: 76.09374403953552
+  imu_max_gap_s: 0.012806892395019531
+  gt_max_gap_s: 0.021072387695319605
+  batch:
+    groups: 1241
+    max_span_s: 0.0
+    p95_span_s: 0.0
+    retimestamp_to: LAST_RANGE_FOR_SFUISE
+    original_range_timestamps_preserved: true
+    span_model: native_same_stamp
+  requested_method: O-FULL
+  qualification: RAW_SOURCE_REFUSED
+  refusal_reasons:
+  - unregistered_initial_law
+  - uncertified_noise_and_motion_domain
+  - native_imu_rate_and_anchor_inventory
+- id: R2
+  family: sfuise
+  sequence: ISAS-Walk3
+  cache: .cache/sc8/data/R2
+  manifest_sha256: 525d26ac1c0b2bafdbcb886c82f391d171cad8d69d5e9fcccd9f36e104d901a0
+  files:
+    imu.csv:
+      rows: 6684
+      sha256: b20c33ef07e068643c6e14919b2b6ca392e82982e15f5bccaef918be46df3d51
+    uwb.csv:
+      rows: 6695
+      sha256: 0b4d410e936f6993e27c2604683f0fe54e3d385cf7a93843330d103fc5874050
+    anchors.csv:
+      rows: 5
+      sha256: 2ed105d802ad985a0bef02b8312b7e8a4f632abfb8546da0246f10781fcc87c5
+    gt.csv:
+      rows: 4263
+      sha256: 026daf90a05321e0ad4d4e01050b4896d949e94d1d5a1b9a4566bf4c9efe2e54
+  provenance:
+    range: raw_plus_official_toa_offset
+    toa_offset_by_anchor:
+      '7475': -0.07
+      '9524': 0.1539
+      '10548': -0.0751
+      '15155': 0.1409
+      '20276': -0.0247
+    sfuise_rejection: official_enabled
+    gt_reference: vive_body_projected_to_physical_uwb_tag
+    source_file_sha256:
+      /home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk3.bag: 45df7ffe69b9d8c8be7784414ffcdc6e0f4674d0d7b8db3541e567e757bae0a0
+    gt_world_transform: joint_GT_assisted_frozen
+    world_calibration_artifact: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/calibration/walk1_world.json
+  calibration_scope: CAL-W_ONLY
+  source: /home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk3.bag
+  audit:
+    status: PASS
+    errors: []
+    imu_count: 6684
+    uwb_count: 6695
+    valid_uwb_count: 5931
+    imu_frequency_hz: 81.89121012144167
+    imu_max_gap_s: 0.013338804244995117
+    initial_accel_norm_median: 9.95871124152654
+    gt_time_coverage: 1.0
+    range_geometry_abs_residual_median: 0.06194463714145315
+    range_geometry_abs_residual_p95: 0.2598260479547879
+    transform_orthogonality_error: null
+    manifest: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/data/R2/manifest.json
+  anchors: 5
+  tags: 1
+  imu_hz: 81.89121012144167
+  imu_duration_s: 81.65936231613159
+  imu_max_gap_s: 0.013338804244995117
+  gt_max_gap_s: 0.02038264274597168
+  batch:
+    groups: 1339
+    max_span_s: 0.0
+    p95_span_s: 0.0
+    retimestamp_to: LAST_RANGE_FOR_SFUISE
+    original_range_timestamps_preserved: true
+    span_model: native_same_stamp
+  requested_method: O-FULL
+  qualification: RAW_SOURCE_REFUSED
+  refusal_reasons:
+  - unregistered_initial_law
+  - uncertified_noise_and_motion_domain
+  - native_imu_rate_and_anchor_inventory
+- id: R3
+  family: own_vicon
+  sequence: 2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle
+  cache: .cache/sc8/data/R3
+  manifest_sha256: e2bdf64f13149f24d9f463f3c8d9333f43d5317a368f43cdc3409db8db1ac1e8
+  files:
+    imu.csv:
+      rows: 14680
+      sha256: f3433df1f1074bb695ccd7691efdb4b8849fb29f471aaadf6f9f71d69eb23e6f
+    uwb.csv:
+      rows: 14479
+      sha256: ff9cffe6cfc818a6a1442e748cef414a1e726a2ce261c87a8ee6e9e683f48e1b
+    anchors.csv:
+      rows: 4
+      sha256: 15e866efa4cf9863868a7ec643b8baecf7e72561da34d9502521363ae4e12dfe
+    gt.csv:
+      rows: 21535
+      sha256: b3348ed6234d185075b5d66c9f9c9cd7885592bdc98bc10a8bf090a5b5781218
+  provenance:
+    acceleration: livox_g_times_9.80665
+    gyro: source_radps
+    anchor_aggregation: component_median
+    extrinsic: joint_GT_assisted_frozen
+    source_reindexed_temporary_copy: false
+    possibly_truncated: false
+    source_file_sha256:
+      /home/mint/ws_fusion_uwb/data/own_vicon/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag: 4b973dd5a6faa8a4b523017feaccb59f4f085e50592a114a963dbd9a816de8be
+    calibration_artifact: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/calibration/own_prefix20.json
+    rotation_body_from_imu_matrix:
+    - - -0.9469019214394204
+      - -0.14782422864591976
+      - -0.28552539046391684
+    - - 0.09851305197510653
+      - -0.9787200561429215
+      - 0.18000619515490715
+    - - -0.3060587031353351
+      - 0.1423202344321967
+      - 0.9413145176328055
+    time_imu_to_gt_s: 0.015542069530033498
+    lever_tag_from_imu_body_m:
+    - 0.03703753555994884
+    - -0.027430216722513653
+    - -0.04130280234190144
+  calibration_scope: R3_PREFIX20_TEST_INVOLVED_CALIBRATION_OPEN
+  source: /home/mint/ws_fusion_uwb/data/own_vicon/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag
+  audit:
+    status: PASS
+    errors: []
+    imu_count: 14680
+    uwb_count: 14479
+    valid_uwb_count: 14479
+    imu_frequency_hz: 202.23259402121505
+    imu_max_gap_s: 0.01539301872253418
+    initial_accel_norm_median: 9.714576872749614
+    gt_time_coverage: 0.999723737827198
+    range_geometry_abs_residual_median: 0.3204346528414137
+    range_geometry_abs_residual_p95: 0.4602080066615501
+    transform_orthogonality_error: 6.249082936590802e-16
+    manifest: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/data/R3/manifest.json
+  anchors: 4
+  tags: 1
+  imu_hz: 202.23259402121505
+  imu_duration_s: 73.39387321472168
+  imu_max_gap_s: 0.01539301872253418
+  gt_max_gap_s: 0.1966249942779612
+  batch:
+    groups: 3669
+    max_span_s: 0.0
+    p95_span_s: 0.0
+    retimestamp_to: LAST_RANGE_FOR_SFUISE
+    original_range_timestamps_preserved: true
+    span_model: native_same_stamp
+  requested_method: O-FULL
+  qualification: RAW_SOURCE_REFUSED
+  refusal_reasons:
+  - unregistered_initial_law
+  - uncertified_noise_and_motion_domain
+  - native_imu_rate_and_anchor_inventory
+- id: R4
+  family: own_vicon
+  sequence: 2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle
+  cache: .cache/sc8/data/R4
+  manifest_sha256: a1a70d863e52ef74f17cf32261609ddf1aad340d10ebcc6d87184e2b88f62cf0
+  files:
+    imu.csv:
+      rows: 2279
+      sha256: 5f6e860679b5d0e0d868dea912a2b5922c923d0a0496e3ac95b7344bb15f0860
+    uwb.csv:
+      rows: 2258
+      sha256: 24b024561cf3526678052d0531b146d6d304edf3599d083b6e8e0afb033d4b7f
+    anchors.csv:
+      rows: 4
+      sha256: 7114f079ebc7b49c533609753b31b6bbe9366506fb82012b958679c849969bc2
+    gt.csv:
+      rows: 3346
+      sha256: 3847b3fc1c86c7f03510c22d27b7188cfd28ce6a5de2d505ab69a9530043854f
+  provenance:
+    acceleration: livox_g_times_9.80665
+    gyro: source_radps
+    anchor_aggregation: component_median
+    extrinsic: joint_GT_assisted_frozen
+    source_reindexed_temporary_copy: true
+    possibly_truncated: true
+    source_file_sha256:
+      /home/mint/ws_fusion_uwb/data/own_vicon/2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle.bag: 19280261417a207432505d2cda7cd35acdf0dcde3e6165a58df558e531da6956
+    calibration_artifact: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/calibration/own_prefix20.json
+    rotation_body_from_imu_matrix:
+    - - -0.9469019214394204
+      - -0.14782422864591976
+      - -0.28552539046391684
+    - - 0.09851305197510653
+      - -0.9787200561429215
+      - 0.18000619515490715
+    - - -0.3060587031353351
+      - 0.1423202344321967
+      - 0.9413145176328055
+    time_imu_to_gt_s: 0.015542069530033498
+    lever_tag_from_imu_body_m:
+    - 0.03703753555994884
+    - -0.027430216722513653
+    - -0.04130280234190144
+  calibration_scope: R3_PREFIX20_TEST_INVOLVED_CALIBRATION_OPEN
+  source: /home/mint/ws_fusion_uwb/data/own_vicon/2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle.bag
+  audit:
+    status: PASS
+    errors: []
+    imu_count: 2279
+    uwb_count: 2258
+    valid_uwb_count: 2258
+    imu_frequency_hz: 201.5329617528349
+    imu_max_gap_s: 0.015322685241699219
+    initial_accel_norm_median: 9.706150376947871
+    gt_time_coverage: 1.0
+    range_geometry_abs_residual_median: 0.35678474627017387
+    range_geometry_abs_residual_p95: 0.48256935464239814
+    transform_orthogonality_error: 6.249082936590802e-16
+    manifest: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/data/R4/manifest.json
+  anchors: 4
+  tags: 1
+  imu_hz: 201.53296175282588
+  imu_duration_s: 11.389990806579592
+  imu_max_gap_s: 0.015322685241699219
+  gt_max_gap_s: 0.06002950668334961
+  batch:
+    groups: 569
+    max_span_s: 0.0
+    p95_span_s: 0.0
+    retimestamp_to: LAST_RANGE_FOR_SFUISE
+    original_range_timestamps_preserved: true
+    span_model: native_same_stamp
+  requested_method: O-FULL
+  qualification: RAW_SOURCE_REFUSED
+  refusal_reasons:
+  - unregistered_initial_law
+  - uncertified_noise_and_motion_domain
+  - native_imu_rate_and_anchor_inventory
+- id: R5
+  family: starloc
+  sequence: loop-3d-z_s3
+  cache: .cache/sc8/data/R5
+  manifest_sha256: a37b66140d69079fa7030c0a46ba2f1a0cc6da54917ec8c9aef338b0c9969b82
+  files:
+    imu.csv:
+      rows: 17018
+      sha256: de56b873d40ef4c54e6bd1e525e25a65e46402569da17abb74524d59f95b0a34
+    uwb.csv:
+      rows: 35640
+      sha256: a263bf33795925956ffa906357c48b4908cc3b8ed89934d04bfdddc6947fabef
+    anchors.csv:
+      rows: 8
+      sha256: c9418b3adff304d9e37434b90c79c62fbca1fe887f023eee09834c62c1d5e5c8
+    gt.csv:
+      rows: 35640
+      sha256: 7dbc4e6c8fce1e60963552079a7a71137f2440a328d8ced8ee0a56b43a3fcb8a
+  provenance:
+    gyro_rotation_C_r_i_xyzw:
+    - -0.5011890340400034
+    - 0.49431046570442355
+    - 0.5155222720703133
+    - -0.488572924600398
+    acceleration_frame: rig_as_published
+    range_field: range_calib
+    setup: s3
+    landmarks: v2
+    anchor_marker_id_to_radio_id:
+      '10': 10
+      '11': 11
+      '12': 12
+      '4': 4
+      '5': 5
+      '6': 6
+      '7': 7
+      '9': 9
+    anchor_id_mapping_provenance: published_v1_room_geometry_correspondence_to_v2_radio_ids
+    gt_reference: uwb_csv_official_tag_position_and_rig_orientation
+    source_file_sha256:
+      /home/mint/ws_fusion_uwb/data/starloc/data/loop-3d-z_s3/imu.csv: f9a18fc78c3c0dfda3fd02acc928497c8dca70de399dbe7d7edaa36bc1e7ca1f
+      /home/mint/ws_fusion_uwb/data/starloc/data/loop-3d-z_s3/uwb.csv: 9f4cc2188698b2faedd0e9cc46c1ffdbe703f83eb501d931b80f21dcec7f371a
+      /home/mint/ws_fusion_uwb/data/starloc/data/loop-3d-z_s3/calib.json: b56a661fbdc618bb7185eeb54a5f95efd7b24d80ba80fa5a9469a576704bc6d6
+      /home/mint/ws_fusion_uwb/data/starloc/mocap/uwb_markers_v2.csv: 4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64
+  calibration_scope: OFFICIAL
+  source: /home/mint/ws_fusion_uwb/data/starloc/data/loop-3d-z_s3
+  audit:
+    status: PASS
+    errors: []
+    imu_count: 17018
+    uwb_count: 35640
+    valid_uwb_count: 35640
+    imu_frequency_hz: 202.2183351365486
+    imu_max_gap_s: 0.2571399600000035
+    initial_accel_norm_median: 9.75449448389702
+    gt_time_coverage: 1.0
+    range_geometry_abs_residual_median: 0.06713584332256994
+    range_geometry_abs_residual_p95: 0.46612055363909055
+    transform_orthogonality_error: null
+    manifest: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/data/R5/manifest.json
+  anchors: 8
+  tags: 1
+  imu_hz: 202.2183351365486
+  imu_duration_s: 150.10377266999998
+  imu_max_gap_s: 0.2571399600000035
+  gt_max_gap_s: 0.1336157790000101
+  batch:
+    groups: 6578
+    max_span_s: 0.01999995700000312
+    p95_span_s: 0.019936174999998002
+    retimestamp_to: LAST_RANGE_FOR_SFUISE
+    original_range_timestamps_preserved: true
+    span_model: ASYNC_APPROXIMATION_UNQUALIFIED
+  requested_method: O-FULL
+  qualification: RAW_SOURCE_REFUSED
+  refusal_reasons:
+  - unregistered_initial_law
+  - uncertified_noise_and_motion_domain
+  - native_imu_rate_and_anchor_inventory
+- id: R6
+  family: starloc
+  sequence: loop-2d-fast_s3
+  cache: .cache/sc8/data/R6
+  manifest_sha256: c7928c8fe7858d3954aa94685c7e61857e4c1bed4a01d6e1cb2e4489fa25dfd7
+  files:
+    imu.csv:
+      rows: 6288
+      sha256: 8e0ecf5364d2a866662ffabc8b121f25044c9778dedd999c1e461f0879e8a272
+    uwb.csv:
+      rows: 13187
+      sha256: 2d6d3c30bf600c359d2ec32164ef257f954aaba418f884f731e1ccabb7a7c253
+    anchors.csv:
+      rows: 8
+      sha256: c9418b3adff304d9e37434b90c79c62fbca1fe887f023eee09834c62c1d5e5c8
+    gt.csv:
+      rows: 13187
+      sha256: 47b212f4524bf714d6aab12a1208c4cbda7cde8b8fca0fe87e864a66b1dc8544
+  provenance:
+    gyro_rotation_C_r_i_xyzw:
+    - 0.5078545532551907
+    - -0.4889389227604402
+    - -0.5100760069052954
+    - 0.4927930090082245
+    acceleration_frame: rig_as_published
+    range_field: range_calib
+    setup: s3
+    landmarks: v2
+    anchor_marker_id_to_radio_id:
+      '10': 10
+      '11': 11
+      '12': 12
+      '4': 4
+      '5': 5
+      '6': 6
+      '7': 7
+      '9': 9
+    anchor_id_mapping_provenance: published_v1_room_geometry_correspondence_to_v2_radio_ids
+    gt_reference: uwb_csv_official_tag_position_and_rig_orientation
+    source_file_sha256:
+      /home/mint/ws_fusion_uwb/data/starloc/data/loop-2d-fast_s3/imu.csv: 6de764200d082a99e2bc1ab7c2a3f7f47e016697bcf27d9df75164cc7ab66ad2
+      /home/mint/ws_fusion_uwb/data/starloc/data/loop-2d-fast_s3/uwb.csv: 97e0df2bd78c202fd16a1cfce1e3b6462539a07032f9f4ffa8a3b863b8ae4d0d
+      /home/mint/ws_fusion_uwb/data/starloc/data/loop-2d-fast_s3/calib.json: e6e99a9b0ac3c5b39a3a558c4ff659958a111153ab08521d3fd97366bcc717c9
+      /home/mint/ws_fusion_uwb/data/starloc/mocap/uwb_markers_v2.csv: 4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64
+  calibration_scope: OFFICIAL
+  source: /home/mint/ws_fusion_uwb/data/starloc/data/loop-2d-fast_s3
+  audit:
+    status: PASS
+    errors: []
+    imu_count: 6288
+    uwb_count: 13187
+    valid_uwb_count: 13187
+    imu_frequency_hz: 202.2183351365486
+    imu_max_gap_s: 0.03708748999999756
+    initial_accel_norm_median: 9.763964076979494
+    gt_time_coverage: 1.0
+    range_geometry_abs_residual_median: 0.05003346361669503
+    range_geometry_abs_residual_p95: 0.173600431610271
+    transform_orthogonality_error: null
+    manifest: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/data/R6/manifest.json
+  anchors: 8
+  tags: 1
+  imu_hz: 202.2183351365486
+  imu_duration_s: 55.40282983
+  imu_max_gap_s: 0.03708748999999756
+  gt_max_gap_s: 0.01999760400000028
+  batch:
+    groups: 2502
+    max_span_s: 0.019999985000001885
+    p95_span_s: 0.019943523000002017
+    retimestamp_to: LAST_RANGE_FOR_SFUISE
+    original_range_timestamps_preserved: true
+    span_model: ASYNC_APPROXIMATION_UNQUALIFIED
+  requested_method: O-FULL
+  qualification: RAW_SOURCE_REFUSED
+  refusal_reasons:
+  - unregistered_initial_law
+  - uncertified_noise_and_motion_domain
+  - native_imu_rate_and_anchor_inventory
+- id: CAL-W
+  family: sfuise
+  sequence: ISAS-Walk1
+  cache: .cache/sc8/data/CAL-W
+  manifest_sha256: d865c275475e687e19f3a862f165b5ea2123d82b6878808c3da0ffde3ab31bcf
+  files:
+    imu.csv:
+      rows: 4839
+      sha256: 64e0cf52190e3c1b810ed508a4721a7c736f3e21362adbafa13721f3f9204d89
+    uwb.csv:
+      rows: 4850
+      sha256: 56d75728fb31fa9019c47f4d0198859ef75fabede4a4b70b3f695ed4942e3a91
+    anchors.csv:
+      rows: 5
+      sha256: 2ed105d802ad985a0bef02b8312b7e8a4f632abfb8546da0246f10781fcc87c5
+    gt.csv:
+      rows: 3168
+      sha256: bbe6b5bd4c7dd0f51df456e5c1c2c4da61e3dc0436cfbedb287ea38d35becbec
+  provenance:
+    range: raw_plus_official_toa_offset
+    toa_offset_by_anchor:
+      '7475': -0.07
+      '9524': 0.1539
+      '10548': -0.0751
+      '15155': 0.1409
+      '20276': -0.0247
+    sfuise_rejection: official_enabled
+    gt_reference: vive_body_projected_to_physical_uwb_tag
+    source_file_sha256:
+      /home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk1.bag: ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944
+    gt_world_transform: joint_GT_assisted_frozen
+    world_calibration_artifact: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/calibration/walk1_world.json
+  calibration_scope: CAL-W_ONLY
+  source: /home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk1.bag
+  audit:
+    status: PASS
+    errors: []
+    imu_count: 4839
+    uwb_count: 4850
+    valid_uwb_count: 4266
+    imu_frequency_hz: 81.89600702919067
+    imu_max_gap_s: 0.021364450454711914
+    initial_accel_norm_median: 9.980550473092354
+    gt_time_coverage: 1.0
+    range_geometry_abs_residual_median: 0.055725783242445814
+    range_geometry_abs_residual_p95: 0.22468768888932011
+    transform_orthogonality_error: null
+    manifest: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/data/CAL-W/manifest.json
+  anchors: 5
+  tags: 1
+  imu_hz: 81.89600702919067
+  imu_duration_s: 59.1154465675354
+  imu_max_gap_s: 0.021364450454711914
+  gt_max_gap_s: 0.020532608032219457
+  batch:
+    groups: 970
+    max_span_s: 0.0
+    p95_span_s: 0.0
+    retimestamp_to: LAST_RANGE_FOR_SFUISE
+    original_range_timestamps_preserved: true
+    span_model: native_same_stamp
+  requested_method: O-FULL
+  qualification: RAW_SOURCE_REFUSED
+  refusal_reasons:
+  - unregistered_initial_law
+  - uncertified_noise_and_motion_domain
+  - native_imu_rate_and_anchor_inventory
+- id: CAL-O
+  family: own_vicon
+  sequence: 2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle
+  cache: .cache/sc8/data/CAL-O
+  manifest_sha256: 631b0f220be9e2cc7ae1f85f06b6de692f09b15faf5d00a14360dc8664f321a5
+  files:
+    imu.csv:
+      rows: 2313
+      sha256: 89e50360a5a1b80b2fdb353a7c9045191e41d48f74f33e0e0d5e154108938f30
+    uwb.csv:
+      rows: 2309
+      sha256: b15c226a10246fd8640eb5d27004b401347b89d5cdc0e536a3d0f3730dbaa866
+    anchors.csv:
+      rows: 4
+      sha256: 8916984cf6ee679ab42f921b0bc4231a96042b430c79a02439100d1ecebcfdfb
+    gt.csv:
+      rows: 3407
+      sha256: ec49e875c8727b88cb778cdee280f9cba671abae201532960e82402ecddd9e66
+  provenance:
+    acceleration: livox_g_times_9.80665
+    gyro: source_radps
+    anchor_aggregation: component_median
+    extrinsic: joint_GT_assisted_frozen
+    source_reindexed_temporary_copy: true
+    possibly_truncated: true
+    source_file_sha256:
+      /home/mint/ws_fusion_uwb/data/own_vicon/2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle.bag: 402201faec2109cd14e6f3e9eb9e7267a12de87f9832d0bc59ac0ac063f72f63
+    calibration_artifact: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/calibration/own_prefix20.json
+    rotation_body_from_imu_matrix:
+    - - -0.9469019214394204
+      - -0.14782422864591976
+      - -0.28552539046391684
+    - - 0.09851305197510653
+      - -0.9787200561429215
+      - 0.18000619515490715
+    - - -0.3060587031353351
+      - 0.1423202344321967
+      - 0.9413145176328055
+    time_imu_to_gt_s: 0.015542069530033498
+    lever_tag_from_imu_body_m:
+    - 0.03703753555994884
+    - -0.027430216722513653
+    - -0.04130280234190144
+  calibration_scope: R3_PREFIX20_TEST_INVOLVED_CALIBRATION_OPEN
+  source: /home/mint/ws_fusion_uwb/data/own_vicon/2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle.bag
+  audit:
+    status: PASS
+    errors: []
+    imu_count: 2313
+    uwb_count: 2309
+    valid_uwb_count: 2309
+    imu_frequency_hz: 202.33014954172697
+    imu_max_gap_s: 0.015451431274414062
+    initial_accel_norm_median: 9.707974941763158
+    gt_time_coverage: 0.9982676483326115
+    range_geometry_abs_residual_median: 0.3627388653241752
+    range_geometry_abs_residual_p95: 0.4370375040499117
+    transform_orthogonality_error: 6.249082936590802e-16
+    manifest: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/data/CAL-O/manifest.json
+  anchors: 4
+  tags: 1
+  imu_hz: 202.33014954169062
+  imu_duration_s: 11.560157060623167
+  imu_max_gap_s: 0.015451431274414062
+  gt_max_gap_s: 0.043480873107910156
+  batch:
+    groups: 578
+    max_span_s: 0.0
+    p95_span_s: 0.0
+    retimestamp_to: LAST_RANGE_FOR_SFUISE
+    original_range_timestamps_preserved: true
+    span_model: native_same_stamp
+  requested_method: O-FULL
+  qualification: RAW_SOURCE_REFUSED
+  refusal_reasons:
+  - unregistered_initial_law
+  - uncertified_noise_and_motion_domain
+  - native_imu_rate_and_anchor_inventory
+- id: CAL-S
+  family: starloc
+  sequence: loop-2d_s3
+  cache: .cache/sc8/data/CAL-S
+  manifest_sha256: 899089887f2ef3c477f9ca9885cd9dd8d3eb67562b5ceae83700d1dcd9cd6257
+  files:
+    imu.csv:
+      rows: 12013
+      sha256: 8ec77e313c75d2c66e80e7c9447da246798204108d42b3a00b976463f143f962
+    uwb.csv:
+      rows: 24827
+      sha256: 6629737d301a00557cb71da5076de9da2658af15e68ff65a3c5a62be784c345a
+    anchors.csv:
+      rows: 8
+      sha256: c9418b3adff304d9e37434b90c79c62fbca1fe887f023eee09834c62c1d5e5c8
+    gt.csv:
+      rows: 24827
+      sha256: 8f06121c2251934b875ee13b5d508f74b8d17912364980bc316ceafffdde8f61
+  provenance:
+    gyro_rotation_C_r_i_xyzw:
+    - -0.5062206886703617
+    - 0.49556241770275483
+    - 0.5108910191364457
+    - -0.4869793333278416
+    acceleration_frame: rig_as_published
+    range_field: range_calib
+    setup: s3
+    landmarks: v2
+    anchor_marker_id_to_radio_id:
+      '10': 10
+      '11': 11
+      '12': 12
+      '4': 4
+      '5': 5
+      '6': 6
+      '7': 7
+      '9': 9
+    anchor_id_mapping_provenance: published_v1_room_geometry_correspondence_to_v2_radio_ids
+    gt_reference: uwb_csv_official_tag_position_and_rig_orientation
+    source_file_sha256:
+      /home/mint/ws_fusion_uwb/data/starloc/data/loop-2d_s3/imu.csv: 32ba1ee530680608a39d4445253bd7eb0ccff304384a474b65c5a4c27c2c0b2f
+      /home/mint/ws_fusion_uwb/data/starloc/data/loop-2d_s3/uwb.csv: d31b7cad71745dd0df0b075c720c6db4a4a41fea0ee5b795c0d8b003b3b80280
+      /home/mint/ws_fusion_uwb/data/starloc/data/loop-2d_s3/calib.json: e9ae87f6c89f361507c5943c9978c72deae76af572c9253a88ce466641426b0e
+      /home/mint/ws_fusion_uwb/data/starloc/mocap/uwb_markers_v2.csv: 4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64
+  calibration_scope: OFFICIAL
+  source: /home/mint/ws_fusion_uwb/data/starloc/data/loop-2d_s3
+  audit:
+    status: PASS
+    errors: []
+    imu_count: 12013
+    uwb_count: 24827
+    valid_uwb_count: 24827
+    imu_frequency_hz: 202.2183351365486
+    imu_max_gap_s: 0.03461503999999138
+    initial_accel_norm_median: 9.761877074384266
+    gt_time_coverage: 1.0
+    range_geometry_abs_residual_median: 0.049642655839921
+    range_geometry_abs_residual_p95: 0.2453243293878663
+    transform_orthogonality_error: null
+    manifest: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/data/CAL-S/manifest.json
+  anchors: 8
+  tags: 1
+  imu_hz: 202.2183351365486
+  imu_duration_s: 105.13817753000001
+  imu_max_gap_s: 0.03461503999999138
+  gt_max_gap_s: 0.14794498000000011
+  batch:
+    groups: 4704
+    max_span_s: 0.019999991999998912
+    p95_span_s: 0.01994892599999787
+    retimestamp_to: LAST_RANGE_FOR_SFUISE
+    original_range_timestamps_preserved: true
+    span_model: ASYNC_APPROXIMATION_UNQUALIFIED
+  requested_method: O-FULL
+  qualification: RAW_SOURCE_REFUSED
+  refusal_reasons:
+  - unregistered_initial_law
+  - uncertified_noise_and_motion_domain
+  - native_imu_rate_and_anchor_inventory
+cases:
+  SC8-H:
+    epochs: 600
+    motion: M3
+    geometry: G1
+    faults: []
+    uwb_faults: []
+  SC8-U:
+    epochs: 600
+    motion: M3
+    geometry: G1
+    faults: []
+    uwb_faults:
+    - - 121
+      - 0
+      - 3
+      - 2.25
+  SC8-A:
+    epochs: 600
+    motion: M3
+    geometry: G1
+    faults:
+    - - 121
+      - 0
+      - 500
+      - 20.0
+      - 0
+    uwb_faults: []
+  SC8-G:
+    epochs: 600
+    motion: M3
+    geometry: G1
+    faults:
+    - - 121
+      - 3
+      - 500
+      - 1.0
+      - 0
+    uwb_faults: []
+  SC8-J:
+    epochs: 600
+    motion: M3
+    geometry: G1
+    faults:
+    - - 121
+      - 0
+      - 500
+      - 20.0
+      - 0
+    uwb_faults:
+    - - 121
+      - 0
+      - 3
+      - 2.25
+  SC8-D0:
+    epochs: 600
+    motion: M0
+    geometry: G0
+    faults: []
+    uwb_faults: []
+  SC8-G2:
+    epochs: 600
+    motion: M3
+    geometry: G2
+    faults: []
+    uwb_faults: []
+  SC8-WH:
+    epochs: 2100
+    motion: M3
+    geometry: G1
+    faults: []
+    uwb_faults: []
+  SC8-WJ:
+    epochs: 2100
+    motion: M3
+    geometry: G1
+    faults:
+    - - 1201
+      - 0
+      - 500
+      - 20.0
+      - 0
+    - - 1601
+      - 3
+      - 500
+      - 1.0
+      - 0
+    uwb_faults:
+    - - 1201
+      - 0
+      - 3
+      - 2.25
+    - - 1601
+      - 0
+      - 3
+      - 2.25
+  SC8-AX0:
+    epochs: 160
+    motion: M0
+    geometry: G0
+    faults:
+    - - 61
+      - 0
+      - 500
+      - 20.0
+      - 0
+    uwb_faults: []
+  SC8-AX1:
+    epochs: 160
+    motion: M0
+    geometry: G0
+    faults:
+    - - 61
+      - 1
+      - 500
+      - 20.0
+      - 0
+    uwb_faults: []
+  SC8-AX2:
+    epochs: 160
+    motion: M0
+    geometry: G0
+    faults:
+    - - 61
+      - 2
+      - 500
+      - 20.0
+      - 0
+    uwb_faults: []
+  SC8-AX3:
+    epochs: 160
+    motion: M0
+    geometry: G0
+    faults:
+    - - 61
+      - 3
+      - 500
+      - 1.0
+      - 0
+    uwb_faults: []
+  SC8-AX4:
+    epochs: 160
+    motion: M0
+    geometry: G0
+    faults:
+    - - 61
+      - 4
+      - 500
+      - 1.0
+      - 0
+    uwb_faults: []
+  SC8-AX5:
+    epochs: 160
+    motion: M0
+    geometry: G0
+    faults:
+    - - 61
+      - 5
+      - 500
+      - 1.0
+      - 0
+    uwb_faults: []
+  SC8-WEAK:
+    epochs: 200
+    motion: M3
+    geometry: G1
+    faults:
+    - - 61
+      - 0
+      - 50
+      - 1.0
+      - 0
+    uwb_faults: []
+  SC8-NEG:
+    epochs: 200
+    motion: M3
+    geometry: G1
+    faults:
+    - - 61
+      - 3
+      - 500
+      - -1.0
+      - 0
+    uwb_faults: []
+  SC8-STAGGER:
+    epochs: 200
+    motion: M3
+    geometry: G1
+    faults:
+    - - 61
+      - 0
+      - 500
+      - 20.0
+      - 0
+    uwb_faults:
+    - - 58
+      - 0
+      - 3
+      - 2.25
+  SC8-L0:
+    epochs: 5000
+    motion: M0
+    geometry: G0
+    faults: []
+    uwb_faults: []
+  SC8-L1:
+    epochs: 10000
+    motion: M3
+    geometry: G1
+    faults:
+    - - 121
+      - 0
+      - 500
+      - 20.0
+      - 124
+    - - 1121
+      - 3
+      - 500
+      - 1.0
+      - 1118
+    - - 3121
+      - 0
+      - 500
+      - 20.0
+      - 3124
+    - - 5121
+      - 3
+      - 500
+      - 1.0
+      - 5118
+    - - 7121
+      - 0
+      - 500
+      - 20.0
+      - 7124
+    - - 9121
+      - 3
+      - 500
+      - 1.0
+      - 9118
+    uwb_faults:
+    - - 124
+      - 0
+      - 3
+      - 2.25
+    - - 1118
+      - 0
+      - 3
+      - 2.25
+    - - 3124
+      - 0
+      - 3
+      - 2.25
+    - - 5118
+      - 0
+      - 3
+      - 2.25
+    - - 7124
+      - 0
+      - 3
+      - 2.25
+    - - 9118
+      - 0
+      - 3
+      - 2.25
+runs:
+- id: E00-R1-O-NOM-20261020-30x30
+  group: E00
+  stream: R1
+  requested_method: O-NOM
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R1-O-FULL-20261020-30x30
+  group: E00
+  stream: R1
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R1-SFUISE-20261020-30x30
+  group: E00
+  stream: R1
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R2-O-NOM-20261020-30x30
+  group: E00
+  stream: R2
+  requested_method: O-NOM
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R2-O-FULL-20261020-30x30
+  group: E00
+  stream: R2
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R2-SFUISE-20261020-30x30
+  group: E00
+  stream: R2
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R3-O-NOM-20261020-30x30
+  group: E00
+  stream: R3
+  requested_method: O-NOM
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R3-O-FULL-20261020-30x30
+  group: E00
+  stream: R3
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R3-SFUISE-20261020-30x30
+  group: E00
+  stream: R3
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R4-O-NOM-20261020-30x30
+  group: E00
+  stream: R4
+  requested_method: O-NOM
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R4-O-FULL-20261020-30x30
+  group: E00
+  stream: R4
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R4-SFUISE-20261020-30x30
+  group: E00
+  stream: R4
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R5-O-NOM-20261020-30x30
+  group: E00
+  stream: R5
+  requested_method: O-NOM
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R5-O-FULL-20261020-30x30
+  group: E00
+  stream: R5
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R5-SFUISE-20261020-30x30
+  group: E00
+  stream: R5
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R6-O-NOM-20261020-30x30
+  group: E00
+  stream: R6
+  requested_method: O-NOM
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R6-O-FULL-20261020-30x30
+  group: E00
+  stream: R6
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-R6-SFUISE-20261020-30x30
+  group: E00
+  stream: R6
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  prefix_s: 20.0
+  track: T-REAL
+- id: E00-SC8-H-O-FULL-20261020-30x30
+  group: E00
+  stream: SC8-H
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  epochs: 80
+  hook: audit
+  track: T-SIM
+- id: E00-SC8-H-O-NOFDE-20261020-30x30
+  group: E00
+  stream: SC8-H
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  epochs: 80
+  hook: plain
+  track: T-SIM
+- id: E01-SC8-H-O-FULL-20261020-30x30
+  group: E01
+  stream: SC8-H
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-H-O-NOFDE-20261020-30x30
+  group: E01
+  stream: SC8-H
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-H-SFUISE-20261020-30x30
+  group: E01
+  stream: SC8-H
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-H-O-FULL-20261021-30x30
+  group: E01
+  stream: SC8-H
+  requested_method: O-FULL
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-H-O-NOFDE-20261021-30x30
+  group: E01
+  stream: SC8-H
+  requested_method: O-NOFDE
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-H-SFUISE-20261021-30x30
+  group: E01
+  stream: SC8-H
+  requested_method: SFUISE
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-H-O-FULL-20261022-30x30
+  group: E01
+  stream: SC8-H
+  requested_method: O-FULL
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-H-O-NOFDE-20261022-30x30
+  group: E01
+  stream: SC8-H
+  requested_method: O-NOFDE
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-H-SFUISE-20261022-30x30
+  group: E01
+  stream: SC8-H
+  requested_method: SFUISE
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-D0-O-FULL-20261020-30x30
+  group: E01
+  stream: SC8-D0
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-D0-O-NOFDE-20261020-30x30
+  group: E01
+  stream: SC8-D0
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-D0-SFUISE-20261020-30x30
+  group: E01
+  stream: SC8-D0
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-G2-O-FULL-20261020-30x30
+  group: E01
+  stream: SC8-G2
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-G2-O-NOFDE-20261020-30x30
+  group: E01
+  stream: SC8-G2
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-G2-SFUISE-20261020-30x30
+  group: E01
+  stream: SC8-G2
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E01-SC8-H-O-NOM-20261020-30x30
+  group: E01
+  stream: SC8-H
+  requested_method: O-NOM
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E02-R1-O-FULL-20261020-30x30
+  group: E02
+  stream: R1
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R1-O-NOFDE-20261020-30x30
+  group: E02
+  stream: R1
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R1-SFUISE-20261020-30x30
+  group: E02
+  stream: R1
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R2-O-FULL-20261020-30x30
+  group: E02
+  stream: R2
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R2-O-NOFDE-20261020-30x30
+  group: E02
+  stream: R2
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R2-SFUISE-20261020-30x30
+  group: E02
+  stream: R2
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R3-O-FULL-20261020-30x30
+  group: E02
+  stream: R3
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R3-O-NOFDE-20261020-30x30
+  group: E02
+  stream: R3
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R3-SFUISE-20261020-30x30
+  group: E02
+  stream: R3
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R4-O-FULL-20261020-30x30
+  group: E02
+  stream: R4
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R4-O-NOFDE-20261020-30x30
+  group: E02
+  stream: R4
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R4-SFUISE-20261020-30x30
+  group: E02
+  stream: R4
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R5-O-FULL-20261020-30x30
+  group: E02
+  stream: R5
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R5-O-NOFDE-20261020-30x30
+  group: E02
+  stream: R5
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R5-SFUISE-20261020-30x30
+  group: E02
+  stream: R5
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R6-O-FULL-20261020-30x30
+  group: E02
+  stream: R6
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R6-O-NOFDE-20261020-30x30
+  group: E02
+  stream: R6
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E02-R6-SFUISE-20261020-30x30
+  group: E02
+  stream: R6
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-REAL
+- id: E03-SC8-U-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-U
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-U-O-NOFDE-20261020-30x30
+  group: E03
+  stream: SC8-U
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-U-SFUISE-20261020-30x30
+  group: E03
+  stream: SC8-U
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-U-O-FULL-20261021-30x30
+  group: E03
+  stream: SC8-U
+  requested_method: O-FULL
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-U-O-NOFDE-20261021-30x30
+  group: E03
+  stream: SC8-U
+  requested_method: O-NOFDE
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-U-SFUISE-20261021-30x30
+  group: E03
+  stream: SC8-U
+  requested_method: SFUISE
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-U-O-FULL-20261022-30x30
+  group: E03
+  stream: SC8-U
+  requested_method: O-FULL
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-U-O-NOFDE-20261022-30x30
+  group: E03
+  stream: SC8-U
+  requested_method: O-NOFDE
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-U-SFUISE-20261022-30x30
+  group: E03
+  stream: SC8-U
+  requested_method: SFUISE
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-A-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-A
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-A-O-NOFDE-20261020-30x30
+  group: E03
+  stream: SC8-A
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-A-SFUISE-20261020-30x30
+  group: E03
+  stream: SC8-A
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-A-O-FULL-20261021-30x30
+  group: E03
+  stream: SC8-A
+  requested_method: O-FULL
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-A-O-NOFDE-20261021-30x30
+  group: E03
+  stream: SC8-A
+  requested_method: O-NOFDE
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-A-SFUISE-20261021-30x30
+  group: E03
+  stream: SC8-A
+  requested_method: SFUISE
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-A-O-FULL-20261022-30x30
+  group: E03
+  stream: SC8-A
+  requested_method: O-FULL
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-A-O-NOFDE-20261022-30x30
+  group: E03
+  stream: SC8-A
+  requested_method: O-NOFDE
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-A-SFUISE-20261022-30x30
+  group: E03
+  stream: SC8-A
+  requested_method: SFUISE
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-G-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-G
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-G-O-NOFDE-20261020-30x30
+  group: E03
+  stream: SC8-G
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-G-SFUISE-20261020-30x30
+  group: E03
+  stream: SC8-G
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-G-O-FULL-20261021-30x30
+  group: E03
+  stream: SC8-G
+  requested_method: O-FULL
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-G-O-NOFDE-20261021-30x30
+  group: E03
+  stream: SC8-G
+  requested_method: O-NOFDE
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-G-SFUISE-20261021-30x30
+  group: E03
+  stream: SC8-G
+  requested_method: SFUISE
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-G-O-FULL-20261022-30x30
+  group: E03
+  stream: SC8-G
+  requested_method: O-FULL
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-G-O-NOFDE-20261022-30x30
+  group: E03
+  stream: SC8-G
+  requested_method: O-NOFDE
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-G-SFUISE-20261022-30x30
+  group: E03
+  stream: SC8-G
+  requested_method: SFUISE
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-J-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-J
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-J-O-NOFDE-20261020-30x30
+  group: E03
+  stream: SC8-J
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-J-SFUISE-20261020-30x30
+  group: E03
+  stream: SC8-J
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-J-O-FULL-20261021-30x30
+  group: E03
+  stream: SC8-J
+  requested_method: O-FULL
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-J-O-NOFDE-20261021-30x30
+  group: E03
+  stream: SC8-J
+  requested_method: O-NOFDE
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-J-SFUISE-20261021-30x30
+  group: E03
+  stream: SC8-J
+  requested_method: SFUISE
+  seed: 20261021
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-J-O-FULL-20261022-30x30
+  group: E03
+  stream: SC8-J
+  requested_method: O-FULL
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-J-O-NOFDE-20261022-30x30
+  group: E03
+  stream: SC8-J
+  requested_method: O-NOFDE
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-J-SFUISE-20261022-30x30
+  group: E03
+  stream: SC8-J
+  requested_method: SFUISE
+  seed: 20261022
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-R2-FU-O-FULL-20261020-30x30
+  group: E03
+  stream: R2-FU
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R2-FU-O-NOFDE-20261020-30x30
+  group: E03
+  stream: R2-FU
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R2-FU-SFUISE-20261020-30x30
+  group: E03
+  stream: R2-FU
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R2-FG-O-FULL-20261020-30x30
+  group: E03
+  stream: R2-FG
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R2-FG-O-NOFDE-20261020-30x30
+  group: E03
+  stream: R2-FG
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R2-FG-SFUISE-20261020-30x30
+  group: E03
+  stream: R2-FG
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R2-FJ-O-FULL-20261020-30x30
+  group: E03
+  stream: R2-FJ
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R2-FJ-O-NOFDE-20261020-30x30
+  group: E03
+  stream: R2-FJ
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R2-FJ-SFUISE-20261020-30x30
+  group: E03
+  stream: R2-FJ
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R3-FU-O-FULL-20261020-30x30
+  group: E03
+  stream: R3-FU
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R3-FU-O-NOFDE-20261020-30x30
+  group: E03
+  stream: R3-FU
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R3-FU-SFUISE-20261020-30x30
+  group: E03
+  stream: R3-FU
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R3-FG-O-FULL-20261020-30x30
+  group: E03
+  stream: R3-FG
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R3-FG-O-NOFDE-20261020-30x30
+  group: E03
+  stream: R3-FG
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R3-FG-SFUISE-20261020-30x30
+  group: E03
+  stream: R3-FG
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R3-FJ-O-FULL-20261020-30x30
+  group: E03
+  stream: R3-FJ
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R3-FJ-O-NOFDE-20261020-30x30
+  group: E03
+  stream: R3-FJ
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-R3-FJ-SFUISE-20261020-30x30
+  group: E03
+  stream: R3-FJ
+  requested_method: SFUISE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SEMI
+- id: E03-SC8-AX0-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-AX0
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-AX1-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-AX1
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-AX2-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-AX2
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-AX3-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-AX3
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-AX4-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-AX4
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-AX5-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-AX5
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-WEAK-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-WEAK
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-NEG-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-NEG
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E03-SC8-STAGGER-O-FULL-20261020-30x30
+  group: E03
+  stream: SC8-STAGGER
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E05-SC8-WH-O-FULL-20261020-30x30
+  group: E05
+  stream: SC8-WH
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WJ-O-FULL-20261020-30x30
+  group: E05
+  stream: SC8-WJ
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WH-O-FULL-20261020-100x100
+  group: E05
+  stream: SC8-WH
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 100
+  - 100
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WJ-O-FULL-20261020-100x100
+  group: E05
+  stream: SC8-WJ
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 100
+  - 100
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WH-O-FULL-20261020-300x300
+  group: E05
+  stream: SC8-WH
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 300
+  - 300
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WJ-O-FULL-20261020-300x300
+  group: E05
+  stream: SC8-WJ
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 300
+  - 300
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WH-O-FULL-20261020-600x600
+  group: E05
+  stream: SC8-WH
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 600
+  - 600
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WJ-O-FULL-20261020-600x600
+  group: E05
+  stream: SC8-WJ
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 600
+  - 600
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WH-O-FULL-20261020-1000x1000
+  group: E05
+  stream: SC8-WH
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 1000
+  - 1000
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WJ-O-FULL-20261020-1000x1000
+  group: E05
+  stream: SC8-WJ
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 1000
+  - 1000
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WH-O-FULL-20261020-300x30
+  group: E05
+  stream: SC8-WH
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 300
+  - 30
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WJ-O-FULL-20261020-300x30
+  group: E05
+  stream: SC8-WJ
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 300
+  - 30
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WH-O-FULL-20261020-300x100
+  group: E05
+  stream: SC8-WH
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 300
+  - 100
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WJ-O-FULL-20261020-300x100
+  group: E05
+  stream: SC8-WJ
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 300
+  - 100
+  pace: offline
+  track: T-SIM
+- id: E05-SC8-WH-O-CANARY-20261020-100x100
+  group: E05
+  stream: SC8-WH
+  requested_method: O-CANARY
+  seed: 20261020
+  window:
+  - 100
+  - 100
+  pace: offline
+  epochs: 102
+  track: T-SIM
+- id: E05-SC8-WH-O-CANARY-20261020-300x300
+  group: E05
+  stream: SC8-WH
+  requested_method: O-CANARY
+  seed: 20261020
+  window:
+  - 300
+  - 300
+  pace: offline
+  epochs: 302
+  track: T-SIM
+- id: E05-SC8-WH-O-CANARY-20261020-600x600
+  group: E05
+  stream: SC8-WH
+  requested_method: O-CANARY
+  seed: 20261020
+  window:
+  - 600
+  - 600
+  pace: offline
+  epochs: 602
+  track: T-SIM
+- id: E05-SC8-WH-O-CANARY-20261020-1000x1000
+  group: E05
+  stream: SC8-WH
+  requested_method: O-CANARY
+  seed: 20261020
+  window:
+  - 1000
+  - 1000
+  pace: offline
+  epochs: 1002
+  track: T-SIM
+- id: E07-SC8-D0-O-ABL-SUPPORT-20261020-30x30
+  group: E07
+  stream: SC8-D0
+  requested_method: O-ABL-SUPPORT
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E07-SC8-D0-O-ABL-JOINT-20261020-30x30
+  group: E07
+  stream: SC8-D0
+  requested_method: O-ABL-JOINT
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E07-SC8-J-O-ABL-SUPPORT-20261020-30x30
+  group: E07
+  stream: SC8-J
+  requested_method: O-ABL-SUPPORT
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E07-SC8-J-O-ABL-JOINT-20261020-30x30
+  group: E07
+  stream: SC8-J
+  requested_method: O-ABL-JOINT
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E07-SC8-G2-O-ABL-G2-20261020-30x30
+  group: E07
+  stream: SC8-G2
+  requested_method: O-ABL-G2
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  epochs: 80
+  track: T-SIM
+- id: E08-SC8-L0-O-FULL-20261020-30x30
+  group: E08
+  stream: SC8-L0
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E08-SC8-L1-O-FULL-20261020-30x30
+  group: E08
+  stream: SC8-L1
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E08-SC8-L1-O-NOFDE-20261020-30x30
+  group: E08
+  stream: SC8-L1
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM

@@ -269,7 +269,8 @@ def normalize_trajectory(path: Path):
     path.write_text("\n".join(rows) + ("\n" if rows else ""))
 
 
-def run_one(setup: Path, cache: Path, run: Path, playback_rate: float = 2.0) -> dict:
+def run_one(setup: Path, cache: Path, run: Path, playback_rate: float = 2.0,
+            fusion_executable: str = "SplineFusion", observer: bool = False) -> dict:
     manifest = json.loads((cache / "manifest.json").read_text())
     run.mkdir(parents=True, exist_ok=True)
     for stale in ("trajectory.tum", "adapter.meta", "run_status.json"):
@@ -281,6 +282,8 @@ def run_one(setup: Path, cache: Path, run: Path, playback_rate: float = 2.0) -> 
     config, lever = runtime_config(cache, run / "sfuise.yaml")
     env = source_environment(setup)
     env.update(OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1")
+    if observer:
+        env['SC8_SFUISE_OBSERVER'] = str(run / 'observer.csv')
     logs = []
     processes = []
     fusion_process = None
@@ -299,7 +302,7 @@ def run_one(setup: Path, cache: Path, run: Path, playback_rate: float = 2.0) -> 
             subprocess.check_call(["rosparam", "load", str(run / "sfuise.yaml"),
                                    f"/{namespace}"], env=run_env)
         commands = [
-            ("fusion", ["rosrun", "sfuise", "SplineFusion",
+            ("fusion", ["rosrun", "uwb_benchmark_sfuise_adapter" if observer else "sfuise", fusion_executable,
                         "__name:=SplineFusion"]),
             ("adapter", ["rosrun", "uwb_benchmark_sfuise_adapter",
                          "sfuise_trajectory_adapter",
@@ -315,7 +318,7 @@ def run_one(setup: Path, cache: Path, run: Path, playback_rate: float = 2.0) -> 
             if name == "fusion":
                 fusion_process = process
         time.sleep(2)
-        playback = subprocess.run(["rosbag", "play", "--clock", "--delay=1",
+        playback = subprocess.run(["rosbag", "play", "--clock", "--hz=1000", "--delay=1",
                                    "--rate", str(playback_rate),
                                    str(bag)], env=run_env, stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT, text=True)
@@ -368,6 +371,9 @@ def run_one(setup: Path, cache: Path, run: Path, playback_rate: float = 2.0) -> 
                   metadata.get("native_average_window_runtime", "nan")),
               "realtime_factor": wall_s / max(1e-9, common.csv_duration(cache / "imu.csv")),
               "official_uwb_rejection": bool(config["if_reject_uwb"])}
+    result['observer_enabled'] = observer
+    result['fusion_executable'] = fusion_executable
+    result['source_clock_resolution_s'] = .001
     (run / "run_status.json").write_text(json.dumps(result, indent=2) + "\n")
     return result
 

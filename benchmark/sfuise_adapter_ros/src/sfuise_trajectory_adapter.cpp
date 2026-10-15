@@ -15,6 +15,7 @@
 #include <sfuise_msgs/Estimate.h>
 #include <std_msgs/Int64.h>
 #include <sensor_msgs/Imu.h>
+#include <rosgraph_msgs/Clock.h>
 
 #include "SplineState.h"
 
@@ -30,7 +31,9 @@ class TrajectoryAdapter {
     cutoff_.open(output_path_ + ".online_cutoff.csv");
     if (!online_ || !cutoff_) throw std::runtime_error("cannot open online export");
     online_ << std::setprecision(17);
-    cutoff_ << "state_ns,window_information_cutoff_ns,observed_sensor_cutoff_ns,estimate_index,calibration_index\n";
+    cutoff_ << "state_ns,window_information_cutoff_ns,observed_sensor_cutoff_ns,estimate_index,calibration_index,published_wall_time,source_clock_at_sink_ns,revision_index\n";
+    cutoff_ << std::setprecision(17);
+    sub_clock_=nh_.subscribe("/clock",100,&TrajectoryAdapter::ClockCallback,this);
     std::vector<double> lever{0.0, 0.0, 0.0};
     private_nh.getParam("lever_arm_body_m", lever);
     if (lever.size() != 3) throw std::runtime_error("~lever_arm_body_m must have 3 values");
@@ -53,6 +56,9 @@ class TrajectoryAdapter {
   }
 
  private:
+  void ClockCallback(const rosgraph_msgs::Clock::ConstPtr& msg) {
+    source_clock_ns_=msg->clock.toNSec();
+  }
   void StartCallback(const std_msgs::Int64::ConstPtr& msg) {
     global_start_ns_ = msg->data;
     have_start_ = true;
@@ -121,7 +127,9 @@ class TrajectoryAdapter {
                 << p.y() << ' ' << p.z() << ' ' << q.x() << ' ' << q.y()
                 << ' ' << q.z() << ' ' << q.w() << '\n';
         cutoff_ << t_ns << ',' << t_ns+1 << ',' << latest_sensor_ns_ << ','
-                << estimate_messages_+1 << ',' << calibration_messages_ << '\n';
+                << estimate_messages_+1 << ',' << calibration_messages_ << ','
+                << ros::WallTime::now().toSec() << ',' << source_clock_ns_
+                << ",0\n";
         online_records_.push_back({t_ns,local.itpPosition(t_ns),q_nav_body,
                                    q_nav_uwb_,t_nav_uwb_});
         last_online_ns_ = t_ns; ++online_samples_;
@@ -210,6 +218,8 @@ class TrajectoryAdapter {
   };
   std::vector<OnlineRecord> online_records_;
   ros::Subscriber sub_start_, sub_calib_, sub_estimate_, sub_toa_, sub_imu_;
+  ros::Subscriber sub_clock_;
+  int64_t source_clock_ns_=0;
   SplineState global_;
   Eigen::Quaterniond q_nav_uwb_{Eigen::Quaterniond::Identity()};
   Eigen::Vector3d t_nav_uwb_{Eigen::Vector3d::Zero()};

@@ -1,0 +1,54 @@
+/goal 完成 SC8：在冻结的当前 UWB–IMU FGO＋FDE＋滚动PL系统上，实际执行正式仿真、精选真实数据、故障注入、窗口扩展、消融和耗时实验，交付论文级图表与可复现报告。目标是证据可靠，不是保证我们的方法在所有指标获胜。
+
+【权威文件】
+读取 docs/requirements/sc8/SC8_EXPERIMENT_HANDBOOK.md 全文与 SC8-A01–A24；同目录 SC8_PLAN.template.yaml 是预注册设计模板，不是现有运行API。最终实际配置/矩阵写入 config/sc8_experiments.yaml 或仓库已有等价入口，不机械新建重复框架。
+读取本地AGENTS、docs/fde_next/SC7_RESULTS.md、SC6 Closure结果及用户提供的 uwb_imu_accuracy_timing_report.md。历史报告用于库存和排查，不用于判定新版不能运行或填充本轮指标。
+设计时远端为 fa5b3dc9ffe3c88492352491d79ba022f373bfb5（SC7交付ef2595f之后）。先核对实际本地HEAD与差异，保留用户新代码，不强行checkout旧版本。不要重复SC1–SC7大型campaign。
+
+【必须维持的比较边界】
+1. 仿真条件raw保证、原始真实数据经验性能、真实数据上叠加人工故障，分T-SIM/T-REAL/T-SEMI三条证据通道。真实数据没有已认证的初始law、80/200/250Hz共享噪声、运动域或任意anchor数证明，不能放开guard假造raw资格。无合法PL填NA/拒绝，不能编造；工程FDE能运行则独立标记O-FDE-ENG，不冒充O-FULL。
+2. 真实算法对照是O-FULL、O-NOFDE、SFUISE的首次因果在线输出；SFUISE最终历史值另列，一次运行导出两类结果，不将历史修正伪称实时、全局batch最优或免费因果精度。
+3. 保留SFUISE官方测距剔除；它不是无鲁棒性的基线。检查现有固定SHA/上游remote/构建，默认不升级。允许只读观察和计时补丁，必须验证不改数值行为。GT仅评分/预登记的接口标定，不给任何方法GT初值或选镜像。
+4. 默认LF/LI=30/30。当前rolling_policy要求LI≤LF且LF≤1000。100–1000历元是5–50秒的真实UWB窗口，不是IMU样本数/量测条数。禁止把LF=30、LI=1000绕过检查后叫支持。
+5. P95标准保持core40ms、measurement-to-sink50ms，使用nearest-rank与所有可测慢帧；正例的及时空间有效比例另按≥95%评价。扩展大窗口是成本/性能前沿实验，允许非实时，不要求1000窗口也满足默认deadline。真实未认证输出用及时估计率，不能借用空间资格。
+6. 原噪声、fault scope、risk/birth q、AL和生产发布规则不改。不能用更弱故障、更大AL、减少输入、只展示成功子集或调测试seed让结果好看。一次真实故障隔离、bridge、prior替换与rejoin必须有原生receipt，不只看PL有效。
+
+【W0：先使比较可成立，然后冻结】
+- 找本地数据manifest，不默认下载全部外部数据。优先六条：ISAS-Walk2、ISAS-Walk3；own_vicon无障碍15-31-28、障碍15-46-27；STAR-Loc loop-3d-z_s3、loop-2d-fast_s3。Walk1用于CAL/接口开发；自采第三条15-48-55只作为待检查的校准候选，不能假设足够激励。官方STAR标定优先。用户“两个自采”若实际文件不同，从本地metadata映射，无需重复询问可自动查到的信息。
+- 每条候选做新版单位/frame/lever/time/GT/anchor/range审计和固定短前缀冒烟。旧失败不能作为拒绝理由，新的方法APE差也不能作为删序列依据。备用仅按Handbook使用MILUV circular3D（必要时random3）；HUEC暂不全跑。
+- 修正必要的adapter、timestamp、baseline export和评分器问题；不要大改估计/PL理论或为各测试轨迹搜索参数。复核旧direct-vs-ROS差异，确保当前实际FGO/commit路径；当前无法全功能接入的实测格明确requested/effective方法，不准静默回退nominal。
+- CAL/TEST分离。旧三Walk/三own联合GT标定不能不披露地当盲测；无独立标定时先预定前缀和隔离段，标记test-involved附表。不得每个方法独立选GT对齐/时延。
+- 原始range保留时间。检查SFUISE RTLSStick批次跨度/offset只一次；不同物理时刻凑批不能暗称同步或免费。在线记录输出stamp、发布时刻、max_sensor_stamp_used、revision。
+- 评分器用独立小测试及evo对口径核对APE、ARE、tag-RPE/body-RPE、lever、SO3、缺帧和单位；真实bias无真值必须NA。
+- 展开去重run registry，目标约120–145、上限160次求解进程，SFUISE在线/历史共享一次；固定输入、源identity、sim seeds20261020/21/22、CAL/TEST、故障manifest、资源门限、图表及平台。完成局部验证和本地commit后继续W1。
+
+【W1：正式主对照 E01/E02/E03】
+- E01：D1/M3/G1健康3seed，D0/S0及G2/S3各一个seed；O-FULL/O-NOFDE/SFUISE，同步导出首次与最终历史。O-NOM只作一条健康一致性/耗时基准。
+- E02：六条已登记实测原始序列，三次主求解/序列，SFUISE导出两种时间口径。所有失败和qualification保留，不把旧CSV当新结果。无能力签发实测PL时仍完成诚实的经验精度/功能表及拒绝链，不假造统计资格。
+- E03：同一D1/M3/G1，FU/FA/FG/FJ各3seed（F0复用E01），每流600epoch，用原SC7故障强度和时域、同标准noise draw；原始IMU层注入，所有方法相同物理raw输入，GT不变。手册F0是逻辑健康类别，不是已有六轴runner的F0；用独立SC8-H/U/A/G/J case ID并核对manifest。D0六轴与弱短/负/错峰仅定向小例，不全排列。
+- 实测只对R2 Walk3和R3无障碍各做FU/FG/FJ三种overlay配对；未新增注入不代表原录制完全健康。记录增量注入影响，天然无GT故障不乱算false-alarm。
+- 报告各独立seed/录制的APE/HPE/VPE、ARE、RPE、速度/bias(有GT才算)、绝对m及%收益，按健康/故障/隔离/重接/晚期分组。完整episode级报警/隔离/prior/bridge/rejoin/TTD/TTI/TTR；位置改善不冲抵姿态恶化。
+- 双方同物理输入digest、初始条件、测距偏置和时钟核对；官方SFUISE剔除保留。方法有不同信息截止时刻则单列state-age，不混在线排名。验证与本地commit后继续。
+
+【W2：窗口、消融与长期 E05/E07/E08】
+- E05联动组：(30,30),(100,100),(300,300),(600,600),(1000,1000)。隔离组固定LF=300、LI=30/100/300，重复(300,300)复用。7个唯一配置共享健康/重复fault两份2100epoch输入，公共评价1101–2100，故障1201/1601；每个必须实际经历最大窗口边缘化。记录replay变化这个混杂因素，禁止把联动APE收益仅归因于PL。
+- 按预注册资源门限进行大窗canary和实际运行；越界保留RESOURCE_LIMIT/测到的epoch/未尝试数/右截断点，不删除1000、不据较短窗推算1000实测、不通过改window guard伪造独立长窗。大窗非实时是可发表的结果，不阻止其它实验。
+- E07只做少数合法消融：FULL/NOFDE复用；terminal分支支持回退原保守box；joint/sample0收缩回退原物理law；G2新旧数值候选。所有组合必须有有效raw包含依据，没有独立开关则合并消融并说明。记录M同中心、A完整轨迹、P纯性能不同证据，不混用。
+- E08最终冻结当前二进制运行L0健康5000 FULL，L1重复10000 FULL/NOFDE；记录晚期同幅值故障、原生恢复、APE/ARE、PL/bias、slot/ledger/provider/RSS/queue。不要求O(1)或无限全状态可观测，不重启清零。避免SFUISE全长额外运行，除非短流稳定且注册预算允许。
+- 大部分分析复用已有数据；仅需健康/故障各最多2次串行性能确认，不重启数百次验收。本地commit后继续。
+
+【W3：完整性、时间与图表 E04/E06】
+- E04从同stamp/tag/receipt的实际结果作H/V Stanford：PE横PL纵、对角线、2/3、5/5、10/10研究AL，完整尺度与局部放大、late灰色、缺失/未资格单列；实际点或log count，不能由均值合成点云。不把未知PL方法/真实数据伪画成相同𝜀，不把零HMI样本当证明。
+- 给underbound、SI、margin、H/V/joint timely availability、经验连续性、AL敏感性及拒绝表。全分母与互斥分区对账；GT非零误差与未认证应用资格披露。
+- E06全方法统一core/sink/state age/CPU/RTF；ours各模块exclusive均值breakdown与总均值闭合，阶段P95另画不能相加；包含真实source验证、失败候选、commit、proof和cleanup。不拿旧nominal1ms对SFUISE含bag等待的整进程wall声称倍数加速。
+- 按Handbook F00–F10生成论文级真实PNG/SVG：可运行矩阵、配对精度、代表轨迹、故障时序、收益图、H/V Stanford、AL/SI、窗口Pareto、latency和模块breakdown、消融、长流。颜色/符号统一，科学清楚，保留失败大值、单位、N/时间和scope。不生成虚构“炫酷”示例数据。
+- 以独立seed/录制汇总而非将相关帧当独立；少seed不夸大显著性，所有退化/NA保留。最后一次必要核心安全与observer无副作用回归。本地commit后继续审计。
+
+【W4：报告与结项】
+- 交付 docs/sc8/SC8_RESULTS.md（中文主报告及简短英文Results摘要）、config/sc8_experiments.yaml实际manifest、精简SC8_METRICS.json、图表与可复现入口。结果报告逐E00–E08与SC8-A01–A24对账。
+- 明确每个结论属于条件仿真/真实经验/注入/在线/历史/窗口前沿；给现有系统收益、困难、未来采集建议。完整run计划=成功+失败+取消+未尝试，保持所有method身份/源码/ELF/DSO和input hashes。
+- 支持续跑未完成run，别重新跑已验证无关组合。只清理本轮.cache/sc8的过程trace/overlay/log，保留输入原数据与用户既有证据；永久只留必要源码测试/配置、结果、精简绘图数据和图表。不创建整repo/数据/二进制备份，不自动push，显式选择git add文件。
+- 阶段commit不是Goal完成，完成表格占位符也不是实际实验。所有注册实际工作和报告完成可称SC8_EVALUATION_COMPLETE_FOR_REGISTERED_MATRIX，即使大窗非实时、某方法输、某几何正确拒绝。缺失重要接口/运行则SC8_EVALUATED_WITH_EXECUTION_GAPS并列明；不能把它们改成PASS。
+- 预算/权限中断在唯一报告写已冻SHA、完成run ID、下一命令，并恢复同一Goal。不要因一个数据集或一项大窗阻塞就跳过全部可做实验，也不要以无法获得硬件资格为由停止仿真/经验评估。
+
+现在读取实际仓库、报告和本地数据库存，开始W0工具操作，完成后持续推进W1–W4。

@@ -231,3 +231,9 @@ compile_commands.json
 /open-rolling*.csv
 /open-rolling*.json
 /open-rolling*.xml
+
+# SC8 requirements are permanent experiment contracts, not scratch.
+!/docs/requirements/sc8/
+!/docs/requirements/sc8/SC8_EXPERIMENT_HANDBOOK.md
+!/docs/requirements/sc8/SC8_PLAN.template.yaml
+!/docs/requirements/sc8/GOAL_SC8.txt
