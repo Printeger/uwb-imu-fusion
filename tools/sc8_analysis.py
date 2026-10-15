@@ -89,9 +89,10 @@ def native_episodes(data,manifest,paced=True):
         alarm=[r for r in rr if value(r,'imu_alarm')==1 and value(r,'first_imu_alarm_ns')>=round(begin*1e9)]
         bridges=[r for r in rr if value(r,'bridge')==1]
         repairs=[r for r in bridges if value(r,'repair')==1 and value(r,'removed_priors')>0]
-        rejoin=[r for r in rr if bridges and value(r,'rejoined')==1 and
+        rejoin=[r for r in rr if bridges and value(r,'rejoined')==1 and value(r,'bridge')==0 and
                 value(r,'epoch')>value(bridges[0],'epoch') and (value(r,'epoch')-1)*.05>=end-1e-9]
-        unsafe=[r for r in rr if bridges and value(r,'rejoined')==1 and (value(r,'epoch')-1)*.05<end-1e-9]
+        unsafe=[r for r in rr if bridges and value(r,'rejoined')==1 and value(r,'bridge')==0 and
+                value(r,'epoch')>value(bridges[0],'epoch') and (value(r,'epoch')-1)*.05<end-1e-9]
         first=lambda x:int(value(x[0],'epoch')) if x else None
         episodes.append(dict(kind='IMU',axis=axis,onset_epoch=onset,begin_s=begin,end_s=end,amplitude=amplitude,
             first_fd=first(alarm),first_bridge=first(bridges),first_prior_repair=first(repairs),
@@ -354,6 +355,9 @@ def score_entry(entry,execution,run,registry):
             onset_confirmed_reached=bool(math.isfinite(observed) and observed>=physical_begin),
             last_fault_input_confirmed_reached=bool(math.isfinite(observed) and observed>=physical_end),
             semantics='Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.')
+        if entry['requested_method']=='SFUISE':state_times=[value(x,'state_ns')*1e-9-1000 for x in rows(run/'trajectory.tum.online_cutoff.csv')]
+        else:state_times=[value(x,'t') for x in rows(run/'states.csv')]
+        result['overlay_execution_coverage'].update(last_saved_state_s=max(state_times) if state_times else None,saved_states_after_overlay_begin=sum(t>=physical_begin for t in state_times),saved_states_after_overlay_end=sum(t>=physical_end for t in state_times),saved_state_scope='Actual complete first-stream state rows; no GT reconstruction or gap fill')
     duration=common.csv_duration(inputs/'imu.csv');result['source_duration_s']=duration
     cpu=result.get('root_cpu_s')
     if cpu is None or not math.isfinite(cpu):cpu=execution.get('children_cpu_s') if entry['requested_method']!='SFUISE' else None
@@ -916,9 +920,13 @@ def overlay_effects(records,registry):
             grid=truth[0];mask=metric.sample(*pose,grid)[0]&metric.sample(*b[view],grid)[0];grid=grid[mask]
             if len(grid)<2:continue
             target=(grid,*metric.sample(*truth,grid)[1:]);sa=metric.evaluate((grid,*metric.sample(*pose,grid)[1:]),target,lever)[0];sb=metric.evaluate((grid,*metric.sample(*b[view],grid)[1:]),target,lever)[0]
+            begin=r.get('overlay_execution_coverage',{}).get('physical_begin_s',float('inf'))
             out.append(dict(stream=r['stream'],view=view,base_id=base['id'],overlay_id=r['id'],common_n=len(grid),
                 interval_s=[float(grid[0]),float(grid[-1])],delta_overlay_minus_original={k:sa[k]['rmse']-sb[k]['rmse'] if sa[k]['rmse'] is not None and sb[k]['rmse'] is not None else None for k in ['ape_m','hpe_m','vpe_m','are_rad','rpe_tag_0.5s_m','rpe_body_0.5s_m']},
-                scope='incremental overlay effect on same observed interval; original recording not certified healthy'))
+                common_post_overlay_n=int(np.sum(grid>=begin)),accuracy_after_overlay_evaluable=bool(np.sum(grid>=begin)>=2),
+                delta_committed=r.get('committed',0)-base.get('committed',0) if r.get('committed') is not None and base.get('committed') is not None else None,
+                delta_timely_estimates=r.get('timely_estimates',0)-base.get('timely_estimates',0) if r.get('timely_estimates') is not None and base.get('timely_estimates') is not None else None,
+                scope='incremental effect on common observed interval; if common_post_overlay_n=0 accuracy describes only pre-overlay prefix. Original recording not certified healthy; coverage impact separate.'))
     return out
 
 
@@ -975,7 +983,7 @@ def report():
         '\n以下为真实原生 episode receipt，FD/隔离/边缘先验替换/bridge/rejoin 分开；sensor TTD 与 wall TTD/TTI/TTR 不混。仅有 FD 或 PL 资格不等于恢复执行；first nominal receipt 不等于误差恢复。阶段 APE/ARE/速度/bias（healthy/fault/bridge/rejoin/late）完整保存在 JSON，位置改善不抵销姿态退化。',
         table(['流/seed/method','episode / exposure','FD','隔离提交','prior / bridge','rejoin4','TTD sensor / wall ms','TTI / TTR wall ms','unsafe endpoint'],[(r['stream']+'/'+str(r.get('seed',''))[-2:]+'/'+r['requested_method'],e['kind']+'/'+str(e.get('axis',e.get('anchor_index')))+'@'+str(e['onset_epoch'])+' / '+e.get('exposure','NA'),e.get('FD'),e.get('ISOLATION_COMMITTED'),f"{e.get('first_prior_repair')} / {e.get('first_bridge')}",e.get('rejoin4'),f"{fmt(e.get('TTD_sensor_ms'))} / {fmt(e.get('TTD_wall_ms'))}",f"{fmt(e.get('TTI_wall_ms'))} / {fmt(e.get('TTR_wall_ms'))}",e.get('unsafe_shared_endpoint')) for r in records if r['group'] in ['E03','E08'] for e in r.get('episodes',[])]),
         table(['真实 overlay/method','实际注入前沿确认'],[(r['stream']+'/'+str(r.get('effective_method',r['requested_method'])),r.get('overlay_execution_coverage')) for r in records if r['group']=='E03' and r['stream'].startswith(('R2-','R3-'))]),
-        table(['真实 overlay','view','公共 N','增量 APE m','增量 ARE rad'],[(e['stream'],e['view'],e['common_n'],e['delta_overlay_minus_original'].get('ape_m'),e['delta_overlay_minus_original'].get('are_rad')) for e in metrics.get('overlay_effects',[])]),
+        table(['真实 overlay','view','公共 / 注入后公共 N','增量 APE m','增量 ARE rad / 注入后可评'],[(e['stream'],e['view'],f"{e['common_n']} / {e.get('common_post_overlay_n',0)}",e['delta_overlay_minus_original'].get('ape_m'),f"{fmt(e['delta_overlay_minus_original'].get('are_rad'))} / {e.get('accuracy_after_overlay_evaluable')}") for e in metrics.get('overlay_effects',[])]),
         '\n## E04：原生完整性、Stanford 与 AL',
         '\nF05-H/V 使用同 stamp/tag/receipt 的实际 PE（横）/PL（纵）计数，不由均值合成。主图 full 尺度与 5 m zoom 均留 overflow；灰色 late bounds 不算及时可用；SFUISE/真实未知 PL 不画同 epsilon 点云。2/3、5/5、10/10 m 仅为研究 AL 后验评价，不改变在线噪声、risk、q 或发布规则。每轴互斥分区和 underbound 另外计数，AL-unavailable 中的 underbound 也不删除。零 HMI 样本不构成概率证明。',
         table(['流/seed/method','planned / committed / raw / timely','missing / refused','H under / V under','joint timely AL2/3 / 5/5 / 10/10','publication protected'],[(r['stream']+'/'+str(r.get('seed',''))[-2:]+'/'+r['requested_method'],f"{i['planned']} / {i['committed']} / {i['spatial_valid']} / {i['timely_spatial']}",f"{i['missing']} / {i['refused']}",f"{i['axes']['H']['underbound']} / {i['axes']['V']['underbound']}",' / '.join(str(i['joint_AL'][k]['timely_within_AL']) for k in ['2/3','5/5','10/10']),i['publication_protected']) for r in records if r['group'] in ['E01','E03'] and r['stream'] in ['SC8-H','SC8-U','SC8-A','SC8-G','SC8-J','SC8-D0','SC8-G2'] and 'axes' in (i:=r.get('integrity',{}))]),
