@@ -9,10 +9,11 @@ def summary(values):
     a = np.asarray(values, dtype=float)
     a = a[np.isfinite(a)]
     if not len(a):
-        return dict(n=0, rmse=None, mean=None, median=None, p95=None, max=None)
+        return dict(n=0, rmse=None, mean=None, median=None, p95=None, p99=None, max=None)
     b = np.sort(a)
     return dict(n=len(a), rmse=float(np.sqrt(np.mean(a*a))), mean=float(a.mean()),
-                median=float(np.median(a)), p95=float(b[math.ceil(.95*len(b))-1]), max=float(b[-1]))
+                median=float(np.median(a)), p95=float(b[math.ceil(.95*len(b))-1]),
+                p99=float(b[math.ceil(.99*len(b))-1]), max=float(b[-1]))
 
 
 def validate(t, p, q):

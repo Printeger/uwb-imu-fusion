@@ -68,6 +68,8 @@ class MetricsTests(unittest.TestCase):
     def test_nearest_rank_slow_values(self):
         self.assertEqual(metrics.summary([1]*19+[100])['p95'],1)
         self.assertEqual(metrics.summary([1]*18+[100,200])['p95'],100)
+        self.assertEqual(metrics.summary([1]*99+[100])['p99'],1)
+        self.assertEqual(metrics.summary([1]*98+[100,200])['p99'],100)
     def test_evo_1290_primary_metrics(self):
         import evo
         from evo.core.metrics import APE, RPE, PoseRelation, Unit

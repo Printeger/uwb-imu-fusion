@@ -948,8 +948,8 @@ def report():
     def table(headers,rr):return '\n'+'\n'.join(['| '+' | '.join(headers)+' |','|'+'|'.join(['---']*len(headers))+'|']+['| '+' | '.join(fmt(c).replace('|','/') for c in row)+' |' for row in rr])+'\n'
     def m(r,key,stat='rmse',view=None):
         vv=r.get('views',{});view=view or next(iter(vv),'');return vv.get(view,{}).get(key,{}).get(stat)
-    def timing(r,key):
-        x=r.get('timing',{}).get(key,{});return x.get('p95') if isinstance(x,dict) else None
+    def timing(r,key,stat='p95'):
+        x=r.get('timing',{}).get(key,{});return x.get(stat) if isinstance(x,dict) else None
     lines=['# SC8 实验结果与复现报告',f'\n**状态：{status}。**',
         '\n本轮实测值来自本次执行 journal；未复用历史 CSV。算法输、界较宽和大窗非实时均作为结果保留。进程 SUCCESS 只表示正常退出，功能、资格、deadline 和应用可用性分别列出。',
         '\n## 当前实测结论',
@@ -997,7 +997,7 @@ def report():
         '\n联动结果同时改变 FGO/replay 与 PL 历史，不能将 APE 变化只归因于完整性窗口。扩展窗不要求 40/50 ms，通过或不通过不是调整 guard 的理由；未到公共区间的 APE/PL 为 NA，不按短窗外推 1000。',
         '\n## E06：时间、CPU、RTF 与默认 profile',
         '\ncore 从原始到达验证开始到 cleanup/receipt 完成；sink 含 ready/排队/载荷/接收门，不含 GT 评分。原生 source 资格计算属于 core，独立 source 生成与冷启动另列；独立 producer 按绝对 source 时间发布，初始化需等待真实 2 s 前缀到达，积压不免费。SFUISE core 包含 callback 与两次发布之间所有 active run 开销，CPU/RSS 来自 root solver；整进程 bag/start/drain wall 不作为 core 或算法加速比。SF 软件 clock 仿射映射在 EOF 后继续计时，1 ms 发布粒度与软件 jitter 未提供硬件实时资格。数值输入 cutoff 与仅 buffered callback cutoff 分列。',
-        table(['组/流/seed/method','measured core N','P95 core / sink / age ms','root CPU s','CPU RTF / service RTF / processing RTF','RSS KiB','timely fraction / profile'],[(r['group']+'/'+r['stream']+'/'+str(r.get('seed',''))[-2:]+'/'+str(r.get('effective_method',r['requested_method'])),r.get('timing',{}).get('core_ms',{}).get('n'),f"{fmt(timing(r,'core_ms'))} / {fmt(timing(r,'measurement_to_sink_ms'))} / {fmt(timing(r,'state_age_ms'))}",r.get('root_cpu_s'),f"{fmt(r.get('CPU_RTF'))} / {fmt(r.get('service_RTF'))} / {fmt(r.get('processing_RTF'))}",r.get('peak_rss_kib'),f"{fmt(r.get('timely_spatial_fraction',r.get('timely_estimate_fraction')))} / {r.get('tested_profile_deadline_pass','NA: no matched raw PL')}") for r in records if r['group'] in ['E01','E02','E06']]),
+        table(['组/流/seed/method','measured core N','P95 core / sink / age ms','P99 core / sink ms','root CPU s','CPU RTF / service RTF / processing RTF','RSS KiB','timely fraction / profile'],[(r['group']+'/'+r['stream']+'/'+str(r.get('seed',''))[-2:]+'/'+str(r.get('effective_method',r['requested_method'])),r.get('timing',{}).get('core_ms',{}).get('n'),f"{fmt(timing(r,'core_ms'))} / {fmt(timing(r,'measurement_to_sink_ms'))} / {fmt(timing(r,'state_age_ms'))}",f"{fmt(timing(r,'core_ms','p99'))} / {fmt(timing(r,'measurement_to_sink_ms','p99'))}",r.get('root_cpu_s'),f"{fmt(r.get('CPU_RTF'))} / {fmt(r.get('service_RTF'))} / {fmt(r.get('processing_RTF'))}",r.get('peak_rss_kib'),f"{fmt(r.get('timely_spatial_fraction',r.get('timely_estimate_fraction')))} / {r.get('tested_profile_deadline_pass','NA: no matched raw PL')}") for r in records if r['group'] in ['E01','E02','E06']]),
         '\n默认 positive profile 必须同时 core P95≤40 ms、measurement-to-sink P95≤50 ms、及时空间有效/所有计划≥95%；所有测到的慢帧、失败候选和 abort 包含。真实只报及时估计率，不借用 raw 空间资格；formal attempt、启动未覆盖、资源停止后未尝试后缀均在全分母。exclusive 模块均值与总 core 均值逐 run 闭合，未分配的 guard/clock/abort 成本单列；阶段 P95 不相加。CPU、wall processing 与 sensor duration 分别记录，不声称全线程实现相同。',
         '\n## E07：合法消融',
         table(['流/开关实际 ID','status','APE m / ARE rad','mean H/V PL m','P95 ms','same-center M'],[(r['id'],r['status'],f"{fmt(m(r,'ape_m'))} / {fmt(m(r,'are_rad'))}",f"{fmt(r.get('integrity',{}).get('axes',{}).get('H',{}).get('pl',{}).get('mean'))} / {fmt(r.get('integrity',{}).get('axes',{}).get('V',{}).get('pl',{}).get('mean'))}",timing(r,'core_ms'),r.get('same_center_M')) for r in records if r['group']=='E07']),
