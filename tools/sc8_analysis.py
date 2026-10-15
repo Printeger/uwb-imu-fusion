@@ -256,6 +256,10 @@ def score_entry(entry,execution,run,registry):
              widened=sum(value(r,old)<value(r,new) for r in actual),
              reduction_m=metric.summary([value(r,old)-value(r,new) for r in actual]))
              for axis,new,old in [('H','hpl','m_old_hpl'),('V','vpl','m_old_vpl')]}
+        result['bias_envelope']={str(j):dict(width=metric.summary([value(r,'bwidth_'+str(j)) for r in actual]),
+            reference_width=metric.summary([value(r,'reference_bwidth_'+str(j)) for r in actual]),
+            last_width=value(actual[-1],'bwidth_'+str(j)) if actual else None,last_reference_width=value(actual[-1],'reference_bwidth_'+str(j)) if actual else None)
+            for j in range(6)}
         result['last_recorded_epoch']=max([int(value(r,'epoch')) for r in native],default=0)
         result['actual_max_epoch']=max([int(value(r,'epoch')) for r in native if r.get('status')!='SOURCE_GAP_OR_ABORT'],default=0)
         result['max_committed_epoch']=max([int(value(r,'epoch')) for r in actual],default=0)
@@ -569,11 +573,17 @@ def envelope_indices(t,signals,events=(),bins=192):
 
 
 def build_plotdata(metrics,registry):
-    index={e['id']:e for e in registry['runs']};curves={};diagnostics={};stanford={};latency={};si={};references={};raw_ranges={}
+    index={e['id']:e for e in registry['runs']};curves={};diagnostics={};stanford={};latency={};si={};references={};raw_ranges={};bias_bounds={}
     for r in metrics['runs']:
         if r['group']=='E00' or r['status'] in ['NOT_ATTEMPTED','RUNNING'] or 'scoring_error' in r:continue
         entry=index[r['id']];path=latest(entry);run=path.parent
         raw=rows(run/'trace.csv');good=[x for x in raw if spatial(x)]
+        if raw and r['stream'] in ['SC8-D0','SC8-J'] and r.get('seed')==20261020 and ((r['group'] in ['E01','E03'] and r['requested_method']=='O-FULL') or (r['group']=='E07' and r['requested_method']=='O-ABL-JOINT')):
+            actual=[x for x in raw if value(x,'updates')==1]
+            if actual:
+                tt=np.array([value(x,'epoch')*.05 for x in actual]);signals={k:np.array([value(x,k) for x in actual]) for k in ['bwidth_2','bwidth_5','reference_bwidth_2','reference_bwidth_5']}
+                ix=envelope_indices(tt,list(signals.values()))
+                bias_bounds[r['id']]=dict(stream=r['stream'],method=r['requested_method'],t=tt[ix],full_n=len(tt),**{k:v[ix] for k,v in signals.items()})
         main=r['group'] in ['E01','E03'] and r['stream'] in ['SC8-H','SC8-U','SC8-A','SC8-G','SC8-J','SC8-D0','SC8-G2']
         if main and raw:
             method=r['requested_method'];stanford.setdefault(method,[]).extend([[value(x,'hpe'),value(x,'hpl'),value(x,'vpe'),value(x,'vpl'),int(current(x))] for x in good])
@@ -637,7 +647,7 @@ def build_plotdata(metrics,registry):
                     counts,_,_=np.histogram2d(pe[mask],pl[mask],bins=[xbins,ybins]);layers[label]=counts.astype(int)
                 axisdata[view]=dict(x_edges=xbins,y_edges=ybins,layers=layers,total=len(pe),outside=int(((pe>xbins[-1])|(pl>ybins[-1])).sum()),within_pl=int((pe<=pl).sum()))
             hist[method][axis]=axisdata
-    return dict(schema='sc8-plotdata-v1',curves=curves,reference_tracks=references,joint_raw_range=raw_ranges,native_diagnostics=diagnostics,stanford=hist,
+    return dict(schema='sc8-plotdata-v1',curves=curves,reference_tracks=references,joint_raw_range=raw_ranges,bias_bounds=bias_bounds,native_diagnostics=diagnostics,stanford=hist,
         si={k:dict(compressed_ecdf(v),over1=int(np.sum(np.asarray(v)>1))) for k,v in si.items()},
         latency={k:compressed_ecdf(v) for k,v in latency.items()},
         curve_reduction='Actual per-bin extrema for all displayed signals + first/last + fault +/-1s; statistics use every sample. ECDF keeps actual ranks; histogram bins sum actual PE/PL points.',
@@ -876,7 +886,7 @@ def figures():
     ax.set(title='O-FULL exclusive mean; closes to total',ylabel='Mean service time (ms)');ax.legend(fontsize=8,loc='upper right')
     finish(fig,'F08_latency_and_breakdown','Every measurable slow/abort frame retained; ECDF is descriptive. SF software source clock ±1 ms plus jitter; root CPU/RTF separate from bag waits.')
     # F09 legal ablations; raw values, no mixed-window causal claim.
-    fig,axs=sub(1,2,4.7);rr=[r for r in records if r['group']=='E07'];labels=[];table=[];percent=[]
+    fig,axs=sub(2,2,7.3);rr=[r for r in records if r['group']=='E07'];labels=[];table=[];percent=[]
     comparison={c['id']:c for c in metrics.get('ablation_comparisons',[])}
     for r in rr:
         names={'O-ABL-SUPPORT':'support off','O-ABL-JOINT':'joint + support off','O-ABL-G2':'old numeric (80)'}
@@ -900,7 +910,12 @@ def figures():
             m=r.get('same_center_M',{}).get(axis,{});v=m.get('reduction_m',{}).get('mean')
             if v is not None:ax.barh(i+j*.25,v,height=.2,color=COLORS['O-FULL'] if axis=='H' else '#56B4E9',label=axis if i==0 else None);ax.text(v,i+j*.25,f" {m.get('strict',0)} strict",va='center',fontsize=8)
     ax.set(yticks=np.arange(len(main))+.125,yticklabels=[r['stream'] for r in main],xlabel='Same-center old PL minus new PL (m)',title='M witness: same committed center');ax.legend()
-    finish(fig,'F09_ablations','Common source interval A / PL / P; red = increase from FULL, blue = decrease. M compares the same center. Original law retained; G2 comparison uses common first 80 epochs.')
+    for ax,j,title in [(axs[1,0],2,'Accel z bias envelope'),(axs[1,1],5,'Gyro z bias envelope')]:
+        for d in data.get('bias_bounds',{}).values():
+            width=np.asarray(d['bwidth_'+str(j)]);ref=np.asarray(d['reference_bwidth_'+str(j)]);label=d['stream'].replace('SC8-','')+' / '+('FULL' if d['method']=='O-FULL' else 'joint+support off')
+            ax.plot(d['t'],width/ref,color=COLORS['O-FULL'] if d['method']=='O-FULL' else COLORS['O-NOFDE'],ls='-' if d['stream']=='SC8-D0' else ':',lw=1,label=label)
+        ax.axhline(1,color='black',lw=.6,ls='--');ax.set(title=title,xlabel='Sensor time (s)',ylabel='Width / propagation reference');ax.legend(fontsize=8)
+    finish(fig,'F09_ablations','Common A / PL / P; red = increase from FULL, blue = decrease. M uses the same center; G2 uses first 80 epochs. Bias ratios are actual raw widths: D0/S0 gain uses original sample0, not continued full-state observability. M3 is shown separately; S1/S2 trajectories were not registered.')
     # F10 long streams preserve absolute sensor time and planned suffix.
     fig,axs=sub(4,1,7.2)
     are_ax=axs[0,0].twinx();are_ax.set_ylabel('Body ARE (rad)',fontsize=8)
