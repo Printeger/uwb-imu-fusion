@@ -773,7 +773,10 @@ def figures():
             if not points:ax.text(.02,i,'NA',transform=ax.get_yaxis_transform(),color='#777777')
         ax.set(yticks=range(len(pairs)),yticklabels=ylabels,title=title);ax.invert_yaxis()
         if key=='ape_m':ax.set_xscale('symlog',linthresh=.1)
-    axs[0,0].legend(handles=[Line2D([],[],color=color(v),marker='D' if v=='S-FINAL' else 'x' if v=='O-NOFDE' else 'o',ls='--' if v=='S-FINAL' else '',label=v.replace('O-FULL','O-FULL / ENG')) for v in ['O-FULL','O-NOFDE','S-ONLINE','S-FINAL']],loc='lower left',bbox_to_anchor=(0,1.03),ncol=2,fontsize=8)
+        values=[s.get(key,{}).get('rmse') for p in pairs for s in p['scores'].values()];values=[v for v in values if v is not None]
+        maximum=max(values,default=1.)
+        ax.set_xlim(0,maximum*1.2 if key=='ape_m' else maximum+.15)
+    axs[0,0].legend(handles=[Line2D([],[],color=color(v),marker='D' if v=='S-FINAL' else 'x' if v=='O-NOFDE' else 'o',ls='--' if v=='S-FINAL' else '',label=v.replace('O-FULL','O-FULL / ENG')) for v in ['O-FULL','O-NOFDE','S-ONLINE','S-FINAL']],loc='lower left',bbox_to_anchor=(0,1.10),ncol=2,fontsize=8)
     finish(fig,'F01_paired_accuracy','Each row is one seed / recording; common AVAILABLE-view domain. Walk physical scores are NA (reference OPEN); STAR rows are input OPEN. Numerical proxies/interface outcomes remain in the report. No alignment; SF cutoff/lag differs. Final history excludes invalid original-idle support.')
     # F02: preselected one recording per family. Same XY axes within each family.
     fig,axs=sub(3,2,7.0)
@@ -893,7 +896,8 @@ def figures():
             if s.get('n'):axs[0,1].plot(s['x'],s['cdf'],ls=ls,color=color(method),label=f"{method} {axis}; >1={s['over1']}/{s['n']}")
     axs[0,0].set(xticks=range(3),xticklabels=['2 / 3','5 / 5','10 / 10'],xlabel='Research H / V AL (m)',ylabel='Timely within-AL / planned (%)',ylim=(0,102));axs[0,0].legend(fontsize=8)
     axs[0,1].axvline(1,color='#aa3333',ls=':');axs[0,1].set(xlabel='SI = PE / PL',ylabel='Empirical CDF',xscale='symlog',ylim=(0,1.02));axs[0,1].legend(fontsize=8)
-    finish(fig,'F06_AL_and_SI','T-SIM finite-run empirical diagnostics; all planned epochs in availability denominator. AL changes only evaluation, never estimator or risk.')
+    axs[0,1].set_xscale('symlog',linthresh=.01);axs[0,1].set_xlim(left=0)
+    finish(fig,'F06_AL_and_SI','T-SIM finite-run diagnostics; all planned epochs in availability denominator. SI axis is linear below 0.01, logarithmic above. AL changes only evaluation, never estimator or risk.')
     # F07 common 1101--2100 window frontier; censored runs have no imputed APE.
     fig,axs=sub(2,2,5.8);wr=[r for r in records if r['group']=='E05' and r.get('window')]
     for fault,mark in [('SC8-WH','o'),('SC8-WJ','^')]:
