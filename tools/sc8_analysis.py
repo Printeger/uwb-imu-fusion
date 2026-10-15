@@ -25,6 +25,21 @@ def clean(obj):
     return obj
 
 
+def reference_safe_score(score):
+    """Retain numerical proxies without certifying an unresolved physical GT."""
+    if score.get('reference_contract')=='OPEN_WALK_TRACKER_BODY_TAG':return score
+    result=dict(score)
+    result['reference_proxy_scores']=dict(score)
+    result['reference_proxy_scores']['reference_contract']='FROZEN_TRACKER_PROXY_ONLY_NOT_PHYSICAL_BODY_OR_TAG'
+    for key,val in score.items():
+        if isinstance(val,dict) and 'rmse' in val:
+            result[key]=dict(metric.summary([]),status='NA_REFERENCE_CONTRACT_OPEN')
+    result['time_correspondences']=score.get('matched');result['matched']=0
+    result['coverage']=None;result['reference_contract']='OPEN_WALK_TRACKER_BODY_TAG'
+    result['reason']='CAL-W gyro/GT derivative rejects tracker=IMU identity; tracker-to-tag point and full body extrinsics not independently established. Frozen numerical reference retained only as proxy.'
+    return result
+
+
 def save(path,obj):
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(json.dumps(clean(obj),ensure_ascii=False,separators=(',',':'),allow_nan=False)+'\n')
@@ -392,6 +407,13 @@ def score_entry(entry,execution,run,registry):
     if execution['status']=='RESOURCE_LIMIT':
         result['censored_profile_cost_ratios']=dict(CPU_over_planned_duration=result.get('CPU_RTF'),measured_service_over_planned_duration=result.get('service_RTF'))
         result['CPU_RTF']=None;result['service_RTF']=None;result['processing_RTF']=None
+    if entry['stream'].split('-')[0] in ['R1','R2']:
+        result['reference_contract']='OPEN_WALK_TRACKER_BODY_TAG'
+        result['views']={view:reference_safe_score(score) for view,score in result['views'].items()}
+        result['reference_proxy_phase_views']=result.pop('phase_views',{})
+    if entry['stream'] in ['R5','R6']:
+        result['input_contract']='OPEN_STAR_GYRO_FRAME_VALIDATION'
+        result['input_contract_scope']='Observed frozen-interface behavior only; CAL-S gyro/GT consistency and transform directions remain open. No intrinsic algorithm robustness claim. Official tag-point consistency is independently retained.'
     return result
 
 
@@ -411,7 +433,7 @@ def evaluate():
     for path in (CACHE/'runs').glob('*/execution.json'):
         d=json.loads(path.read_text());attempts.append(dict(id=path.parent.name,status=d['status'],source_identity=d['identity'],reason=d.get('reason'),returncode=d.get('returncode'),input_digest=d.get('input_digest'),input_files=d.get('input_files'),output_hashes=d.get('output_hashes'),elapsed_s=d.get('elapsed_s'),actual_run_id=d.get('actual_run_id'),runner_error=d.get('runner_error')))
     validation={}
-    for name in ['input-checks/result.json','input-checks/bag-parity.json','input-checks/all-bag-parity.json','spline-export-check/result.json','native-observer-prefix-check.json','sfuise_observer/check.json','equivalence/R3/equivalence.json','final-checks.json']:
+    for name in ['input-checks/result.json','input-checks/bag-parity.json','input-checks/all-bag-parity.json','spline-export-check/result.json','reference-check/result.json','native-observer-prefix-check.json','sfuise_observer/check.json','equivalence/R3/equivalence.json','final-checks.json']:
         p=CACHE/name
         if p.exists():validation[name]=dict(sha256=common.sha256(p),result=json.loads(p.read_text()))
     counts=dict(Counter(r['status'] for r in records));assert sum(counts.values())==len(registry['runs'])
@@ -558,9 +580,18 @@ def paired_results(records,registry):
         if all(k in poses for k in ['S-ONLINE','S-FINAL']):
             hg=poses['S-ONLINE'][0];mask=metric.sample(*poses['S-FINAL'],hg)[0]&metric.sample(*truth,hg)[0];hg=hg[mask]
             history=dict(common_n=len(hg),scores=scored({k:poses[k] for k in ['S-ONLINE','S-FINAL']},truth,lever,hg))
+        proxy_comparison={};reference_open=by['O-FULL'].get('reference_contract')=='OPEN_WALK_TRACKER_BODY_TAG'
+        if reference_open:
+            proxy_comparison=dict(scores=scores,gain_scores=gain_scores,observed_interval_gains=observed_gains,SF_history_common=history)
+            scores={k:reference_safe_score(v) for k,v in scores.items()};gain_scores={k:reference_safe_score(v) for k,v in gain_scores.items()}
+            history=dict(history,scores={k:reference_safe_score(v) for k,v in history.get('scores',{}).items()}) if history else {}
+            gains={k:dict(off_minus_on=None,percent=None) for k in gains}
+            if fault_effect_evaluable is not None:fault_effect_evaluable=False
         pairs.append(dict(group=key[0],stream=key[1],seed=key[2],common_grid_n=len(gain_grid),
             common_interval_s=[float(gain_grid[0]),float(gain_grid[-1])] if len(gain_grid) else None,
             gains=gains,gain_scores=gain_scores,observed_interval_gains=observed_gains,post_fault_common_n=post_fault_n,fault_effect_evaluable=fault_effect_evaluable,
+            reference_contract='OPEN_WALK_TRACKER_BODY_TAG' if reference_open else 'REGISTERED_REFERENCE',reference_proxy_comparison=proxy_comparison,
+            input_contract=by['O-FULL'].get('input_contract','REGISTERED_INPUT'),
             gain_scope='ON/OFF first-stream intersection only; independent of SF/historical missing data. For real overlays, fault gains require at least two common post-injection states; pre-only observed interval values remain separate.',
             scores=scores,display_common_grid_n=len(display_grid),display_common_interval_s=[float(display_grid[0]),float(display_grid[-1])] if len(display_grid) else None,
             available_views=list(poses),missing_main_online_views=[k for k in [on,off,'S-ONLINE'] if k not in poses],
@@ -638,7 +669,7 @@ def build_plotdata(metrics,registry):
                 if not len(a['t']):continue
                 events=[(f[0]-1)*.05+.005 for f in registry['cases'].get(r['stream'],{}).get('faults',[])]
                 ix=envelope_indices(a['t'],[a[k] for k in ['ape','are','hpe','vpe']],events)
-                curves[r['id']+'|'+view]=dict(run=r['id'],stream=r['stream'],view=view,
+                curves[r['id']+'|'+view]=dict(run=r['id'],stream=r['stream'],view=view,reference_contract=r.get('reference_contract','REGISTERED_REFERENCE'),
                     **{k:np.asarray(v)[ix] for k,v in a.items()},full_matched_n=len(a['t']),display_n=len(ix),
                     gap_intervals=[[float(a['t'][j]),float(a['t'][j+1])] for j in np.where(np.diff(a['t'])>.100000001)[0]])
         if raw and ((r['stream']=='SC8-J' and r.get('seed')==20261020 and r['group']=='E03') or r['group']=='E08'):
@@ -727,7 +758,7 @@ def figures():
     finish(fig,'F00_admission','T-REAL: raw source refused for all six. W0 uses fixed 20 s prefixes; process completion is not qualification.')
     # F01: every independent seed / recording, online and historical separated.
     fig,axs=sub(1,2,5.6);pairs=[p for p in metrics.get('paired',[]) if p['group'] in ['E01','E02']]
-    ylabels=[p['stream']+(f" / {str(p['seed'])[-2:]}" if p['group']=='E01' else '') for p in pairs]
+    ylabels=[p['stream']+(f" / {str(p['seed'])[-2:]}" if p['group']=='E01' else '')+(' (ref OPEN)' if p.get('reference_contract')=='OPEN_WALK_TRACKER_BODY_TAG' else '')+(' (input OPEN)' if p.get('input_contract')=='OPEN_STAR_GYRO_FRAME_VALIDATION' else '') for p in pairs]
     for ax,key,title in [(axs[0,0],'ape_m','Tag APE RMSE (m)'),(axs[0,1],'are_rad','Body ARE RMSE (rad)')]:
         for i,p in enumerate(pairs):
             scores=p['scores'];points=[]
@@ -743,7 +774,7 @@ def figures():
         ax.set(yticks=range(len(pairs)),yticklabels=ylabels,title=title);ax.invert_yaxis()
         if key=='ape_m':ax.set_xscale('symlog',linthresh=.1)
     axs[0,0].legend(handles=[Line2D([],[],color=color(v),marker='D' if v=='S-FINAL' else 'x' if v=='O-NOFDE' else 'o',ls='--' if v=='S-FINAL' else '',label=v.replace('O-FULL','O-FULL / ENG')) for v in ['O-FULL','O-NOFDE','S-ONLINE','S-FINAL']],loc='lower left',bbox_to_anchor=(0,1.03),ncol=2,fontsize=8)
-    finish(fig,'F01_paired_accuracy','Each row is one seed / recording; common AVAILABLE-view domain, missing views NA. No alignment; SF cutoff/lag differs. Final history excludes invalid original-idle support.')
+    finish(fig,'F01_paired_accuracy','Each row is one seed / recording; common AVAILABLE-view domain. Walk physical scores are NA (reference OPEN); STAR rows are input OPEN. Numerical proxies/interface outcomes remain in the report. No alignment; SF cutoff/lag differs. Final history excludes invalid original-idle support.')
     # F02: preselected one recording per family. Same XY axes within each family.
     fig,axs=sub(3,2,7.0)
     for i,rid in enumerate(['R1','R3','R5']):
@@ -757,7 +788,7 @@ def figures():
             colored=axs[i,0].scatter(p[:,0],p[:,1],c=c['ape'],norm=norm,cmap='viridis',s=3,
                 marker={'S-ONLINE':'^','S-FINAL':'D','O-NOFDE':'x','O-ENG-NOFDE':'x'}.get(view,'o'),linewidths=.2,alpha=.75)
             axs[i,1].plot(tt,pp[:,2],color=color(view),ls=ls,lw=.8,label=view)
-        if colored is not None:fig.colorbar(colored,ax=axs[i,0],label='Tag APE (m)',fraction=.045,pad=.02)
+        if colored is not None:fig.colorbar(colored,ax=axs[i,0],label='Proxy distance (m)' if rid=='R1' else 'Tag APE (m)',fraction=.045,pad=.02)
         reference=data.get('reference_tracks',{}).get(rid)
         if reference:
             tt,gg=display_with_gaps(np.asarray(reference['t']),np.asarray(reference['p']),reference.get('gap_intervals',[]))
@@ -766,6 +797,8 @@ def figures():
             c=max(cc,key=lambda c:len(c['t']));gt=np.asarray(c['truth']);tt,gg=display_with_gaps(np.asarray(c['t']),gt,c.get('gap_intervals',[]));axs[i,0].plot(gg[:,0],gg[:,1],'k-',lw=1,label='GT');axs[i,1].plot(tt,gg[:,2],'k-',lw=1)
         if not cc:no(axs[i,0]);no(axs[i,1])
         axs[i,0].set(title=f'{rid}: tag XY',xlabel='x (m)',ylabel='y (m)',aspect='equal');axs[i,1].set(title=f'{rid}: tag height',xlabel='Sensor time (s)',ylabel='z (m)')
+        if rid=='R1':axs[i,0].set_title('R1: tracker proxy / ref OPEN');axs[i,1].set_title('R1: frozen proxy reference')
+        if rid=='R5':axs[i,0].set_title('R5: gyro frame OPEN');axs[i,1].set_title('R5: frozen-interface result')
         if cc and max(max(abs(np.asarray(c['estimate']).ravel())) for c in cc)>1000:
             axs[i,0].ticklabel_format(style='sci',axis='both',scilimits=(0,0),useMathText=True)
             if reference:
@@ -779,7 +812,7 @@ def figures():
                     tt,pp=display_with_gaps(np.asarray(c['t']),np.asarray(c['estimate']),c.get('gap_intervals',[]));zoomz.plot(tt,pp[:,2],color=color(c['view']),ls='--' if c['view']=='S-FINAL' else '-',lw=.65)
                 zoomz.plot(rt,gp[:,2],'k-',lw=.7);zoomz.set(xlim=(rt[0],rt[-1]),ylim=(low[2]-pad[2],high[2]+pad[2]));zoomz.tick_params(labelsize=8)
     axs[0,1].legend(fontsize=8,loc='best')
-    finish(fig,'F02_real_trajectories','First listed recording per family; XY marker color = actual APE, lines identify methods. No alignment. R3 TEST after 16.679 s; observed gaps broken, censored tracks absent. Large excursions keep full scale with GT-neighborhood insets.')
+    finish(fig,'F02_real_trajectories','First listed recording per family; R1 uses an unresolved frozen tracker proxy, not physical tag/body GT. Other XY marker colors = observed tag error; R5 gyro-input validation remains OPEN. Lines identify methods. No alignment. R3 TEST after 16.679 s; observed gaps broken, censored tracks absent. Large excursions keep full scale with GT-neighborhood insets.')
     # F03: actual strong joint raw fault, all first emissions and native receipts.
     fig,axs=sub(4,1,7.0)
     for c in data['curves'].values():
@@ -821,7 +854,7 @@ def figures():
         episodes=[e for r in records if r['group']=='E03' and r['stream']==stream and r['requested_method']=='O-FULL' for e in r.get('episodes',[])]
         imu=[e for e in episodes if e['kind']=='IMU' and e.get('exposure')=='FULL_FAULT_INTERVAL_CONFIRMED'];uwb=[e for e in episodes if e['kind']=='UWB' and e.get('exposure')=='FULL_FAULT_INTERVAL_CONFIRMED']
         counts.append(stream.replace('SC8-','')+': '+('rejoin '+str(sum(e.get('REJOIN_EXECUTED',False) for e in imu))+'/'+str(len(imu)) if imu else '')+('; ' if imu and uwb else '')+('UWB isolation '+str(sum(e.get('ISOLATION_COMMITTED',False) for e in uwb))+'/'+str(len(uwb)) if uwb else ''))
-    finish(fig,'F04_fault_paired_gains','Positive = OFF minus ON improvement; each seed / recording shown. Position gain does not cancel ARE degradation. FULL native episode receipts (fully exposed): '+', '.join(counts)+'. Real gains require two common post-injection states; pre-only pairs are NA. Engineering receipts have no equivalent qualified rejoin claim.')
+    finish(fig,'F04_fault_paired_gains','Positive = OFF minus ON improvement; each seed / recording shown. Position gain does not cancel ARE degradation. FULL native episode receipts (fully exposed): '+', '.join(counts)+'. Real physical gains require a verified reference and two common post-injection states; otherwise NA. Walk tracker reference is OPEN. Engineering receipts have no equivalent qualified rejoin claim.')
     # F05 H/V actual binned Stanford counts, full scale and zoom.
     for axis in ['H','V']:
         fig,axs=sub(2,2,6.0);full_extent=max([v[axis]['full']['y_edges'][-1] for v in data['stanford'].values()],default=10)
@@ -988,9 +1021,12 @@ def overlay_effects(records,registry):
             if len(grid)<2:continue
             target=(grid,*metric.sample(*truth,grid)[1:]);sa=metric.evaluate((grid,*metric.sample(*pose,grid)[1:]),target,lever)[0];sb=metric.evaluate((grid,*metric.sample(*b[view],grid)[1:]),target,lever)[0]
             begin=r.get('overlay_execution_coverage',{}).get('physical_begin_s',float('inf'))
+            delta={k:sa[k]['rmse']-sb[k]['rmse'] if sa[k]['rmse'] is not None and sb[k]['rmse'] is not None else None for k in ['ape_m','hpe_m','vpe_m','are_rad','rpe_tag_0.5s_m','rpe_body_0.5s_m']}
+            reference_open=r.get('reference_contract')=='OPEN_WALK_TRACKER_BODY_TAG'
             out.append(dict(stream=r['stream'],view=view,base_id=base['id'],overlay_id=r['id'],common_n=len(grid),
-                interval_s=[float(grid[0]),float(grid[-1])],delta_overlay_minus_original={k:sa[k]['rmse']-sb[k]['rmse'] if sa[k]['rmse'] is not None and sb[k]['rmse'] is not None else None for k in ['ape_m','hpe_m','vpe_m','are_rad','rpe_tag_0.5s_m','rpe_body_0.5s_m']},
-                common_post_overlay_n=int(np.sum(grid>=begin)),accuracy_after_overlay_evaluable=bool(np.sum(grid>=begin)>=2),
+                interval_s=[float(grid[0]),float(grid[-1])],delta_overlay_minus_original={k:None for k in delta} if reference_open else delta,
+                reference_contract=r.get('reference_contract','REGISTERED_REFERENCE'),reference_proxy_delta=delta if reference_open else {},
+                common_post_overlay_n=int(np.sum(grid>=begin)),accuracy_after_overlay_evaluable=bool(np.sum(grid>=begin)>=2 and not reference_open),
                 delta_committed=r.get('committed',0)-base.get('committed',0) if r.get('committed') is not None and base.get('committed') is not None else None,
                 delta_timely_estimates=r.get('timely_estimates',0)-base.get('timely_estimates',0) if r.get('timely_estimates') is not None and base.get('timely_estimates') is not None else None,
                 scope='incremental effect on common observed interval; if common_post_overlay_n=0 accuracy describes only pre-overlay prefix. Original recording not certified healthy; coverage impact separate.'))
@@ -1033,10 +1069,13 @@ def report():
         table(['W0 流','requested','effective','进程状态','wall s'],[(r['stream'],r['requested_method'],r.get('effective_method'),r['status'],r.get('wall_s')) for r in records if r['group']=='E00']),
         '\n## 评分、配对和不确定性口径',
         '\n主 APE/HPE/VPE 在实际首发 estimate stamp 对同物理 tag/world 的 GT 插值，ARE 是 body SO(3) 测地角（rad，主表同时给 deg）；不拟合 SE(3)、yaw 或测试时延。tag difference RPE 和减去固定杆臂后的 body SE(3) RPE 分别给 0.5/1 s，任何输入/GT gap>100 ms 的对均拒绝。RPE 的公共 GT 网格与配对表的有限间隔插值只用于评价首次输出流，不改因果输出、不使用最终历史替首发。SFUISE S-FINAL 是同一次运行在同一在线 stamp 网格的可验证子集上由最终 retained history + 最终标定导出，不是全局 batch 最优；artifact 级 revision 与最后输入上界独立记录，不冒充逐点精确依赖。',
-        '\n原生旧 W0 联合故障前缀与正式 J600 的前160：raw ADC/range/独立初始观测、IDs/时间、state/PL 和 FD/先验/bridge/rejoin receipts 逐值相同（差0），不增加求解或精度重复样本。独立评分器 12 项测试与 evo v1.29.0 对口径检查覆盖单位、符号、SO(3)、tag/body 杆臂、错误杆臂、固定偏置、SE(3) 世界变换、错序/重复/非有限、真实 dt、缺口与 nearest-rank 慢值。资源截断产生的不完整末行拒绝；完整 post-commit state 行只作固定物理 tag 转换并与完整 TUM 逐点核对，不从 GT 重建。真实 velocity/bias 无独立真值为 NA；仿真原生有物理状态/bias 真值，单列评分。SFUISE 未导出 velocity/bias 真值对口径时也不凭位置差分伪造。',
+        '\n原生旧 W0 联合故障前缀与正式 J600 的前160：raw ADC/range/独立初始观测、IDs/时间、state/PL 和 FD/先验/bridge/rejoin receipts 逐值相同（差0），不增加求解或精度重复样本。独立评分器 13 项测试与 evo v1.29.0 对口径检查覆盖单位、符号、SO(3)、tag/body 杆臂、错误杆臂、固定偏置、SE(3) 世界变换、错序/重复/非有限、真实 dt、缺口与 nearest-rank 慢值。资源截断产生的不完整末行拒绝；完整 post-commit state 行只作固定物理 tag 转换并与完整 TUM 逐点核对，不从 GT 重建。真实 velocity/bias 无独立真值为 NA；仿真原生有物理状态/bias 真值，单列评分。SFUISE 未导出 velocity/bias 真值对口径时也不凭位置差分伪造。',
         '\n历史导出的额外边界审计：冻结适配器将移动窗口的 idle 控制点写入 global history，导致起始 `t < global_origin + 2*dt` 的历史插值引用后续控制点。用原始 SplineState 类、不构造估计器的确定性 codec 检查：在线 p/q/velocity/bias 复原误差 0，安全域后历史误差 0，起始错误可直接复现。原始输出未改写，其 hash、被拒绝点的原始数值和时间永久留在 JSON；过程 trace 最后按约定清理。按样条支撑域对所有流统一拒绝这一历史前缀（通常 2 个点），不是按 PE 选点。S-ONLINE 全部首次输出不受影响；S-FINAL 仅报告可验证历史域，拒绝数、原始错误点/时间保存在 JSON，作为导出接口缺口列出。',
         '\n独立统计单位是 seed 或录制，三个 seed 不夸大显著性；逐帧 Stanford/ECDF 仅是有限运行描述，不作独立置信区间。配对收益为 OFF−ON，百分比用 OFF 作分母，退化保持负数；不同截止时刻的 SFUISE 另列 state age，S-FINAL 不排实时名次。过程被截断时不填后缀误差，配对表显式给公共可观测区间。',
         '\n## E01/E02：健康与真实主对照',
+        '\n**Walk 参照缺口（W1 后审计修正）**：冻结适配器把 VIVE tracker 当成 IMU/body 并直接加 IMU→tag 杆臂。CAL-W 968 对角速度的单位旋转 RMSE 0.485762 rad/s，固定旋转诊断拟合为约 179.725°、RMSE 0.105943 rad/s，推翻了 tracker=IMU 假设；bag 无静态外参，tracker→tag 平移/姿态与重力系仍未独立闭合。先前 Walk 表中的数值不再称物理 tag APE/body ARE，主表改为 NA，原数值完整留为 proxy。没有将拟合旋转应用到输入、GT 或估计器，也没有修改冻结参数。论文仅确认额外 tracker 提供 GT，不给本轮所需的完整外参：[原论文 §V-D](https://isas.iar.kit.edu/pdf/RAL23_Li.pdf)。',
+        '\n**STAR 输入接口缺口**：发布的 tf_cam_rig / tf_cam_imu 方向标签与冻结组合 C_cam_rigᵀ C_cam_imu 存在解释分歧。只读 CAL-S 检查中，冻结 gyro 与 GT 差分 RMSE 约 0.393 rad/s；按文字方向组合的候选约 0.324 rad/s，仍未闭合，故没有悄悄替换或拟合 TEST。官方 tag_pos、rig 四元数与 CAD 杆臂自洽到约 4e−16 m，位置误差仍是实际管线输出误差；R5/R6 均标 input OPEN，不将发散归因于正确输入下算法本身。细节和两种矩阵见 reference-check 收据。',
+        table(['Walk 数值代理（不作物理精度排名）','view','时间匹配 N','冻结 proxy 距离 RMSE m','tracker proxy 四元数差 rad'],[(r['group']+'/'+r['stream'],v,p.get('matched'),p.get('ape_m',{}).get('rmse'),p.get('are_rad',{}).get('rmse')) for r in records if r.get('reference_contract')=='OPEN_WALK_TRACKER_BODY_TAG' and r['group']!='E00' for v,s in r.get('views',{}).items() for p in [s.get('reference_proxy_scores',{})]]),
         table(['组/流/seed','view','status','匹配 N','APE m','HPE m','VPE m','ARE rad / deg','tag RPE0.5 m','body RPE0.5 m / rad'],[(r['group']+'/'+r['stream']+'/'+str(r.get('seed',''))[-2:],v,r['status'],s.get('matched'),s.get('ape_m',{}).get('rmse'),s.get('hpe_m',{}).get('rmse'),s.get('vpe_m',{}).get('rmse'),f"{fmt(s.get('are_rad',{}).get('rmse'))} / {fmt(s.get('are_deg',{}).get('rmse'))}",s.get('rpe_tag_0.5s_m',{}).get('rmse'),f"{fmt(s.get('rpe_body_0.5s_m',{}).get('rmse'))} / {fmt(s.get('rpe_body_0.5s_rad',{}).get('rmse'))}") for r in records if r['group'] in ['E01','E02'] for v,s in r.get('views',{}).items()]),
         table(['实测流/method','attempt / planned','commit / timely','未覆盖/资源后缀','原生 FDE 状态计数'],[(r['stream']+'/'+str(r.get('effective_method',r['requested_method'])),f"{r.get('attempted_epochs','NA')} / {r.get('planned_epochs','NA')}",f"{r.get('committed','NA')} / {r.get('timely_estimates','NA')}",r.get('startup_or_unattempted_epochs'),r.get('fde_status_counts',{'SFUISE':'official rejection; no matched raw PL'})) for r in records if r['group']=='E02']),
         table(['实测 view','整个 GT TEST 网格覆盖 / N','实际输出时间区间 s'],[(r['stream']+'/'+v,f"{fmt(s.get('output_coverage_on_GT_TEST_grid',{}).get('fraction'))} / {s.get('output_coverage_on_GT_TEST_grid',{}).get('planned','NA')}",s.get('output_coverage_on_GT_TEST_grid',{}).get('estimate_interval_s')) for r in records if r['group']=='E02' for v,s in r.get('views',{}).items()]),
@@ -1087,14 +1126,14 @@ def report():
         '\n后续可另采独立标定录制：覆盖三轴角运动、平移与不同姿态，独立测量 body/tag/IMU/GT 杆臂和时间延迟，并留完全不参与拟合的 TEST。优先记录硬件时间同步、原始逐条 range 和连续 IMU 缺口，保存提交/拒绝/发布时刻、依赖截止与原生恢复 receipt。若希望把经验结果提升为真实 raw 保证，还需独立验证初始 law、噪声/运动域/采样/anchor 映射及证明接口，不能由当前六条经验轨迹或零超界样本推导。',
         '\n这些采集与理论扩展建议不改变本轮冻结算法，也不阻止本轮仿真、经验和窗口边界的结项。']
     lines += ['\n## SC8-A01–A24 对账',table(['验收','证据/状态'],[
-        ('A01','入口/冻结 identity、ELF/DSO/libraries/platform；旧报告只库存；生产合同 hash 未改'),('A02','E00 九条库存，六条固定测试，备用未启用'),('A03','单位/frame/lever/offset/time/GT/批次新审计；899/899 direct/ROS'),('A04','CAL-W 与 R3 prefix20 +2s 隔离，test-involved 明示，无逐方法测试拟合'),('A05','三通道和 requested/effective 分离；真实 raw 拒绝/PL NA'),('A06','SF 固定 pin、官方剔除、首发/历史/cutoff/revision，数值观察双实例检查'),('A07','共同 source-only、native 逐值 audit；lossless bag parity，原始数据不改'),('A08','12 项独立 scorer 测试 + evo 对口径'),('A09',f"E01: {dict(Counter(r['status'] for r in records if r['group']=='E01'))}"),('A10',f"E02: {dict(Counter(r['status'] for r in records if r['group']=='E02'))}; 工程结果不叫 FULL raw"),('A11',f"E03: {dict(Counter(r['status'] for r in records if r['group']=='E03'))}; 原生 episode 与真实增量/阶段分开"),('A12','seed/录制统计，负收益保留，无帧级伪独立 CI'),('A13','实际 H/V Stanford 分母对账，AL/SI/late/拒绝分层，零 HMI 不当证明'),('A14',f"E05: {dict(Counter(r['status'] for r in records if r['group']=='E05'))}; 7 唯一合法配置"),('A15','同进程 LF+2 canary、边缘化与 resource/inflight 右截断；公共 1101–2100，缺数据 NA'),('A16','逐 run core/sink/age/CPU/RTF；exclusive 均值闭合，P95不相加'),('A17','40/50 ms 和95%全计划分母；真实及时估计≠raw资格'),('A18',f"E07: {dict(Counter(r['status'] for r in records if r['group']=='E07'))}; 合并开关与 M/A/P 明示"),('A19',f"E08: {dict(Counter(r['status'] for r in records if r['group']=='E08'))}; late gaps={len(late)}"),('A20','F00–F10 实际图/精简绘图数据；NA和overflow保留' if figure_current else 'PENDING：图表与当前 metrics 摘要尚未全部匹配'),('A21','最终相关回归 PASS' if checked else 'PENDING：最终相关回归未全部结束'),('A22',str(counts)+f"; attempts={metrics['attempt_processes']}，辅助另计，完整版本/失败身份留存"),('A23','唯一中文报告+English Results，实际冻结 registry/metrics/plot CLI'),('A24','阶段本地 commit；只清理本轮 owned cache，保留原始数据/用户旧证据，不 push')]),
+        ('A01','入口/冻结 identity、ELF/DSO/libraries/platform；旧报告只库存；生产合同 hash 未改'),('A02','E00 九条库存，六条固定测试，备用未启用'),('A03','字段/单位/时间审计与899/899 direct/ROS；Walk tracker/body/tag参照未闭合，物理分数NA，诊断与proxy保留'),('A04','CAL-W 与 R3 prefix20 +2s 隔离，test-involved 明示，无逐方法测试拟合'),('A05','三通道和 requested/effective 分离；真实 raw 拒绝/PL NA'),('A06','SF 固定 pin、官方剔除、首发/历史/cutoff/revision，数值观察双实例检查'),('A07','共同 source-only、native 逐值 audit；lossless bag parity，原始数据不改'),('A08','13 项独立 scorer 测试 + evo 对口径'),('A09',f"E01: {dict(Counter(r['status'] for r in records if r['group']=='E01'))}"),('A10',f"E02: {dict(Counter(r['status'] for r in records if r['group']=='E02'))}; 工程结果不叫 FULL raw"),('A11',f"E03: {dict(Counter(r['status'] for r in records if r['group']=='E03'))}; 原生 episode 与真实增量/阶段分开"),('A12','seed/录制统计，负收益保留，无帧级伪独立 CI'),('A13','实际 H/V Stanford 分母对账，AL/SI/late/拒绝分层，零 HMI 不当证明'),('A14',f"E05: {dict(Counter(r['status'] for r in records if r['group']=='E05'))}; 7 唯一合法配置"),('A15','同进程 LF+2 canary、边缘化与 resource/inflight 右截断；公共 1101–2100，缺数据 NA'),('A16','逐 run core/sink/age/CPU/RTF；exclusive 均值闭合，P95不相加'),('A17','40/50 ms 和95%全计划分母；真实及时估计≠raw资格'),('A18',f"E07: {dict(Counter(r['status'] for r in records if r['group']=='E07'))}; 合并开关与 M/A/P 明示"),('A19',f"E08: {dict(Counter(r['status'] for r in records if r['group']=='E08'))}; late gaps={len(late)}"),('A20','F00–F10 实际图/精简绘图数据；NA和overflow保留' if figure_current else 'PENDING：图表与当前 metrics 摘要尚未全部匹配'),('A21','最终相关回归 PASS' if checked else 'PENDING：最终相关回归未全部结束'),('A22',str(counts)+f"; attempts={metrics['attempt_processes']}，辅助另计，完整版本/失败身份留存"),('A23','唯一中文报告+English Results，实际冻结 registry/metrics/plot CLI'),('A24','阶段本地 commit；只清理本轮 owned cache，保留原始数据/用户旧证据，不 push')]),
         '\n## 复现与续跑',
         '```bash\npython3 tools/sc8_experiments.py preflight --build\npython3 tools/sc8_sfuise_observer.py\npython3 tools/sc8_sfuise_observer.py check\npython3 tools/test_sc8_metrics.py\npython3 tools/test_sc8_inputs.py\npython3 tools/test_sc8_inputs.py bags\n# 在已冻结环境续跑；已有完成/失败 attempt 默认均复用，不自动重复求解\npython3 tools/sc8_experiments.py run --group E01,E02,E03\npython3 tools/sc8_experiments.py run --group E05,E07,E08\npython3 tools/sc8_experiments.py run --group E06\npython3 tools/sc8_experiments.py checks\npython3 tools/sc8_experiments.py evaluate\npython3 tools/sc8_experiments.py figures\npython3 tools/sc8_experiments.py report\n# 全部运行和图表结束后审计；清理只接受当前 PASS 审计\npython3 tools/sc8_analysis.py audit\npython3 tools/sc8_cleanup.py --apply\npython3 tools/sc8_experiments.py report\n```',
         '\n在新环境重建时应核对 frozen source/依赖/ELF 身份；若编译器、库或 ELF 不同，须另存版本化 registry，不能覆盖此轮身份。registry 内保存完整数值 CAL 参数，输入重建使用冻结标定，不在 TEST 重拟合。只重画图可用永久 metrics+plotdata：`figures` 在原始 trace 不存在时读取保存的 plotdata，不启动求解。',
         '\n执行缺口：'+('; '.join(all_gaps) if all_gaps else '暂无已发生缺口；以最终矩阵和回归为准。'),
         f"\n断点：冻结 `{f.get('identity',{}).get('head','NA')}`；待运行 {pending}，运行错误/未完成长流 {len(gaps)+len(late)}。所有逻辑 ID 和实际 attempt 见 JSON。资源上限是结果；接口/执行缺口没有改写 PASS。最终审计和本轮 cache 清理状态另记录在本报告的本地阶段提交日志。",
         '\n## English Results',
-        f"\nThe frozen evaluation registered {metrics['registered']} unique runs and retained all {metrics['attempt_processes']} execution attempts (plus the registered ROS counterpart). Current process outcomes are {counts}. Accuracy is scored without fitted trajectory alignment, with each seed or recording retained as the independent unit. First causal SFUISE outputs and final retained-history outputs are separate views of the same run; differing initialization information, input cutoffs and state age preclude an unconditional online ranking. Only registered simulated sources can receive conditional raw protection bounds. Real and semi-synthetic recordings use an explicitly labelled engineering FDE pipeline with no matched raw PL. Historical bootstrap points with invalid original-idle support are explicitly unavailable; first causal outputs are unchanged. Censored suffixes, failures, negative gains and attitude degradation remain visible. Large-window results are measured cost frontiers, not an assertion of real-time operation at 1000 epochs. The evaluation status is {status}; zero observed HMI events are not a probabilistic proof."]
+        f"\nThe frozen evaluation registered {metrics['registered']} unique runs and retained all {metrics['attempt_processes']} execution attempts (plus the registered ROS counterpart). Current process outcomes are {counts}. Accuracy is scored without fitted trajectory alignment, with each seed or recording retained as the independent unit. First causal SFUISE outputs and final retained-history outputs are separate views of the same run; differing initialization information, input cutoffs and state age preclude an unconditional online ranking. Only registered simulated sources can receive conditional raw protection bounds. Real and semi-synthetic recordings use an explicitly labelled engineering FDE pipeline with no matched raw PL. Walk physical tag/body reference remains open: CAL-W rejects tracker=IMU identity, so physical scores are unavailable and frozen proxy differences remain separately labelled. Historical bootstrap points with invalid original-idle support are explicitly unavailable; first causal outputs are unchanged. Censored suffixes, failures, negative gains and attitude degradation remain visible. Large-window results are measured cost frontiers, not an assertion of real-time operation at 1000 epochs. The evaluation status is {status}; zero observed HMI events are not a probabilistic proof."]
     healthy=[r for r in records if r['group']=='E01' and r['stream']=='SC8-H' and r['requested_method']=='O-FULL' and 'ape_m' in r.get('views',{}).get('O-FULL',{})]
     if healthy:
         values=[r['views']['O-FULL']['ape_m']['rmse'] for r in healthy]
@@ -1120,6 +1159,8 @@ def evaluation_status(records,validation):
     checks=validation.get('final-checks.json',{}).get('result',[])
     checked=bool(checks) and all(c['returncode']==0 for c in checks)
     gaps=[r['id'] for r in records if r['status']=='EXECUTION_ERROR' or 'scoring_error' in r]
+    gaps.append('STAR gyro-frame input validation OPEN: published transform direction labels and CAL-S gyro/GT consistency do not close; frozen outputs retained as interface-level outcomes, no intrinsic algorithm ranking')
+    gaps.append('Walk physical tag/body GT reference OPEN: CAL-W rejects tracker=IMU identity; frozen numerical proxy metrics are retained separately, not physical accuracy')
     gaps.append('Registered scope omission: no separate weak-UWB amplitude matrix or S1/S2 bias trajectories; no historical curves substituted')
     gaps += [r['id']+': long stream did not reach final planned epoch' for r in records if r['group']=='E08' and r['stream']=='SC8-L1' and r['status'] not in ['NOT_ATTEMPTED','RUNNING'] and r.get('max_committed_epoch',0)<10000]
     gaps += [r['id']+': real engineering run censored before complete recording' for r in records if r.get('track') in ['T-REAL','T-SEMI'] and r['group']!='E00' and r['status']=='RESOURCE_LIMIT']
@@ -1202,7 +1243,7 @@ def findings(metrics):
     if real:paragraphs.append(f"真实工程 FDE：已结束 {len(real)}/6 条完整录制尝试，其中 {sum(r['status']=='RESOURCE_LIMIT' for r in real)} 条在预登记 wall 资源门限截断；SC7 raw 资格仍全部拒绝。未完成后缀不填误差，不能将有限公共区间的收益推广到全录制。")
     for r in rr:
         if r['group']=='E02' and r['stream']=='R5' and 'ape_m' in r.get('views',{}).get('S-ONLINE',{}):
-            score=r['views']['S-ONLINE'];paragraphs.append(f"STAR-Loc R5 的 SFUISE 首次在线流 tag APE RMSE {score['ape_m']['rmse']:.6g} m、最大 {score['ape_m']['max']:.6g} m，保留整个实测尺度；官方剔除未关闭，codec/单位/原始输入逐项核对，不能删去发散段后宣称成功。工程 ON 只有截断前缀，不能以其短段误差与该完整流作全程排名。")
+            score=r['views']['S-ONLINE'];paragraphs.append(f"STAR-Loc R5 的 SFUISE 首次在线流 tag APE RMSE {score['ape_m']['rmse']:.6g} m、最大 {score['ape_m']['max']:.6g} m，保留整个实测尺度；官方剔除未关闭，codec/单位/原始输入逐项核对，不能删去发散段后宣称成功。CAL-S 对 gyro/rig 转换的方向约定和角速度一致性尚未闭合，因此这些值描述冻结接口下的实际行为，不作为正确输入下算法本身的优劣证据。工程 ON 只有截断前缀，不能以其短段误差与该完整流作全程排名。")
     native=[r for r in rr if r['group']!='E00' and 'axes' in r.get('integrity',{})]
     if native:
         under=sum(r['integrity']['axes'][axis]['underbound'] for r in native for axis in ['H','V']);n=sum(r['integrity']['spatial_valid'] for r in native)
@@ -1244,6 +1285,12 @@ def audit():
     check('main_physical_input_pairing',not pairbad,pairbad)
     unsupported=[p['stream'] for p in metrics.get('paired',[]) if p.get('post_fault_common_n') is not None and p['post_fault_common_n']<2 and any(g.get('off_minus_on') is not None for g in p['gains'].values())]
     check('real_fault_gains_require_post_injection_common_states',not unsupported,unsupported)
+    reference=metrics.get('validation',{}).get('reference-check/result.json',{}).get('result',{})
+    check('CAL_reference_diagnostic_retained_as_OPEN',reference.get('status')=='OPEN_REFERENCE_CONTRACT' and reference.get('original_parameter_changes') is False)
+    walk=[r for r in metrics['runs'] if r.get('reference_contract')=='OPEN_WALK_TRACKER_BODY_TAG']
+    check('unresolved_walk_reference_has_no_physical_APE_or_ARE_claim',bool(walk) and all(s.get(k,{}).get('rmse') is None for r in walk for s in r.get('views',{}).values() for k in ['ape_m','are_rad']))
+    star=reference.get('STAR_CAL_only',{})
+    check('STAR_tag_point_reference_verified_input_frame_gap_disclosed',star.get('status')=='INPUT_GYRO_FRAME_VALIDATION_OPEN' and star.get('official_tag_lever_consistency_rmse_m',1)<1e-9 and star.get('candidate_applied') is False)
     baseline=[r for r in metrics['runs'] if r['group']=='E01' and r['stream']=='SC8-H' and r.get('seed')==20261020]
     full=next((r for r in baseline if r['requested_method']=='O-FULL'),{})
     nominal=next((r for r in baseline if r['requested_method']=='O-NOM'),{})

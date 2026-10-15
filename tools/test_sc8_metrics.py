@@ -5,6 +5,16 @@ from scipy.spatial.transform import Rotation
 import sc8_metrics as metrics
 
 class MetricsTests(unittest.TestCase):
+    def test_unresolved_reference_preserves_proxy_without_physical_claim(self):
+        from sc8_analysis import reference_safe_score
+        score=dict(ape_m=metrics.summary([3,4]),are_rad=metrics.summary([1,2]),matched=2,coverage=1.)
+        protected=reference_safe_score(score)
+        self.assertIsNone(protected['ape_m']['rmse'])
+        self.assertIsNone(protected['are_rad']['rmse'])
+        self.assertEqual(protected['matched'],0)
+        self.assertEqual(protected['time_correspondences'],2)
+        self.assertEqual(protected['reference_proxy_scores']['ape_m']['rmse'],score['ape_m']['rmse'])
+        self.assertEqual(score['matched'],2)
     def setUp(self):
         self.t=np.arange(61)*.05
         self.p=np.column_stack([self.t,self.t**2*.1,np.sin(self.t)])

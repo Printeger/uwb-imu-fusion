@@ -3015,3 +3015,16 @@ analysis_amendments:
   representatives: 'First listed sequence per family: R1/R3/R5; display rule implemented
     during W1, before all E02 results; all six remain in full tables, no accuracy-based
     replacement.'
+- kind: POST_W1_REFERENCE_CONTRACT_AUDIT
+  solver_protocol_changed: false
+  frozen_inputs_changed: false
+  scope: CAL-W rejects tracker=IMU/body identity. Physical Walk tag/body APE/ARE/RPE
+    revoked to NA; all frozen numerical proxy scores retained separately. No fitted
+    transform applied to inputs, GT, estimates or TEST.
+  STAR_scope: Official tag/rig CAD reference verified. Published camera/rig/IMU direction
+    labels and CAL-S angular consistency do not close the frozen gyro conversion;
+    R5/R6 labelled input OPEN and not used for intrinsic algorithm ranking. No silent
+    correction or TEST fit.
+  validation: tools/test_sc8_reference.py (CAL-only, zero FGO solves); tools/test_sc8_metrics.py
+    reference-suppression regression. All frozen computation/ELF/design identities
+    remain unchanged.
