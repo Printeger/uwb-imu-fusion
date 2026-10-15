@@ -252,7 +252,7 @@ def score_entry(entry,execution,run,registry):
             result['tested_profile_deadline_pass']=bool(core95 is not None and sink95 is not None and core95<=40 and sink95<=50 and result['timely_spatial_fraction']>=.95)
         else:result['tested_profile_deadline_pass']='NOT_APPLIED_OFFLINE_SCALING_FRONTIER'
         result['resources']={k:dict(first=value(actual[0],k),last=value(actual[-1],k),max=max(value(r,k) for r in actual)) for k in ['rss','slots','live','ledger','replay','capsules','active_states','proof_explicit','source_prefix','q','alerts'] } if actual else {}
-        result['resource_scope']='RSS is process high-water mark observed at saved native receipts; a resource-censored inflight peak may be larger. Full-process peak_rss_kib is available only with final runtime receipt. No unseen peak is imputed.'
+        result['resource_scope']='RSS is instantaneous /proc/self/statm resident size sampled at saved native receipts; its reported max is a sampled maximum, not the process high-water mark. Full-process peak_rss_kib is available only with final runtime receipt. In-between and censored inflight peaks are not imputed.'
         result['same_center_M']={axis:dict(strict=sum(value(r,old)-value(r,new)>1e-9 for r in actual),
              widened=sum(value(r,old)<value(r,new) for r in actual),
              reduction_m=metric.summary([value(r,old)-value(r,new) for r in actual]))
@@ -874,7 +874,7 @@ def figures():
     axs[0,1].set(xlabel='Window (UWB epochs; 20 Hz)',ylabel='Mean common-interval PL (m)');axs[0,1].legend(fontsize=8)
     axs[1,0].axhline(40,color='#aa3333',ls=':');axs[1,0].set(xlabel='Window (UWB epochs)',ylabel='All measurable core P95 (ms)',yscale='log');axs[1,1].set(xlabel='All measurable core P95 (ms)',ylabel='Common-interval HPL (m)',xscale='log')
     if censored:axs[1,1].text(.02,.98,f'{len(censored)}/{len(wr)} stopped/refused or missing common interval.\nActual epochs and resource limits: report E05.\nNo missing APE / PL values imputed.',transform=axs[1,1].transAxes,va='top',fontsize=8)
-    finish(fig,'F07_window_frontier','Offline frontier; 100–1000 UWB epochs = 5–50 s. Pareto labels (LF, LI); bubble area follows observed receipt RSS high-water mark, a lower bound if inflight work was censored. No interval extrapolation; replay changes with LF.')
+    finish(fig,'F07_window_frontier','Offline frontier; 100–1000 UWB epochs = 5–50 s. Pareto labels (LF, LI); bubble area follows maximum sampled RSS at saved receipts; the true process peak may be larger. No interval extrapolation; replay changes with LF.')
     # F08 full-boundary latency CDF and exclusive means (not summed P95s).
     fig,axs=sub(3,2,8.0)
     for ax,phase,kind in [(axs[0,0],'Healthy','core'),(axs[0,1],'Fault','core'),(axs[1,0],'Real','core'),(axs[1,1],'Healthy','sink'),(axs[2,0],'Fault','sink')]:
