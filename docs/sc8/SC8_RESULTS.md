@@ -57,3 +57,5 @@ python3 tools/sc8_experiments.py run --group E00
 `register` 保留已经存在的登记；`run` 复用有身份的已执行记录。显式 `--retry-failed` 保存旧失败到原 attempt 目录，新建后续 attempt。W0 接口验证已完成；提交当前代码后执行 `freeze`，保存实际源、ELF、DSO、平台与校准数值，然后运行 `run --group E01,E02,E03`。当前仍无正式主结果或结项声明。
 
 计算冻结源码提交：`def42ac`。精确源码/ELF/DSO、动态依赖、平台、全部校准数值和设计 SHA256 已写入 registry 的 `frozen`；后续只读分析可继续开发，不改变求解协议。下一命令：`python3 tools/sc8_experiments.py run --group E01,E02,E03`。
+
+正式驱动第一次启动在设计摘要自检处因字段层级错误退出，尚未产生求解进程。已修正 guard 的字段访问，保留前一冻结为 `previous_freeze_before_formal`，重新冻结；设计和已完成数据不变。

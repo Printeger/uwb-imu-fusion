@@ -556,7 +556,7 @@ def run_groups(groups,only=None,retry_failed=False):
         assert registry.get('phase')=='FROZEN','complete W0 and freeze before formal experiments'
         ident=current_identity();frozen=registry['frozen']['identity']
         assert ident['computational_content_sha256']==frozen['computational_content_sha256'] and ident['binaries']==frozen['binaries'],'frozen computation changed'
-        assert hashlib.sha256(json.dumps({k:registry[k] for k in ['seeds','cases','runs','resource_stops','evaluation','calibration','inventory']},sort_keys=True).encode()).hexdigest()==frozen['design_sha256'],'registered design changed'
+        assert hashlib.sha256(json.dumps({k:registry[k] for k in ['seeds','cases','runs','resource_stops','evaluation','calibration','inventory']},sort_keys=True).encode()).hexdigest()==registry['frozen']['design_sha256'],'registered design changed'
     for entry in registry['runs']:
         if entry['group'] not in groups or (only is not None and only not in entry['id']):continue
         try:run_one(entry,registry,retry_failed)

@@ -1,6 +1,6 @@
 schema: sc8-experiments-v1
 entry_head: fa5b3dc9ffe3c88492352491d79ba022f373bfb5
-phase: FROZEN
+phase: W0
 contract: docs/requirements/sc8/SC8_EXPERIMENT_HANDBOOK.md
 seeds:
 - 20261020
@@ -2454,7 +2454,131 @@ auxiliary_solver_audits:
   kind: deterministic_direct_ROS_equivalence
   result: .cache/sc8/equivalence/R3/equivalence.json
   processes: 1
-frozen:
+calibration:
+  walk1_world.json:
+    schema: sfuise-world-interface-calibration/v1
+    label: GT-assisted interface calibration
+    scope: CAL-W_ISAS-Walk1_ONLY
+    rotation_anchor_from_vive_matrix:
+    - - 0.9735319825072342
+      - -0.18081504558031472
+      - 0.13979055163823928
+    - - 0.14634850003440114
+      - 0.9629807866775789
+      - 0.22638489575833698
+    - - -0.17554941063192286
+      - -0.1999347988260698
+      - 0.9639546050749297
+    rotation_anchor_from_vive_xyzw:
+    - -0.10793121739645807
+    - 0.0798345149284047
+    - 0.0828278876498085
+    - 0.9874800471730735
+    translation_anchor_from_vive_m:
+    - 1.6126307241736089
+    - 1.0722925639491718
+    - 1.567906538812692
+    fit_samples: 844
+    rejected_samples: 69
+    residual_rmse_m: 0.1782044280616124
+    residual_median_m: 0.139057823292497
+    sequence_counts:
+      CAL-W: 913
+    gt_use: missing_world_frame_transform_only
+    test_involved: false
+    identification: range-derived rigid world fit; model adequacy not guaranteed
+  own_prefix20.json:
+    schema: own-vicon-interface-calibration/v1
+    label: GT-assisted interface calibration
+    scope: R3_FIXED_FIRST_20_PERCENT
+    rotation_body_from_imu_matrix:
+    - - -0.9469019214394204
+      - -0.14782422864591976
+      - -0.28552539046391684
+    - - 0.09851305197510653
+      - -0.9787200561429215
+      - 0.18000619515490715
+    - - -0.3060587031353351
+      - 0.1423202344321967
+      - 0.9413145176328055
+    rotation_body_from_imu_xyzw:
+    - -0.1504190954223361
+    - 0.08195631101949016
+    - 0.9832263848187696
+    - 0.06263493444249663
+    time_imu_to_gt_s: 0.015542069530033498
+    lever_tag_from_imu_body_m:
+    - 0.03703753555994884
+    - -0.027430216722513653
+    - -0.04130280234190144
+    accelerometer_bias_body_mps2:
+    - -1.2876134346779886
+    - 1.0828407218202725
+    - -0.5301160823260639
+    lever_std_m:
+    - 0.006759460905269989
+    - 0.020951441000329057
+    - 0.009319059377150073
+    gyro_fit_rmse_radps: 0.14748226900437714
+    accel_fit_rmse_mps2: 0.2871089936520964
+    gyro_samples: 584
+    accel_scalar_samples: 750
+    gt_use: interface_rotation_time_and_translation_only
+    test_involved: true
+    cal_end_sensor_s: 14.678774642944337
+    isolation_s: 2.0
+    test_begin_s: 16.678774642944337
+    angular_excitation_singular_values:
+    - 2.0399141686416744
+    - 1.2749504312798883
+    - 0.8632216657629774
+    full_6d_identifiability: 'CALIBRATION_OPEN: no independent lever/time truth; fit
+      diagnostics only'
+  own_cal_o.json:
+    schema: own-vicon-interface-calibration/v1
+    label: GT-assisted interface calibration
+    scope: CAL-O_ONLY
+    rotation_body_from_imu_matrix:
+    - - 0.2997727790208003
+      - 0.6066486147600046
+      - 0.7362837355041286
+    - - 0.930244345636044
+      - -0.3570688685021708
+      - -0.08454159070391297
+    - - 0.21161696144287478
+      - 0.7102670493246513
+      - -0.6713709706811412
+    rotation_body_from_imu_xyzw:
+    - 0.7629240817742143
+    - 0.5036192319496374
+    - 0.31061435848984403
+    - 0.2604481425531231
+    time_imu_to_gt_s: 0.17592244225006
+    lever_tag_from_imu_body_m:
+    - -0.053419884961757765
+    - -0.04569574102348384
+    - 0.04465124551677377
+    accelerometer_bias_body_mps2:
+    - 8.313097451216368
+    - -1.7080792763352455
+    - -16.38392788864421
+    lever_std_m:
+    - 0.08049271359564679
+    - 0.07226498139843619
+    - 0.0058110861337833
+    gyro_fit_rmse_radps: 0.1319694078232546
+    accel_fit_rmse_mps2: 0.11971228138496162
+    gyro_samples: 455
+    accel_scalar_samples: 201
+    gt_use: interface_rotation_time_and_translation_only
+    test_involved: false
+    angular_excitation_singular_values:
+    - 0.10316564445526805
+    - 0.02167662486111623
+    - 0.01439735155267021
+    full_6d_identifiability: 'CALIBRATION_OPEN: no independent lever/time truth; fit
+      diagnostics only'
+previous_freeze_before_formal:
   identity:
     head: def42ac48bb8b8780316bc8e4e592f786ad9e7ec
     source_content_sha256: f0d73b43ad43ec144ce4d85f113133a7ddbe1a0cf98111d2ba64597714e6e5e0
@@ -2659,127 +2783,3 @@ frozen:
     .cache/sc8/sfuise_observer/check.json: b806b91dd0dd64b3ddc8b851bc0f3395bd2dd77b9e698ae7fe1675008ab9e52c
     .cache/sc8/equivalence/R3/equivalence.json: eae2f3a2bacc7c790c6908787ce23d6d678ceb2d634bb8ddababc5736b4ed60a
   design_sha256: de11b25d711e26e33d8216d3f5953172d2d1b57b2f9fc690193da6fb6b91c46d
-calibration:
-  walk1_world.json:
-    schema: sfuise-world-interface-calibration/v1
-    label: GT-assisted interface calibration
-    scope: CAL-W_ISAS-Walk1_ONLY
-    rotation_anchor_from_vive_matrix:
-    - - 0.9735319825072342
-      - -0.18081504558031472
-      - 0.13979055163823928
-    - - 0.14634850003440114
-      - 0.9629807866775789
-      - 0.22638489575833698
-    - - -0.17554941063192286
-      - -0.1999347988260698
-      - 0.9639546050749297
-    rotation_anchor_from_vive_xyzw:
-    - -0.10793121739645807
-    - 0.0798345149284047
-    - 0.0828278876498085
-    - 0.9874800471730735
-    translation_anchor_from_vive_m:
-    - 1.6126307241736089
-    - 1.0722925639491718
-    - 1.567906538812692
-    fit_samples: 844
-    rejected_samples: 69
-    residual_rmse_m: 0.1782044280616124
-    residual_median_m: 0.139057823292497
-    sequence_counts:
-      CAL-W: 913
-    gt_use: missing_world_frame_transform_only
-    test_involved: false
-    identification: range-derived rigid world fit; model adequacy not guaranteed
-  own_prefix20.json:
-    schema: own-vicon-interface-calibration/v1
-    label: GT-assisted interface calibration
-    scope: R3_FIXED_FIRST_20_PERCENT
-    rotation_body_from_imu_matrix:
-    - - -0.9469019214394204
-      - -0.14782422864591976
-      - -0.28552539046391684
-    - - 0.09851305197510653
-      - -0.9787200561429215
-      - 0.18000619515490715
-    - - -0.3060587031353351
-      - 0.1423202344321967
-      - 0.9413145176328055
-    rotation_body_from_imu_xyzw:
-    - -0.1504190954223361
-    - 0.08195631101949016
-    - 0.9832263848187696
-    - 0.06263493444249663
-    time_imu_to_gt_s: 0.015542069530033498
-    lever_tag_from_imu_body_m:
-    - 0.03703753555994884
-    - -0.027430216722513653
-    - -0.04130280234190144
-    accelerometer_bias_body_mps2:
-    - -1.2876134346779886
-    - 1.0828407218202725
-    - -0.5301160823260639
-    lever_std_m:
-    - 0.006759460905269989
-    - 0.020951441000329057
-    - 0.009319059377150073
-    gyro_fit_rmse_radps: 0.14748226900437714
-    accel_fit_rmse_mps2: 0.2871089936520964
-    gyro_samples: 584
-    accel_scalar_samples: 750
-    gt_use: interface_rotation_time_and_translation_only
-    test_involved: true
-    cal_end_sensor_s: 14.678774642944337
-    isolation_s: 2.0
-    test_begin_s: 16.678774642944337
-    angular_excitation_singular_values:
-    - 2.0399141686416744
-    - 1.2749504312798883
-    - 0.8632216657629774
-    full_6d_identifiability: 'CALIBRATION_OPEN: no independent lever/time truth; fit
-      diagnostics only'
-  own_cal_o.json:
-    schema: own-vicon-interface-calibration/v1
-    label: GT-assisted interface calibration
-    scope: CAL-O_ONLY
-    rotation_body_from_imu_matrix:
-    - - 0.2997727790208003
-      - 0.6066486147600046
-      - 0.7362837355041286
-    - - 0.930244345636044
-      - -0.3570688685021708
-      - -0.08454159070391297
-    - - 0.21161696144287478
-      - 0.7102670493246513
-      - -0.6713709706811412
-    rotation_body_from_imu_xyzw:
-    - 0.7629240817742143
-    - 0.5036192319496374
-    - 0.31061435848984403
-    - 0.2604481425531231
-    time_imu_to_gt_s: 0.17592244225006
-    lever_tag_from_imu_body_m:
-    - -0.053419884961757765
-    - -0.04569574102348384
-    - 0.04465124551677377
-    accelerometer_bias_body_mps2:
-    - 8.313097451216368
-    - -1.7080792763352455
-    - -16.38392788864421
-    lever_std_m:
-    - 0.08049271359564679
-    - 0.07226498139843619
-    - 0.0058110861337833
-    gyro_fit_rmse_radps: 0.1319694078232546
-    accel_fit_rmse_mps2: 0.11971228138496162
-    gyro_samples: 455
-    accel_scalar_samples: 201
-    gt_use: interface_rotation_time_and_translation_only
-    test_involved: false
-    angular_excitation_singular_values:
-    - 0.10316564445526805
-    - 0.02167662486111623
-    - 0.01439735155267021
-    full_6d_identifiability: 'CALIBRATION_OPEN: no independent lever/time truth; fit
-      diagnostics only'
