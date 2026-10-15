@@ -283,7 +283,9 @@ def score_entry(entry,execution,run,registry):
         result['semantics']='ACTUAL_NATIVE_COMMITTED_TAG; raw conditional simulation only'
         result['phase_errors']={}
         first_fault=min([f[0] for f in manifest.get('faults',[])]+[f[0] for f in manifest.get('uwb_faults',[])],default=planned+1)
+        intervals=[((f[0]-1)*.05+.005,(f[0]-1)*.05+.005+f[2]*.001) for f in manifest.get('faults',[])]+[(f[0]*.05,(f[0]+f[2]-1)*.05) for f in manifest.get('uwb_faults',[])]
         for name,rr in [('healthy_prefix',[r for r in actual if value(r,'epoch')<first_fault]),
+                        ('fault_active',[r for r in actual if any(a-1e-9<=value(r,'epoch')*.05<=b+1e-9 for a,b in intervals)]),
                         ('bridge',[r for r in actual if value(r,'bridge')==1]),
                         ('rejoin',[r for r in actual if value(r,'rejoined')==1 and value(r,'bridge')==0]),
                         ('late_last_quarter',[r for r in actual if value(r,'epoch')>.75*planned])]:
@@ -418,7 +420,7 @@ def evaluate():
     pairs=paired_results(records,registry)
     metrics=dict(schema='sc8-metrics-v1',status='IN_PROGRESS',registry_sha256=common.sha256(ROOT/'config/sc8_experiments.yaml'),
         registered=len(registry['runs']),logical_run_status_counts=counts,attempt_processes=len(attempts),attempt_status_counts=attempt_labels,attempt_exit_counts=exit_labels,
-        runs=records,attempts=attempts,paired=pairs,overlay_effects=overlay_effects(records,registry),unit_aggregates=unit_aggregates(records),ablation_comparisons=ablation_comparisons(records,registry),validation=validation,auxiliary_solver_audits=registry.get('auxiliary_solver_audits'),statistical_unit='SEED_OR_RECORDING_NOT_FRAMES')
+        runs=records,attempts=attempts,paired=pairs,overlay_effects=overlay_effects(records,registry),unit_aggregates=unit_aggregates(records),phase_aggregates=phase_aggregates(records),ablation_comparisons=ablation_comparisons(records,registry),validation=validation,auxiliary_solver_audits=registry.get('auxiliary_solver_audits'),statistical_unit='SEED_OR_RECORDING_NOT_FRAMES')
     metrics['status'],metrics['execution_gaps']=evaluation_status(records,validation)
     save(OUT/'SC8_METRICS.json',metrics)
     print('SCORED',counts,'attempts',len(attempts),'scoring errors',sum('scoring_error' in r for r in records),flush=True)
@@ -1048,6 +1050,8 @@ def report():
         table(['定向例','status','APE m','ARE rad','raw / planned'],[(r['stream'],r['status'],m(r,'ape_m'),m(r,'are_rad'),f"{r.get('integrity',{}).get('spatial_valid','NA')} / {r.get('planned_epochs','NA')}") for r in records if r['group']=='E03' and r['stream'] not in ['SC8-U','SC8-A','SC8-G','SC8-J'] and r['stream'].startswith('SC8-')]),
         '\n以下为真实原生 episode receipt，FD/隔离/边缘先验替换/bridge/rejoin 分开；sensor TTD 与 wall TTD/TTI/TTR 不混。仅有 FD 或 PL 资格不等于恢复执行；first nominal receipt 不等于误差恢复。阶段 APE/ARE/速度/bias（healthy/fault/bridge/rejoin/late）完整保存在 JSON，位置改善不抵销姿态退化。',
         table(['流/seed/method','episode / exposure','FD','隔离提交','prior / bridge','rejoin4','TTD sensor / wall ms','TTI / TTR wall ms','unsafe endpoint'],[(r['stream']+'/'+str(r.get('seed',''))[-2:]+'/'+r['requested_method'],e['kind']+'/'+str(e.get('axis',e.get('anchor_index')))+'@'+str(e['onset_epoch'])+' / '+e.get('exposure','NA'),e.get('FD'),e.get('ISOLATION_COMMITTED'),f"{e.get('first_prior_repair')} / {e.get('first_bridge')}",e.get('rejoin4'),f"{fmt(e.get('TTD_sensor_ms'))} / {fmt(e.get('TTD_wall_ms'))}",f"{fmt(e.get('TTI_wall_ms'))} / {fmt(e.get('TTR_wall_ms'))}",e.get('unsafe_shared_endpoint')) for r in records if r['group'] in ['E03','E08'] for e in r.get('episodes',[])]),
+        '\n以下阶段按每个 seed 的 RMSE 等权汇总；rejoin 是恢复后的状态，可与 late 重叠，不是互斥完整性分区。未执行 bridge/rejoin 的 OFF 阶段为 NA。每个 seed 原值和帧 N 留在 JSON。',
+        table(['主流/method/阶段','seed N / receipt N','APE mean [min,max] m','ARE mean [min,max] rad','v mean m/s','ba / bg mean m/s² / rad/s'],[(a['stream']+'/'+a['method']+'/'+a['phase'],f"{a['metrics']['ape']['n_units']} / {a['receipts']}",f"{fmt(a['metrics']['ape']['mean'])} [{fmt(a['metrics']['ape']['min'])},{fmt(a['metrics']['ape']['max'])}]",f"{fmt(a['metrics']['rotation_error']['mean'])} [{fmt(a['metrics']['rotation_error']['min'])},{fmt(a['metrics']['rotation_error']['max'])}]",a['metrics']['velocity_error']['mean'],f"{fmt(a['metrics']['accel_bias_error']['mean'])} / {fmt(a['metrics']['gyro_bias_error']['mean'])}") for a in metrics.get('phase_aggregates',[])]),
         table(['真实 overlay/method','实际注入前沿确认'],[(r['stream']+'/'+str(r.get('effective_method',r['requested_method'])),r.get('overlay_execution_coverage')) for r in records if r['group']=='E03' and r['stream'].startswith(('R2-','R3-'))]),
         table(['真实 overlay','view','公共 / 注入后公共 N','增量 APE m','增量 ARE rad / 注入后可评'],[(e['stream'],e['view'],f"{e['common_n']} / {e.get('common_post_overlay_n',0)}",e['delta_overlay_minus_original'].get('ape_m'),f"{fmt(e['delta_overlay_minus_original'].get('are_rad'))} / {e.get('accuracy_after_overlay_evaluable')}") for e in metrics.get('overlay_effects',[])]),
         '\n## E04：原生完整性、Stanford 与 AL',
@@ -1139,6 +1143,20 @@ def unit_aggregates(records):
                 std=float(a.std(ddof=1)) if len(a)>1 else None,min=float(a.min()) if len(a) else None,max=float(a.max()) if len(a) else None)
         out.append(dict(group=group,stream=stream,view=view,unit='equally weighted independent seed / recording RMSE; no frame-level CI',run_ids=[r['id'] for r,_ in rr],metrics=agg))
     return out
+
+
+def phase_aggregates(records):
+    result=[]
+    for stream in ['SC8-U','SC8-A','SC8-G','SC8-J']:
+        for method in ['O-FULL','O-NOFDE']:
+            runs=[r for r in records if r['group']=='E03' and r['stream']==stream and r['requested_method']==method and r.get('phase_errors')]
+            for phase in ['healthy_prefix','fault_active','bridge','rejoin','late_last_quarter']:
+                values={};receipts=sum(r['phase_errors'].get(phase,{}).get('ape',{}).get('n',0) for r in runs)
+                for key in ['ape','rotation_error','velocity_error','accel_bias_error','gyro_bias_error']:
+                    units=[r['phase_errors'].get(phase,{}).get(key,{}).get('rmse') for r in runs];units=[x for x in units if x is not None]
+                    values[key]=dict(n_units=len(units),mean=float(np.mean(units)) if units else None,min=min(units) if units else None,max=max(units) if units else None)
+                result.append(dict(stream=stream,method=method,phase=phase,receipts=receipts,metrics=values,scope='Equally weighted seed RMSE; stages may overlap (persistent rejoined state versus late), not integrity partitions'))
+    return result
 
 
 def ablation_comparisons(records,registry):
