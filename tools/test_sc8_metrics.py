@@ -114,5 +114,7 @@ class MetricsTests(unittest.TestCase):
             np.testing.assert_allclose(p,[[1,2.3,3],[2,2.3,3],[3,2.3,3]],atol=1e-14)
             (run/'trajectory.tum').write_text('0 1 2 3 '+' '.join(map(str,q))+'\n1 2 2 3 '+' '.join(map(str,q))+'\n')
             with self.assertRaises(AssertionError):dataset_trajectory(run,[.3,0,0])
+            (run/'trajectory.tum').write_text('0 1 2.3 3 '+' '.join(map(str,q))+'\n1 2 3\n2 3 2.3 3 '+' '.join(map(str,q))+'\n')
+            with self.assertRaises(ValueError):dataset_trajectory(run,[.3,0,0])
 
 if __name__=='__main__':unittest.main(verbosity=2)

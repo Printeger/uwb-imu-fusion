@@ -76,7 +76,9 @@ def dataset_trajectory(run,lever):
             if i is None:continue
             assert np.linalg.norm(tag[i]-point)<1e-9,'state/TUM physical tag mismatch'
             assert (Rotation.from_quat(q[i]).inv()*Rotation.from_quat(quat)).magnitude()<1e-9,'state/TUM body orientation mismatch'
-    except (OSError,ValueError):pass # no complete TUM buffer, complete states remain
+    except OSError:pass # no complete TUM buffer, complete states remain
+    except ValueError as error:
+        if str(error)!='insufficient TUM states':raise
     return t,tag,q
 
 
