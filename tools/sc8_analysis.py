@@ -257,7 +257,7 @@ def score_entry(entry,execution,run,registry):
              widened=sum(value(r,old)<value(r,new) for r in actual),
              reduction_m=metric.summary([value(r,old)-value(r,new) for r in actual]))
              for axis,new,old in [('H','hpl','m_old_hpl'),('V','vpl','m_old_vpl')]}
-        result['bias_envelope']={str(j):dict(width=metric.summary([value(r,'bwidth_'+str(j)) for r in actual]),
+        result['bias_envelope']={str(j):dict(axis=['accel_x','accel_y','accel_z','gyro_x','gyro_y','gyro_z'][j],unit='m/s^2' if j<3 else 'rad/s',width=metric.summary([value(r,'bwidth_'+str(j)) for r in actual]),
             reference_width=metric.summary([value(r,'reference_bwidth_'+str(j)) for r in actual]),
             last_width=value(actual[-1],'bwidth_'+str(j)) if actual else None,last_reference_width=value(actual[-1],'reference_bwidth_'+str(j)) if actual else None)
             for j in range(6)}
@@ -644,7 +644,10 @@ def build_plotdata(metrics,registry):
             keys.append('core_rolling_p95');signals.append(rolling)
             events=[f[0]*.05 for f in registry['cases'][r['stream']]['faults']]
             ix=envelope_indices(tt,[*signals[:10],rolling],events)
-            event_indices=[j for j,x in enumerate(actual) if any(value(x,k)==1 for k in ['imu_alarm','uwb_alarm','bridge','repair','rejoined'])]
+            event_indices=[j for j,x in enumerate(actual) if any(value(x,k)==1 for k in ['imu_alarm','uwb_alarm','bridge','repair'])]
+            rejoin_state=np.array([value(x,'rejoined')==1 and value(x,'bridge')==0 for x in actual])
+            transitions=np.flatnonzero(np.r_[rejoin_state[0],rejoin_state[1:]!=rejoin_state[:-1]])
+            for j in transitions:event_indices.extend(range(max(0,j-1),min(len(actual),j+4)))
             ix=np.unique(np.r_[ix,event_indices]).astype(int)
             diagnostics[r['id']]=dict(t=tt[ix],**{k:np.asarray(v)[ix] for k,v in zip(keys,signals)},full_n=len(actual),display_n=len(ix))
     hist={}
@@ -662,7 +665,7 @@ def build_plotdata(metrics,registry):
     return dict(schema='sc8-plotdata-v1',curves=curves,reference_tracks=references,joint_raw_range=raw_ranges,bias_bounds=bias_bounds,native_diagnostics=diagnostics,stanford=hist,
         si={k:dict(compressed_ecdf(v),over1=int(np.sum(np.asarray(v)>1))) for k,v in si.items()},
         latency={k:compressed_ecdf(v) for k,v in latency.items()},
-        curve_reduction='Actual per-bin extrema for all displayed signals + first/last + fault +/-1s; statistics use every sample. ECDF keeps actual ranks; histogram bins sum actual PE/PL points.',
+        curve_reduction='Actual per-bin extrema for all displayed signals + first/last + fault +/-1s; native alarm/bridge/repair receipts retained, persistent rejoined-state transitions retain preceding and first4 following receipts. Statistics use every sample. ECDF keeps actual ranks; histogram bins sum actual PE/PL points.',
         histogram_scope='E01/E03 registered main SIM cases only; real/SF PL absent; frame counts descriptive, not independent confidence samples')
 
 
