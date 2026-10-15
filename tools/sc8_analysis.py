@@ -210,7 +210,7 @@ def score_entry(entry,execution,run,registry):
         result['integrity']=integrity(native,planned,entry['pace'])
         actual=[r for r in native if value(r,'updates')==1]
         selected=[r for r in actual if entry['group']!='E05' or 1101<=value(r,'epoch')<=2100]
-        result['window_common_summary']={k:metric.summary([value(r,k) for r in selected]) for k in ['hpl','vpl','hpe','vpe','ape','core_ms']}
+        result['window_common_summary']={k:metric.summary([value(r,k) for r in selected if k not in ['hpl','vpl'] or spatial(r)]) for k in ['hpl','vpl','hpe','vpe','ape','core_ms']}
         if entry['group']=='E05':
             result['window_common_coverage']=dict(planned=1000,committed=len(selected),valid_bounds=sum(spatial(r) for r in selected),
                 first_epoch=int(value(selected[0],'epoch')) if selected else None,last_epoch=int(value(selected[-1],'epoch')) if selected else None,
@@ -643,7 +643,7 @@ def build_plotdata(metrics,registry):
             actual=[x for x in raw if value(x,'updates')==1]
             if not actual:continue
             keys=['ape','rotation_error','hpl','vpl','bias_width','core_ms','delivery_ms','slots','rss','ledger','replay','capsules','q','alerts','source_prefix','active_states','proof_explicit','imu_alarm','uwb_alarm','bridge','repair','removed_priors','removed_groups','rejoined','excluded','imu_margin_0','imu_margin_3','temporal_margin_0']
-            tt=np.array([value(x,'epoch')*.05 for x in actual]);signals=[[value(x,k) for x in actual] for k in keys]
+            tt=np.array([value(x,'epoch')*.05 for x in actual]);signals=[[value(x,k) if k not in ['hpl','vpl'] or spatial(x) else float('nan') for x in actual] for k in keys]
             cores=np.array([value(x,'core_ms') for x in actual]);rolling=[np.sort(cores[max(0,i-19):i+1])[math.ceil(.95*min(i+1,20))-1] for i in range(len(cores))]
             keys.append('core_rolling_p95');signals.append(rolling)
             events=[f[0]*.05 for f in registry['cases'][r['stream']]['faults']]
@@ -1159,7 +1159,7 @@ def ablation_comparisons(records,registry):
             pstats[label]=metric.summary([value(x,'core_ms') for x in allrows if x.get('status')!='SOURCE_GAP_OR_ABORT' and grid[0]-1e-8<=value(x,'epoch')*.05<=grid[-1]+1e-8])
         out.append(dict(id=r['id'],baseline=base['id'],common_n=len(grid),interval_s=[float(grid[0]),float(grid[-1])],
             input_digest_equal=r['input_digest']==base['input_digest'],max_center_difference_m=same_center,
-            A_common=dict(ablated=aa,full=bb),P_common=pstats,PL_common={k:dict(ablated=metric.summary([value(ra[t],k) for t in stamps]),full=metric.summary([value(rb[t],k) for t in stamps])) for k in ['hpl','vpl']},
+            A_common=dict(ablated=aa,full=bb),P_common=pstats,PL_common={k:dict(ablated=metric.summary([value(ra[t],k) for t in stamps if spatial(ra[t]) and spatial(rb[t])]),full=metric.summary([value(rb[t],k) for t in stamps if spatial(ra[t]) and spatial(rb[t])])) for k in ['hpl','vpl']},
             performance_scope='Measured P includes complete run; G2 old prefix 80 has separate common-prefix A/PL comparison. No time speedup from unmatched lengths.'))
     return out
 
