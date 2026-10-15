@@ -1121,6 +1121,9 @@ def audit():
     def check(name,condition,detail=None):checks.append(dict(check=name,passed=bool(condition),detail=detail))
     check('frozen_computation',now['computational_content_sha256']==frozen['computational_content_sha256'])
     check('frozen_solver_ELF_and_DSO',now['binaries']==frozen['binaries'])
+    import hashlib
+    design={k:registry[k] for k in ['seeds','cases','runs','resource_stops','evaluation','calibration','inventory']}
+    check('frozen_registered_design',hashlib.sha256(json.dumps(design,sort_keys=True).encode()).hexdigest()==registry['frozen']['design_sha256'])
     check('all_registered_attempted',all(r['status'] not in ['NOT_ATTEMPTED','RUNNING'] for r in metrics['runs']))
     check('logical_status_partition',sum(metrics['logical_run_status_counts'].values())==len(registry['runs'])==len(metrics['runs']))
     auxiliary=sum(a.get('processes',0) for a in registry.get('auxiliary_solver_audits',[]))
@@ -1168,7 +1171,23 @@ def audit():
     for method,axes in pdata['stanford'].items():
         for axis,views in axes.items():
             for view,h in views.items():check(f'{method} {axis} {view}: actual histogram tally',sum(np.asarray(a).sum() for a in h['layers'].values())+h['outside']==h['total'])
+    previous=json.loads((OUT/'SC8_AUDIT.json').read_text()) if (OUT/'SC8_AUDIT.json').exists() else {}
+    retained={x['attempt']:x for x in previous.get('non_success_evidence',[])}
+    for path in sorted((CACHE/'runs').glob('*/execution.json')):
+        execution=json.loads(path.read_text())
+        if execution['status']=='SUCCESS':continue
+        evidence=retained.setdefault(path.parent.name,dict(attempt=path.parent.name))
+        evidence.update({k:execution[k] for k in ['status','returncode','reason','runner_error','resource_reason','resource_observation'] if k in execution})
+        if execution.get('details',{}).get('reason'):evidence['details_reason']=execution['details']['reason']
+        console=path.parent/'console.log'
+        if console.exists():
+            text=console.read_text(errors='replace');evidence['console_sha256']=common.sha256(console)
+            evidence['console_tail']=text.splitlines()[-12:]
     result=dict(status='PASS' if all(c['passed'] for c in checks) else 'FAIL',checks=checks,artifacts=artifacts,
+        metrics_sha256=common.sha256(OUT/'SC8_METRICS.json'),registry_sha256=common.sha256(ROOT/'config/sc8_experiments.yaml'),
+        plotdata_sha256=common.sha256(OUT/'SC8_PLOTDATA.json'),
+        analysis_source_sha256={str(p.relative_to(ROOT)):common.sha256(p) for p in [ROOT/'tools/sc8_analysis.py',ROOT/'tools/sc8_metrics.py',ROOT/'tools/sc8_cleanup.py'] if p.exists()},
+        non_success_evidence=list(retained.values()),
         metrics_status=metrics['status'],execution_gaps=metrics.get('execution_gaps'),
         numerical_regression_scope='Deterministic unit tests excluded from experimental solver budget by Handbook §7; ROS actual counterpart conservatively counted.',
         cleanup='NOT_PERFORMED_BY_AUDIT')
