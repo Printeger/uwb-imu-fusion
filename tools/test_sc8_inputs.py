@@ -60,16 +60,24 @@ def check():
 
 
 
-def bag_parity():
+def bag_parity(all_runs=False):
     import csv
     from rosbags.highlevel import AnyReader
     from sc8_experiments import common,sha
     summaries=[]
-    for rid in ['R1','R2','R3','R4','R5','R6']:
-        paths=list((CACHE/'runs').glob('E00-'+rid+'-SFUISE-*/execution.json'))
-        paths=[p for p in paths if json.loads(p.read_text())['status']=='SUCCESS']
-        assert paths,rid
-        path=max(paths,key=lambda p:json.loads(p.read_text()).get('attempt',1))
+    if all_runs:
+        from sc8_analysis import latest
+        registry=yaml.safe_load((ROOT/'config/sc8_experiments.yaml').read_text())
+        selected=[(e['id'],latest(e)) for e in registry['runs'] if e['requested_method']=='SFUISE']
+        selected=[(rid,p) for rid,p in selected if p is not None and json.loads(p.read_text())['status']!='RUNNING' and (p.parent/'input.bag').exists()]
+    else:
+        selected=[]
+        for rid in ['R1','R2','R3','R4','R5','R6']:
+            paths=list((CACHE/'runs').glob('E00-'+rid+'-SFUISE-*/execution.json'))
+            paths=[p for p in paths if json.loads(p.read_text())['status']=='SUCCESS']
+            assert paths,rid
+            selected.append((rid,max(paths,key=lambda p:json.loads(p.read_text()).get('attempt',1))))
+    for rid,path in selected:
         execution=json.loads(path.read_text());run=path.parent;cache=ROOT/execution['inputs']
         doc=json.loads((cache/'manifest.json').read_text());primary=doc['primary_tag']
         imu=common.read_csv(cache/'imu.csv');ranges=[r for r in common.read_csv(cache/'uwb.csv') if int(r['tag_id'])==primary]
@@ -102,10 +110,11 @@ def bag_parity():
         summaries.append(dict(id=rid,imu=len(imu),ranges=len(ranges),groups=len(groups),
                               input_digest=execution['input_digest'],bag_sha256=sha(run/'input.bag'),
                               doubles_equal_exactly=True,canonical_ns_equal_exactly=True,offset_applied_once=True))
-    save(CACHE/'input-checks/bag-parity.json',dict(status='PASS',records=summaries,
+    save(CACHE/('input-checks/all-bag-parity.json' if all_runs else 'input-checks/bag-parity.json'),dict(status='PASS',records=summaries,
         async_group_original_timestamps='preserved in canonical input; group-end model is shared, unqualified on real data'))
     print('SC8 six-family lossless TOA/IMU/timestamp/offset physical parity PASS')
 
 if __name__=='__main__':
-    if sys.argv[1:]==['bags']:bag_parity()
+    if sys.argv[1:]==['all-bags']:bag_parity(True)
+    elif sys.argv[1:]==['bags']:bag_parity()
     else:check()

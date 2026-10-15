@@ -87,4 +87,32 @@ class MetricsTests(unittest.TestCase):
             metric.process_data((ref,est))
             np.testing.assert_allclose(ours[key]['rmse'],np.sqrt(np.mean(metric.error**2)),atol=1e-10)
 
+    def test_partial_final_tum_keeps_complete_prefix(self):
+        import tempfile
+        from pathlib import Path
+        from sc8_analysis import trajectory
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'partial.tum'
+            path.write_text('0 1 2 3 0 0 0 1\n1 2 3 4 0 0 0 1\n2 3 4')
+            t,p,q=trajectory(path)
+            np.testing.assert_array_equal(t,[0,1])
+            np.testing.assert_array_equal(p,[[1,2,3],[2,3,4]])
+            path.write_text('0 1 2 3 0 0 0 1\n1 2 3\n2 3 4 5 0 0 0 1\n')
+            with self.assertRaises(ValueError):trajectory(path)
+
+    def test_complete_state_receipts_and_tag_crosscheck(self):
+        import tempfile,csv
+        from pathlib import Path
+        from sc8_analysis import dataset_trajectory
+        with tempfile.TemporaryDirectory() as directory:
+            run=Path(directory);q=Rotation.from_euler('z',np.pi/2).as_quat()
+            with (run/'states.csv').open('w') as stream:
+                writer=csv.writer(stream);writer.writerow(['t','px','py','pz','qx','qy','qz','qw'])
+                for t in [0,1,2]:writer.writerow([t,1+t,2,3,*q])
+            (run/'trajectory.tum').write_text('0 1 2.3 3 '+' '.join(map(str,q))+'\n1 2 2.3 3 '+' '.join(map(str,q))+'\n2 3')
+            t,p,_=dataset_trajectory(run,[.3,0,0])
+            np.testing.assert_allclose(p,[[1,2.3,3],[2,2.3,3],[3,2.3,3]],atol=1e-14)
+            (run/'trajectory.tum').write_text('0 1 2 3 '+' '.join(map(str,q))+'\n1 2 2 3 '+' '.join(map(str,q))+'\n')
+            with self.assertRaises(AssertionError):dataset_trajectory(run,[.3,0,0])
+
 if __name__=='__main__':unittest.main(verbosity=2)

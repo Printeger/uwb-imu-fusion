@@ -61,7 +61,7 @@ def evaluate(estimate, truth, lever=(0,0,0), max_gap=.1, times=None):
             'are_rad':summary((rt.inv()*re).magnitude()),
             'planned_grid':len(grid),'matched':int(ok.sum()),
             'coverage':float(ok.mean()) if len(ok) else None,
-            'alignment':'NONE','true_bias':'NA_REAL_WITHOUT_GT'}
+            'alignment':'NONE','true_bias':'NOT_EVALUATED_BY_POSE_ONLY_SCORER'}
     for dt in [.5,1.]:
         # Pairs start at the shared GT grid; same physical dt for every method.
         start = gt[(gt+dt <= gt[-1]+1e-9)]
