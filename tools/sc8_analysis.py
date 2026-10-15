@@ -1110,6 +1110,9 @@ def findings(metrics):
         ar=[next(iter(r['views'].values()))['are_rad']['rmse'] for r in healthy]
         passes=sum(r.get('tested_profile_deadline_pass') is True for r in healthy)
         paragraphs.append(f"健康 D1/M3/G1：{len(a)} 个独立 seed 的 FULL tag APE RMSE 为 {min(a):.6g}–{max(a):.6g} m，ARE 为 {min(ar):.6g}–{max(ar):.6g} rad；默认双 P95 与及时空间比例条件通过 {passes}/{len(a)}。这只覆盖实测的注册 profile，不授予真实应用资格。")
+        for al in ['2/3','5/5']:
+            rates=[r['integrity']['joint_AL'][al]['timely_within_AL']/r['integrity']['planned'] for r in healthy]
+            paragraphs.append(f"同一健康组在研究 AL(H,V)=({al.replace('/',',')}) m 下，joint 及时可用率为 {100*min(rates):.4g}%–{100*max(rates):.4g}%。空间 raw 资格、deadline 和满足所选 AL 是三个不同条件；厘米级实际误差不意味着 PL 也为厘米级。")
     for stream in ['SC8-U','SC8-A','SC8-G','SC8-J']:
         pp=[p for p in metrics.get('paired',[]) if p['group']=='E03' and p['stream']==stream]
         vals=[p['gains'].get('ape_m',{}).get('off_minus_on') for p in pp];vals=[x for x in vals if x is not None]
@@ -1117,12 +1120,18 @@ def findings(metrics):
         if vals:paragraphs.append(f"{stream}：{len(vals)} 个 seed 的公共观测区间上 OFF−ON APE 改善 {min(vals):.6g}–{max(vals):.6g} m（均值 {np.mean(vals):.6g} m）；ARE 改善 {min(angles):.6g}–{max(angles):.6g} rad。负值是退化，不能由另一个指标抵销。")
     real=[r for r in rr if r['group']=='E02' and r['requested_method']=='O-FULL' and r['status'] not in ['NOT_ATTEMPTED','RUNNING']]
     if real:paragraphs.append(f"真实工程 FDE：已结束 {len(real)}/6 条完整录制尝试，其中 {sum(r['status']=='RESOURCE_LIMIT' for r in real)} 条在预登记 wall 资源门限截断；SC7 raw 资格仍全部拒绝。未完成后缀不填误差，不能将有限公共区间的收益推广到全录制。")
+    for r in rr:
+        if r['group']=='E02' and r['stream']=='R5' and 'ape_m' in r.get('views',{}).get('S-ONLINE',{}):
+            score=r['views']['S-ONLINE'];paragraphs.append(f"STAR-Loc R5 的 SFUISE 首次在线流 tag APE RMSE {score['ape_m']['rmse']:.6g} m、最大 {score['ape_m']['max']:.6g} m，保留整个实测尺度；官方剔除未关闭，codec/单位/原始输入逐项核对，不能删去发散段后宣称成功。工程 ON 只有截断前缀，不能以其短段误差与该完整流作全程排名。")
     native=[r for r in rr if r['group']!='E00' and 'axes' in r.get('integrity',{})]
     if native:
         under=sum(r['integrity']['axes'][axis]['underbound'] for r in native for axis in ['H','V']);n=sum(r['integrity']['spatial_valid'] for r in native)
         paragraphs.append(f"实际原生条件 raw 记录共 {n} 个合格 tag receipt（不同场景/消融/窗口不可当作独立概率样本），H/V 合计 underbound {under} 次。计数包含迟到与 AL-unavailable 的合格界；无论是否为零，都不作为风险概率证明。")
     window=[r for r in rr if r['group']=='E05' and r['status'] not in ['NOT_ATTEMPTED','RUNNING']]
     if window:paragraphs.append(f"窗口前沿已结束 {len(window)}/14：资源截断 {sum(r['status']=='RESOURCE_LIMIT' for r in window)}，进入公共 1101–2100 评分区间 {sum(bool(r.get('views')) for r in window)}。窗口/回放同时变化，缺失公共区间不外推；1000 历元是否经历边缘化只认实际 receipt。")
+    for r in rr:
+        if r['group']=='E08' and r['status'] not in ['NOT_ATTEMPTED','RUNNING']:
+            paragraphs.append(f"长流 {r['stream']}/{r['requested_method']}：实际最后提交 {r.get('max_committed_epoch',0)}/{r.get('planned_epochs')}，进程 {r['status']}；最后实际服务历元 {r.get('actual_max_epoch',0)}，source queue 记录 {r.get('source_delivery_counts',{})}。未提交后缀和未确认到达的晚期故障不算恢复成功。")
     return paragraphs
 
 
