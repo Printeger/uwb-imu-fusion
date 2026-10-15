@@ -662,14 +662,14 @@ def build_plotdata(metrics,registry):
                 mask=truth[0]>=r.get('scoring_begin_s') if r.get('scoring_begin_s') is not None else np.ones(len(truth[0]),bool)
                 rt,rp=truth[0][mask],truth[1][mask]
                 ri=envelope_indices(rt,[rp[:,j] for j in range(3)])
-                references[r['stream']]=dict(t=rt[ri],p=rp[ri],full_n=len(rt),gap_intervals=[[float(rt[j]),float(rt[j+1])] for j in np.where(np.diff(rt)>.100000001)[0]])
+                references[r['stream']]=dict(t=rt[ri],p=rp[ri],full_n=len(rt),reference_contract=r.get('reference_contract','REGISTERED_REFERENCE'),input_contract=r.get('input_contract','REGISTERED_INPUT'),gap_intervals=[[float(rt[j]),float(rt[j+1])] for j in np.where(np.diff(rt)>.100000001)[0]])
             for view,pose in poses.items():
                 try:_,a=metric.evaluate(pose,truth,lever)
                 except ValueError:continue
                 if not len(a['t']):continue
                 events=[(f[0]-1)*.05+.005 for f in registry['cases'].get(r['stream'],{}).get('faults',[])]
                 ix=envelope_indices(a['t'],[a[k] for k in ['ape','are','hpe','vpe']],events)
-                curves[r['id']+'|'+view]=dict(run=r['id'],stream=r['stream'],view=view,reference_contract=r.get('reference_contract','REGISTERED_REFERENCE'),
+                curves[r['id']+'|'+view]=dict(run=r['id'],stream=r['stream'],view=view,reference_contract=r.get('reference_contract','REGISTERED_REFERENCE'),input_contract=r.get('input_contract','REGISTERED_INPUT'),
                     **{k:np.asarray(v)[ix] for k,v in a.items()},full_matched_n=len(a['t']),display_n=len(ix),
                     gap_intervals=[[float(a['t'][j]),float(a['t'][j+1])] for j in np.where(np.diff(a['t'])>.100000001)[0]])
         if raw and ((r['stream']=='SC8-J' and r.get('seed')==20261020 and r['group']=='E03') or r['group']=='E08'):
@@ -792,7 +792,8 @@ def figures():
         reference=data.get('reference_tracks',{}).get(rid)
         if reference:
             tt,gg=display_with_gaps(np.asarray(reference['t']),np.asarray(reference['p']),reference.get('gap_intervals',[]))
-            axs[i,0].plot(gg[:,0],gg[:,1],'k-',lw=1,label='GT');axs[i,1].plot(tt,gg[:,2],'k-',lw=1,label='GT')
+            reference_label='Frozen GT proxy' if rid=='R1' else 'GT'
+            axs[i,0].plot(gg[:,0],gg[:,1],'k-',lw=1,label=reference_label);axs[i,1].plot(tt,gg[:,2],'k-',lw=1,label=reference_label)
         elif cc:
             c=max(cc,key=lambda c:len(c['t']));gt=np.asarray(c['truth']);tt,gg=display_with_gaps(np.asarray(c['t']),gt,c.get('gap_intervals',[]));axs[i,0].plot(gg[:,0],gg[:,1],'k-',lw=1,label='GT');axs[i,1].plot(tt,gg[:,2],'k-',lw=1)
         if not cc:no(axs[i,0]);no(axs[i,1])
