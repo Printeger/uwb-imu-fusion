@@ -1,6 +1,6 @@
 schema: sc8-experiments-v1
 entry_head: fa5b3dc9ffe3c88492352491d79ba022f373bfb5
-phase: W0_INTERFACE_VALIDATION
+phase: FROZEN
 contract: docs/requirements/sc8/SC8_EXPERIMENT_HANDBOOK.md
 seeds:
 - 20261020
@@ -2454,3 +2454,332 @@ auxiliary_solver_audits:
   kind: deterministic_direct_ROS_equivalence
   result: .cache/sc8/equivalence/R3/equivalence.json
   processes: 1
+frozen:
+  identity:
+    head: def42ac48bb8b8780316bc8e4e592f786ad9e7ec
+    source_content_sha256: f0d73b43ad43ec144ce4d85f113133a7ddbe1a0cf98111d2ba64597714e6e5e0
+    computational_content_sha256: 1356f99f6e302c638bbbacfe001e4164e79b6b4454b447c558b7d3c03db325f4
+    binaries:
+      /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/epoch_raim_runner: 380887d44f372b943791494fd806d74ee1ee607946b7a9cb5a14b4dc77c580be
+      /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/nominal_dataset_runner: 350997f75ac41087873760b8552fc9b9b2a74784c75a91e43fc198a9c39b6d0c
+      /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so: 5faa46cc2d41492a55c65e9972a7bbe1f2a1b1773d791034ebdf119ec5954189
+      /home/mint/ws_fusion_uwb/.uwb_benchmark/sfuise_isolated_ws/devel/lib/uwb_benchmark_sfuise_adapter/sfuise_sc8_observed: d70d43c7e9549a7fa20f71c9cd35bfc7c9d948b851f8aef178bde3161c294297
+      ? /home/mint/ws_fusion_uwb/.uwb_benchmark/sfuise_isolated_ws/devel/lib/uwb_benchmark_sfuise_adapter/sfuise_trajectory_adapter
+      : 8300335488ea62fb52e1cc94b8e5d5a00f6dcdadb746fcc6f1c6decf2973fa34
+      /home/mint/ws_fusion_uwb/.uwb_benchmark/sfuise_isolated_ws/devel/lib/sfuise/SplineFusion: 3629a20e3513d147b1ba2fcf5e39a4f5c523dea273aeda968dad3be0f7dbdb3a
+  platform:
+    platform: Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.29
+    python: 3.8.10
+    cpu: Intel(R) Core(TM) Ultra 5 125H
+    omp_num_threads: null
+  numpy: 1.24.4
+  scipy: 1.10.1
+  evo: v1.29.0
+  lscpu: 'Architecture:                            x86_64
+
+    CPU op-mode(s):                          32-bit, 64-bit
+
+    Byte Order:                              Little Endian
+
+    Address sizes:                           46 bits physical, 48 bits virtual
+
+    CPU(s):                                  18
+
+    On-line CPU(s) list:                     0-17
+
+    Thread(s) per core:                      2
+
+    Core(s) per socket:                      9
+
+    Socket(s):                               1
+
+    NUMA node(s):                            1
+
+    Vendor ID:                               GenuineIntel
+
+    CPU family:                              6
+
+    Model:                                   170
+
+    Model name:                              Intel(R) Core(TM) Ultra 5 125H
+
+    Stepping:                                4
+
+    CPU MHz:                                 2995.199
+
+    BogoMIPS:                                5990.39
+
+    Virtualization:                          VT-x
+
+    Hypervisor vendor:                       Microsoft
+
+    Virtualization type:                     full
+
+    L1d cache:                               432 KiB
+
+    L1i cache:                               576 KiB
+
+    L2 cache:                                18 MiB
+
+    L3 cache:                                18 MiB
+
+    NUMA node0 CPU(s):                       0-17
+
+    Vulnerability Gather data sampling:      Not affected
+
+    Vulnerability Ghostwrite:                Not affected
+
+    Vulnerability Indirect target selection: Not affected
+
+    Vulnerability Itlb multihit:             Not affected
+
+    Vulnerability L1tf:                      Not affected
+
+    Vulnerability Mds:                       Not affected
+
+    Vulnerability Meltdown:                  Not affected
+
+    Vulnerability Mmio stale data:           Not affected
+
+    Vulnerability Old microcode:             Not affected
+
+    Vulnerability Reg file data sampling:    Not affected
+
+    Vulnerability Retbleed:                  Mitigation; Enhanced IBRS
+
+    Vulnerability Spec rstack overflow:      Not affected
+
+    Vulnerability Spec store bypass:         Mitigation; Speculative Store Bypass
+    disabled via prctl
+
+    Vulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers
+    and __user pointer sanitization
+
+    Vulnerability Spectre v2:                Mitigation; Enhanced / Automatic IBRS;
+    IBPB conditional; PBRSB-eIBRS SW sequence; BHI BHI_DIS_S
+
+    Vulnerability Srbds:                     Not affected
+
+    Vulnerability Tsa:                       Not affected
+
+    Vulnerability Tsx async abort:           Not affected
+
+    Vulnerability Vmscape:                   Not affected
+
+    Flags:                                   fpu vme de pse tsc msr pae mce cx8 apic
+    sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb
+    rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid
+    tsc_known_freq pni pclmulqdq vmx ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe
+    popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch
+    ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow ept vpid ept_ad fsgsbase tsc_adjust
+    bmi1 avx2 smep bmi2 erms invpcid rdseed adx smap clflushopt clwb sha_ni xsaveopt
+    xsavec xgetbv1 xsaves avx_vnni vnmi umip waitpkg gfni vaes vpclmulqdq rdpid movdiri
+    movdir64b fsrm md_clear serialize ibt flush_l1d arch_capabilities
+
+    '
+  uname: 'Linux mint 6.18.54.1-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Tue
+    Oct  6 19:13:07 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux'
+  loaded_libraries:
+    /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so: 5faa46cc2d41492a55c65e9972a7bbe1f2a1b1773d791034ebdf119ec5954189
+    /lib/x86_64-linux-gnu/libpthread.so.0: af27ed906f6185e0143b9c0d0da287788efa7eb6b2639e44d48fb2939415fdc5
+    /usr/local/lib/libgtsam.so.4: 00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da
+    /lib/x86_64-linux-gnu/libtbb.so.2: 26115b1a00c49e84d314e3f75eab0c752a2dfb20a61c60897f5656b1db239cba
+    /lib/x86_64-linux-gnu/libyaml-cpp.so.0.6: b8a2d129e9b39d03ad7dade4eaa4eb1327a2562e203c17b50bcd8eb117d1ed7e
+    /lib/x86_64-linux-gnu/libstdc++.so.6: 26916e7389a561537a0510661fc75538cea236139346f3dbe21bc64ba65605bf
+    /lib/x86_64-linux-gnu/libm.so.6: a0e70f48f02a399e8dd37f861a99e226c285a9daf50a25d19fff7ccf18b97f9c
+    /lib/x86_64-linux-gnu/libgcc_s.so.1: 489803ded8a4d803e2c792763a2767c12185f5764b7bba080742d14ef2452b27
+    /lib/x86_64-linux-gnu/libc.so.6: 53b909551f8e581120ddc2d24cfb5df76c52e3c2e2a5dac0d202b25638b3e902
+    /lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0: e1ba3a5cf611782b0dd5d7981edd06504edcb867482d2929213ae655a98d0ae2
+    /usr/local/lib/libgtsam_unstable.so.4: 7e54a7f4603b30b755f9f0036034e19c9f753c985c82af83c1551b23a9358c23
+    /lib/x86_64-linux-gnu/libboost_serialization.so.1.71.0: e1cd1dfdb60c9ac2e9c168cf2f0958a5ece96084604d21f7933250f5845bf1e8
+    /lib/x86_64-linux-gnu/libboost_timer.so.1.71.0: 83e9597dda3f11709b591b2d89b50deda1035acffe18b1908c44c5cab430964a
+    /lib/x86_64-linux-gnu/libtbbmalloc.so.2: 14147fcfadccacb4ddf94738143a3fa999a065a303dda898da8ab057cfb483b4
+    /usr/local/lib/libmetis-gtsam.so: 0a9c286ec13c815313fbe004d9969c3ae0ff08523f38efb575ca785e98f24d2b
+    /lib/x86_64-linux-gnu/libdl.so.2: e0d0cace80b627e50ca3f7b621b64917677c27c74077080854d57cf4e548edc6
+    /lib/x86_64-linux-gnu/libboost_chrono.so.1.71.0: d1b51a0aaec8675081523ab596742813c14ede4832c529c1cca2f25d3aee5050
+    /lib/x86_64-linux-gnu/libboost_program_options.so.1.71.0: 16a89b0d75de54bfef18b479eb1d38710e5c242246a17baffa11eb4f2d544663
+    /opt/ros/noetic/lib/libroscpp.so: 2bba1ac7e2511e44b51ba69f9dc923f8a86dd726722d8013075ad1f7998063a3
+    /opt/ros/noetic/lib/librosconsole.so: 6a2606bec588ad94ab2492e8bdc20423e99782625e11e454b9b8c16057b1dc1c
+    /opt/ros/noetic/lib/libroscpp_serialization.so: 054c5e661490c61927d798a0513807766a005b6854f309b780290bb6ca6881d4
+    /opt/ros/noetic/lib/librostime.so: 3d7fe2addb37ca107726c4c3d28d54379f1efad6c58682d1a4f11b1aa4a0e907
+    /lib/x86_64-linux-gnu/libcholmod.so.3: 2fae4a48fab49868c2a7a5fec8bbb90efe30272a4e451e884f55a02df327b558
+    /opt/ros/noetic/lib/libxmlrpcpp.so: bb257f20c523812a8013439b9b1649c444b25d7e7d31d86df63f9733172a73f0
+    /opt/ros/noetic/lib/libcpp_common.so: 7ca7b67d2f06d897cbbadc51343c75312accf25916eeed71dacd275b3c39ee2e
+    /lib/x86_64-linux-gnu/libboost_thread.so.1.71.0: 8bf9cd91f41bb60d52083d6c66e3b79b7f5884945d14b4aa95aa13d8486d9daf
+    /opt/ros/noetic/lib/librosconsole_log4cxx.so: d0e1afe985f5db3d2b191fcd388ddecd91ba15920ae7132e84f3f43ff3e8fe0d
+    /opt/ros/noetic/lib/librosconsole_backend_interface.so: 99092c95434fa4be7a8963649a996034784e4f6c6033f55063efd411829adafc
+    /lib/x86_64-linux-gnu/liblog4cxx.so.10: 5693f25a8d6fc9582486b8ae34ce72a16f4d976319eaa813587d13ac56c7ebcc
+    /lib/x86_64-linux-gnu/libboost_regex.so.1.71.0: 8ba016f96cf59ea484eb77a800bdaa2020e6a3dde60b1d320b2cf807a4aedaf2
+    /lib/x86_64-linux-gnu/libamd.so.2: 90a6577c0b59b25680e238cf2226265c3dbb45683303e853792ef03fde970d05
+    /lib/x86_64-linux-gnu/libcolamd.so.2: 0c3ae69c2dced6cb3dbf624cf3edf5aa54b2ed560771ab9797b315eeb95934a0
+    /lib/x86_64-linux-gnu/libsuitesparseconfig.so.5: be0139837fce47efe22257fc6497f7725dedab4aa77c5a0936099c071f325ef2
+    /lib/x86_64-linux-gnu/libccolamd.so.2: a841bd18769c4f218f70a5e96936276c6080536dba7200880d98e1199fa33c0c
+    /lib/x86_64-linux-gnu/libcamd.so.2: 2da0fd13d53242a2dc3e4270b09c5fb809952e1ea0914dd8a417e40f265a7c95
+    /lib/x86_64-linux-gnu/libmetis.so.5: 3201764476cd0835c59200442463e3ecde6b5e3169947b969647bb76dca518e3
+    /lib/x86_64-linux-gnu/liblapack.so.3: 21c2d80ed1c9e9b43d6756d200aadd682cfc50bf26642a21f386d032c92016d1
+    /lib/x86_64-linux-gnu/libblas.so.3: 4516337d4c705dfc065013f98c636a037cf05b29e0266322201adc585aed0143
+    /lib/x86_64-linux-gnu/libgomp.so.1: 98b21ff32bb07b53f1fb266d887d2db0086ea66c8ad03696a1db53f65321cd94
+    /lib/x86_64-linux-gnu/libconsole_bridge.so.0.4: 3008f31164aced8976b266973a20cf5355b70ae38c60f0405e578c2bee194a43
+    /lib/x86_64-linux-gnu/libapr-1.so.0: f002556ea2645376d2358992f402d224b35142c262adc0fb56217159c4951320
+    /lib/x86_64-linux-gnu/libaprutil-1.so.0: d532af8eccfede0733a7dc321b606ac3cc63e916a7966262a064a917f52b1da8
+    /lib/x86_64-linux-gnu/libicui18n.so.66: e6b2f6fdf6f473bd529526a06b1e1bb6dab4a9998da941346711f1805dd42816
+    /lib/x86_64-linux-gnu/libicuuc.so.66: d41e9287614412b6e95f809773a5f0f86ee3763a7d5f0db4856e79f64f7c8dab
+    /lib/x86_64-linux-gnu/libgfortran.so.5: 01fc721062fc3c2b5492202d276c5a374b7d952fc168d2d1e603fa85660cc502
+    /lib/x86_64-linux-gnu/libuuid.so.1: 5255c40077f560d9572f60e8c1b85333bd409ac5daeee326e5c1bb3273dca0a9
+    /lib/x86_64-linux-gnu/libcrypt.so.1: 5744b3669e4574920dfac2b33207db4e8cb501df88ef28c3801ba0673a7c7d6f
+    /lib/x86_64-linux-gnu/libexpat.so.1: 78f843a1bedfa4446d888d3ac0a501bbd27c08d3ef35999cbf6afc2592b357d6
+    /lib/x86_64-linux-gnu/libicudata.so.66: 50b039da86ab40fed973954892aa52b0b833127b94103ec62b71c1e0891ce5ed
+    /lib/x86_64-linux-gnu/libquadmath.so.0: 36ccd8fddb16b65129879a6ecf379b468d6e920bdcaeb01e3a7fdd4e7ddf1be8
+  unchanged_contracts:
+    research/rolling_policy.hpp: 410666e55ec00f6e6079e7bb55886c4f8b787affbb8b963ad592559d8e658b39
+    research/time_uniform_event.hpp: 954ca2d0dc2153642ff43e368b7e4b46284e199f77718cd1cae157a6ad6879dc
+    config/sc7.yaml: 42fdc2f41ca64bc5fc9186c16f19b193ee1d7e571c931eb37aa8a1f25d41274a
+    config/sc6.yaml: 55265150404b589c9f08867e29fe64ecbbcfa3ba9d044fac3ace2b113acca6e5
+    config/sc6_closure.yaml: 50b21fa02b0ca21c7082b4482a99b7ad3fa6c32d3f02fbabce096de7f71c5c4d
+    config/fde_off.yaml: acf4a1a6ff15351384f0e230f2b91c067b7927ca9b184d6bf2e06860e26ff54a
+    config/fde_joint_order1.yaml: 18cec5ece3cd6f33761b946b7815ea5a8d0c998e007ad2fe49eef122de4284f7
+  baseline_pin: 75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d
+  baseline_observer:
+    pinned_sha: 75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d
+    original_sha256: bfd3f1e25d98a7486fa3b435023af9dca1236c0a8de4a86793c52ad0f11e48d1
+    observed_sha256: e50da39aa724da48594b2313ede8c3095d25d45fd4efbf5546bd3edde46e9595
+    reversed_insertions_exact_original: true
+    insertion_count: 15
+    cutoff: MAX_NUMERIC_INPUT_INCLUDING_INITIAL_GRAVITY_INTEGRATION_AND_INHERITED_PAST;
+      CALLBACK_BOUND_SEPARATE
+    core_boundary: all callback/run active work since preceding output, including
+      maintenance after publication; excludes idle sleeps
+    wire_adapter: optional Float64 ToA -> unchanged upstream TOAData; original Float32
+      subscription shut down in this mode
+    upstream_worktree_clean: true
+  no_push: true
+  validated_W0:
+    .cache/sc8/input-checks/result.json: 7e9648d5bc1bffd6ba3b1d0952cf316b5a6640024f17bd01c2b2bafde947abaa
+    .cache/sc8/input-checks/bag-parity.json: 5abf83b7426a9cd1bdeef892626c5778bf9bdb369583b57edd258d1f0a96ff3e
+    .cache/sc8/sfuise_observer/check.json: b806b91dd0dd64b3ddc8b851bc0f3395bd2dd77b9e698ae7fe1675008ab9e52c
+    .cache/sc8/equivalence/R3/equivalence.json: eae2f3a2bacc7c790c6908787ce23d6d678ceb2d634bb8ddababc5736b4ed60a
+  design_sha256: de11b25d711e26e33d8216d3f5953172d2d1b57b2f9fc690193da6fb6b91c46d
+calibration:
+  walk1_world.json:
+    schema: sfuise-world-interface-calibration/v1
+    label: GT-assisted interface calibration
+    scope: CAL-W_ISAS-Walk1_ONLY
+    rotation_anchor_from_vive_matrix:
+    - - 0.9735319825072342
+      - -0.18081504558031472
+      - 0.13979055163823928
+    - - 0.14634850003440114
+      - 0.9629807866775789
+      - 0.22638489575833698
+    - - -0.17554941063192286
+      - -0.1999347988260698
+      - 0.9639546050749297
+    rotation_anchor_from_vive_xyzw:
+    - -0.10793121739645807
+    - 0.0798345149284047
+    - 0.0828278876498085
+    - 0.9874800471730735
+    translation_anchor_from_vive_m:
+    - 1.6126307241736089
+    - 1.0722925639491718
+    - 1.567906538812692
+    fit_samples: 844
+    rejected_samples: 69
+    residual_rmse_m: 0.1782044280616124
+    residual_median_m: 0.139057823292497
+    sequence_counts:
+      CAL-W: 913
+    gt_use: missing_world_frame_transform_only
+    test_involved: false
+    identification: range-derived rigid world fit; model adequacy not guaranteed
+  own_prefix20.json:
+    schema: own-vicon-interface-calibration/v1
+    label: GT-assisted interface calibration
+    scope: R3_FIXED_FIRST_20_PERCENT
+    rotation_body_from_imu_matrix:
+    - - -0.9469019214394204
+      - -0.14782422864591976
+      - -0.28552539046391684
+    - - 0.09851305197510653
+      - -0.9787200561429215
+      - 0.18000619515490715
+    - - -0.3060587031353351
+      - 0.1423202344321967
+      - 0.9413145176328055
+    rotation_body_from_imu_xyzw:
+    - -0.1504190954223361
+    - 0.08195631101949016
+    - 0.9832263848187696
+    - 0.06263493444249663
+    time_imu_to_gt_s: 0.015542069530033498
+    lever_tag_from_imu_body_m:
+    - 0.03703753555994884
+    - -0.027430216722513653
+    - -0.04130280234190144
+    accelerometer_bias_body_mps2:
+    - -1.2876134346779886
+    - 1.0828407218202725
+    - -0.5301160823260639
+    lever_std_m:
+    - 0.006759460905269989
+    - 0.020951441000329057
+    - 0.009319059377150073
+    gyro_fit_rmse_radps: 0.14748226900437714
+    accel_fit_rmse_mps2: 0.2871089936520964
+    gyro_samples: 584
+    accel_scalar_samples: 750
+    gt_use: interface_rotation_time_and_translation_only
+    test_involved: true
+    cal_end_sensor_s: 14.678774642944337
+    isolation_s: 2.0
+    test_begin_s: 16.678774642944337
+    angular_excitation_singular_values:
+    - 2.0399141686416744
+    - 1.2749504312798883
+    - 0.8632216657629774
+    full_6d_identifiability: 'CALIBRATION_OPEN: no independent lever/time truth; fit
+      diagnostics only'
+  own_cal_o.json:
+    schema: own-vicon-interface-calibration/v1
+    label: GT-assisted interface calibration
+    scope: CAL-O_ONLY
+    rotation_body_from_imu_matrix:
+    - - 0.2997727790208003
+      - 0.6066486147600046
+      - 0.7362837355041286
+    - - 0.930244345636044
+      - -0.3570688685021708
+      - -0.08454159070391297
+    - - 0.21161696144287478
+      - 0.7102670493246513
+      - -0.6713709706811412
+    rotation_body_from_imu_xyzw:
+    - 0.7629240817742143
+    - 0.5036192319496374
+    - 0.31061435848984403
+    - 0.2604481425531231
+    time_imu_to_gt_s: 0.17592244225006
+    lever_tag_from_imu_body_m:
+    - -0.053419884961757765
+    - -0.04569574102348384
+    - 0.04465124551677377
+    accelerometer_bias_body_mps2:
+    - 8.313097451216368
+    - -1.7080792763352455
+    - -16.38392788864421
+    lever_std_m:
+    - 0.08049271359564679
+    - 0.07226498139843619
+    - 0.0058110861337833
+    gyro_fit_rmse_radps: 0.1319694078232546
+    accel_fit_rmse_mps2: 0.11971228138496162
+    gyro_samples: 455
+    accel_scalar_samples: 201
+    gt_use: interface_rotation_time_and_translation_only
+    test_involved: false
+    angular_excitation_singular_values:
+    - 0.10316564445526805
+    - 0.02167662486111623
+    - 0.01439735155267021
+    full_6d_identifiability: 'CALIBRATION_OPEN: no independent lever/time truth; fit
+      diagnostics only'

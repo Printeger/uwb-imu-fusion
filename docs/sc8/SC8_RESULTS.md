@@ -1,6 +1,6 @@
 # SC8 实验结果与执行记录
 
-**状态：IN_PROGRESS / W0。正式 E01–E08 尚未开始；本文件不是结项声明。**
+**状态：IN_PROGRESS / W1。W0 已完成，计算身份已冻结，正式矩阵开始；本文件不是结项声明。**
 
 入口 HEAD：`fa5b3dc9ffe3c88492352491d79ba022f373bfb5`。本地与设计时版本相同，工作区入口干净，无适用 AGENTS.md。保留用户既有数据和证据，不 push。实际运行矩阵位于 `config/sc8_experiments.yaml`，已展开 143 个唯一进程计划，上限 160；接口开发重试另外计账。
 
@@ -55,3 +55,5 @@ python3 tools/sc8_experiments.py run --group E00
 ```
 
 `register` 保留已经存在的登记；`run` 复用有身份的已执行记录。显式 `--retry-failed` 保存旧失败到原 attempt 目录，新建后续 attempt。W0 接口验证已完成；提交当前代码后执行 `freeze`，保存实际源、ELF、DSO、平台与校准数值，然后运行 `run --group E01,E02,E03`。当前仍无正式主结果或结项声明。
+
+计算冻结源码提交：`def42ac`。精确源码/ELF/DSO、动态依赖、平台、全部校准数值和设计 SHA256 已写入 registry 的 `frozen`；后续只读分析可继续开发，不改变求解协议。下一命令：`python3 tools/sc8_experiments.py run --group E01,E02,E03`。
