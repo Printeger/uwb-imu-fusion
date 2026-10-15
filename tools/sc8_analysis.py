@@ -538,13 +538,19 @@ def paired_results(records,registry):
             for name in ['ape_m','hpe_m','vpe_m','are_rad','rpe_tag_0.5s_m','rpe_body_0.5s_m','rpe_body_0.5s_rad','rpe_tag_1s_m','rpe_body_1s_m','rpe_body_1s_rad']:
                 a=gain_scores[on][name]['rmse'];b=gain_scores[off][name]['rmse']
                 gains[name]=dict(off_minus_on=b-a if a is not None and b is not None else None,percent=100*(b-a)/b if a is not None and b else None)
+        observed_gains=gains;post_fault_n=None;fault_effect_evaluable=None
+        if by['O-FULL'].get('track')=='T-SEMI':
+            begin=by['O-FULL'].get('overlay_execution_coverage',{}).get('physical_begin_s',float('inf'))
+            post_fault_n=int(np.sum(gain_grid>=begin));fault_effect_evaluable=post_fault_n>=2
+            if not fault_effect_evaluable:gains={k:dict(off_minus_on=None,percent=None) for k in gains}
         history={}
         if all(k in poses for k in ['S-ONLINE','S-FINAL']):
             hg=poses['S-ONLINE'][0];mask=metric.sample(*poses['S-FINAL'],hg)[0]&metric.sample(*truth,hg)[0];hg=hg[mask]
             history=dict(common_n=len(hg),scores=scored({k:poses[k] for k in ['S-ONLINE','S-FINAL']},truth,lever,hg))
         pairs.append(dict(group=key[0],stream=key[1],seed=key[2],common_grid_n=len(gain_grid),
             common_interval_s=[float(gain_grid[0]),float(gain_grid[-1])] if len(gain_grid) else None,
-            gains=gains,gain_scores=gain_scores,gain_scope='ON/OFF first-stream intersection only; independent of SF/historical missing data',
+            gains=gains,gain_scores=gain_scores,observed_interval_gains=observed_gains,post_fault_common_n=post_fault_n,fault_effect_evaluable=fault_effect_evaluable,
+            gain_scope='ON/OFF first-stream intersection only; independent of SF/historical missing data. For real overlays, fault gains require at least two common post-injection states; pre-only observed interval values remain separate.',
             scores=scores,display_common_grid_n=len(display_grid),display_common_interval_s=[float(display_grid[0]),float(display_grid[-1])] if len(display_grid) else None,
             available_views=list(poses),missing_main_online_views=[k for k in [on,off,'S-ONLINE'] if k not in poses],
             display_scope='intersection of all AVAILABLE views including valid historical support; missing methods remain NA; no claim of ON common coverage if ON absent',
@@ -801,7 +807,7 @@ def figures():
         episodes=[e for r in records if r['group']=='E03' and r['stream']==stream and r['requested_method']=='O-FULL' for e in r.get('episodes',[])]
         imu=[e for e in episodes if e['kind']=='IMU' and e.get('exposure')=='FULL_FAULT_INTERVAL_CONFIRMED'];uwb=[e for e in episodes if e['kind']=='UWB' and e.get('exposure')=='FULL_FAULT_INTERVAL_CONFIRMED']
         counts.append(stream.replace('SC8-','')+': '+('rejoin '+str(sum(e.get('REJOIN_EXECUTED',False) for e in imu))+'/'+str(len(imu)) if imu else '')+('; ' if imu and uwb else '')+('UWB isolation '+str(sum(e.get('ISOLATION_COMMITTED',False) for e in uwb))+'/'+str(len(uwb)) if uwb else ''))
-    finish(fig,'F04_fault_paired_gains','Positive = OFF minus ON improvement; each seed / recording shown. Position gain does not cancel ARE degradation. FULL native episode receipts (fully exposed): '+', '.join(counts)+'. Real overlays are empirical and have no equivalent qualified rejoin claim.')
+    finish(fig,'F04_fault_paired_gains','Positive = OFF minus ON improvement; each seed / recording shown. Position gain does not cancel ARE degradation. FULL native episode receipts (fully exposed): '+', '.join(counts)+'. Real gains require two common post-injection states; pre-only pairs are NA. Engineering receipts have no equivalent qualified rejoin claim.')
     # F05 H/V actual binned Stanford counts, full scale and zoom.
     for axis in ['H','V']:
         fig,axs=sub(2,2,6.0);full_extent=max([v[axis]['full']['y_edges'][-1] for v in data['stanford'].values()],default=10)
@@ -1016,8 +1022,8 @@ def report():
         table(['流/seed','公共区间 s','公共 N','APE 改善 m / %','ARE 改善 rad','输入 digest 一致'],[(p['stream']+'/'+str(p['seed'])[-2:],p['common_interval_s'],p['common_grid_n'],f"{fmt(p['gains'].get('ape_m',{}).get('off_minus_on'))} / {fmt(p['gains'].get('ape_m',{}).get('percent'))}",p['gains'].get('are_rad',{}).get('off_minus_on'),p['input_digests_equal']) for p in metrics.get('paired',[]) if p['group'] in ['E01','E02']]),
         table(['SF 同次运行历史对照','共同有效 N','首次 / 历史 APE m','首次 / 历史 ARE rad'],[(p['stream']+'/'+str(p['seed'])[-2:],p['SF_history_common']['common_n'],f"{fmt(p['SF_history_common']['scores'].get('S-ONLINE',{}).get('ape_m',{}).get('rmse'))} / {fmt(p['SF_history_common']['scores'].get('S-FINAL',{}).get('ape_m',{}).get('rmse'))}",f"{fmt(p['SF_history_common']['scores'].get('S-ONLINE',{}).get('are_rad',{}).get('rmse'))} / {fmt(p['SF_history_common']['scores'].get('S-FINAL',{}).get('are_rad',{}).get('rmse'))}") for p in metrics.get('paired',[]) if p.get('SF_history_common')]),
         '\n## E03：故障、恢复与实测增量',
-        '\n主流 U/A/G/J 各三 seed、600 历元；健康 F0 复用 E01。登记强度保持 range +2.25 m/3 历元、raw accel 20 m/s² 或 gyro 1 rad/s/500 ms，标准噪声 draw 与初始观测不变；另有 D0 六轴、弱短、负、错峰定向例，不全排列。R2/R3 仅 FU/FG/FJ；注入 ORIGINAL_SENSOR_X 经固定旋转进入 body，保留 raw sample/range IDs、原时刻、delta 与 GT unchanged，不宣称这一未认证 body 混合方向满足单轴 raw 定理。',
-        table(['流/seed','公共 N','APE OFF−ON m','APE %','ARE OFF−ON rad'],[(p['stream']+'/'+str(p['seed'])[-2:],p['common_grid_n'],p['gains'].get('ape_m',{}).get('off_minus_on'),p['gains'].get('ape_m',{}).get('percent'),p['gains'].get('are_rad',{}).get('off_minus_on')) for p in metrics.get('paired',[]) if p['group']=='E03']),
+        '\n主流 U/A/G/J 各三 seed、600 历元；健康 F0 复用 E01。登记强度保持 range +2.25 m/3 历元、raw accel 20 m/s² 或 gyro 1 rad/s/500 ms，标准噪声 draw 与初始观测不变；另有 D0 六轴、弱短、负、错峰定向例，不全排列。真实 overlay 公共交集若不足两个注入后状态，故障 gain 为 NA，故障前数值另留 JSON，不以零差异冒充恢复效果。R2/R3 仅 FU/FG/FJ；注入 ORIGINAL_SENSOR_X 经固定旋转进入 body，保留 raw sample/range IDs、原时刻、delta 与 GT unchanged，不宣称这一未认证 body 混合方向满足单轴 raw 定理。',
+        table(['流/seed','公共 / 注入后公共 N','APE OFF−ON m','APE %','ARE OFF−ON rad'],[(p['stream']+'/'+str(p['seed'])[-2:],f"{p['common_grid_n']} / {p.get('post_fault_common_n','NA_SIM')}",p['gains'].get('ape_m',{}).get('off_minus_on'),p['gains'].get('ape_m',{}).get('percent'),p['gains'].get('are_rad',{}).get('off_minus_on')) for p in metrics.get('paired',[]) if p['group']=='E03']),
         table(['E03 主流','view','独立单位 N','APE mean / min / max m','ARE mean / min / max rad'],[(a['stream'],a['view'],a['metrics']['ape_m']['n_units'],' / '.join(fmt(a['metrics']['ape_m'][k]) for k in ['mean','min','max']),' / '.join(fmt(a['metrics']['are_rad'][k]) for k in ['mean','min','max'])) for a in metrics.get('unit_aggregates',[]) if a['group']=='E03' and a['stream'] in ['SC8-U','SC8-A','SC8-G','SC8-J']]),
         table(['定向例','status','APE m','ARE rad','raw / planned'],[(r['stream'],r['status'],m(r,'ape_m'),m(r,'are_rad'),f"{r.get('integrity',{}).get('spatial_valid','NA')} / {r.get('planned_epochs','NA')}") for r in records if r['group']=='E03' and r['stream'] not in ['SC8-U','SC8-A','SC8-G','SC8-J'] and r['stream'].startswith('SC8-')]),
         '\n以下为真实原生 episode receipt，FD/隔离/边缘先验替换/bridge/rejoin 分开；sensor TTD 与 wall TTD/TTI/TTR 不混。仅有 FD 或 PL 资格不等于恢复执行；first nominal receipt 不等于误差恢复。阶段 APE/ARE/速度/bias（healthy/fault/bridge/rejoin/late）完整保存在 JSON，位置改善不抵销姿态退化。',
