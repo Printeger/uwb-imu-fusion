@@ -1,0 +1,420 @@
+{
+  "schema": "sc8-advisor-figure-sources-v1",
+  "frozen_solver": "61907ab417450d317e443e4ff10f2cce062deabe",
+  "figures": [
+    {
+      "slide": 3,
+      "asset": "s03_healthy",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_PLOTDATA.json"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_PLOTDATA.json": "1356bd2523e1a3a936a5e550d7f4c56386a0076e89f68ce6e905969293ea1b23"
+      },
+      "original_figure": "F01_paired_accuracy.svg",
+      "original_figure_sha256": "3e642c2f2926eb7f3ba8aef5dfdd8c06609d21ac3244cd13d8956f1c5d589742",
+      "section": "SC8_RESULTS E01: three healthy seeds, per-run output-stamp APE",
+      "displayed_metric": "E01: three healthy seeds, per-run output-stamp APE",
+      "caveat": "Different initialization information and output stamps; S-FINAL is same-run noncausal valid history, not batch optimum.",
+      "rendering": "Replotted from frozen summary / actual count bins; SVG with editable text and 300dpi PNG fallback.",
+      "axes_and_legend_bounds_checked": true,
+      "outputs": {
+        "svg": {
+          "path": "docs/sc8/presentation/figures/s03_healthy.svg",
+          "sha256": "b84455ba7adfbf03d75e8ae9d725c6c81783e28bcadb1c2f310de09986ea42c0"
+        },
+        "png": {
+          "path": "docs/sc8/presentation/figures/s03_healthy.png",
+          "sha256": "a2e371077b0097f1a450aa2e4220a1d39ef7938f717034f77eacb7be9c735014"
+        }
+      }
+    },
+    {
+      "slide": 4,
+      "asset": "s04_vicon",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_PLOTDATA.json"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_PLOTDATA.json": "1356bd2523e1a3a936a5e550d7f4c56386a0076e89f68ce6e905969293ea1b23"
+      },
+      "original_figure": "F02_real_trajectories.svg",
+      "original_figure_sha256": "4f72ec40cb891ab01e268fc3172e204d793443777b6f91f7756d123380e8a828",
+      "section": "SC8_RESULTS E00/E02: R3 XY and height on registered TEST",
+      "displayed_metric": "E00/E02: R3 XY and height on registered TEST",
+      "caveat": "GT-assisted TEST-involved segmented calibration; no FULL TEST output; no independent blind-test claim.",
+      "rendering": "Replotted from frozen summary / actual count bins; SVG with editable text and 300dpi PNG fallback.",
+      "axes_and_legend_bounds_checked": true,
+      "outputs": {
+        "svg": {
+          "path": "docs/sc8/presentation/figures/s04_vicon.svg",
+          "sha256": "14c4edd09f5abbc32e24dd5e7bfeb708a8dbda65d2931d6d9c257cd94599bf7d"
+        },
+        "png": {
+          "path": "docs/sc8/presentation/figures/s04_vicon.png",
+          "sha256": "57b9e69c047d3f3caf1a1f34aec98f255ff185426634fd6bc0cf3637dddd161a"
+        }
+      }
+    },
+    {
+      "slide": 5,
+      "asset": "s05_coverage",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_PLOTDATA.json"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_PLOTDATA.json": "1356bd2523e1a3a936a5e550d7f4c56386a0076e89f68ce6e905969293ea1b23"
+      },
+      "original_figure": "F00_admission.svg",
+      "original_figure_sha256": "b0365ba2580749885caeb9d94086ba00ee522748c71a741d1a525063def8b68b",
+      "section": "SC8_RESULTS E02: output coverage on full GT TEST grid",
+      "displayed_metric": "E02: output coverage on full GT TEST grid",
+      "caveat": "Temporal coverage only for Walk; R3 FULL NA, no real raw PL; percentages are not accuracy or commit rates.",
+      "rendering": "Replotted from frozen summary / actual count bins; SVG with editable text and 300dpi PNG fallback.",
+      "axes_and_legend_bounds_checked": true,
+      "outputs": {
+        "svg": {
+          "path": "docs/sc8/presentation/figures/s05_coverage.svg",
+          "sha256": "5dfc48add51d9ac1ffd34be6f7731c12d24142f9695599df118456651dad965c"
+        },
+        "png": {
+          "path": "docs/sc8/presentation/figures/s05_coverage.png",
+          "sha256": "b9ba978380850f9d77692d67fef6c18c4014e08045851475db6f5fc19d302f12"
+        }
+      }
+    },
+    {
+      "slide": 6,
+      "asset": "s06_gains",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_PLOTDATA.json"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_PLOTDATA.json": "1356bd2523e1a3a936a5e550d7f4c56386a0076e89f68ce6e905969293ea1b23"
+      },
+      "original_figure": "F04_fault_paired_gains.svg",
+      "original_figure_sha256": "14fd9988871601d4c9abe26e2506c209c80edf411756c497f3341426ac237567",
+      "section": "SC8_RESULTS E03: matched per-seed gains, N=3 each; black tick is mean",
+      "displayed_metric": "E03: matched per-seed gains, N=3 each; black tick is mean",
+      "caveat": "Negative is deterioration. Position and attitude effects separate; real physical paired gains remain unavailable.",
+      "rendering": "Replotted from frozen summary / actual count bins; SVG with editable text and 300dpi PNG fallback.",
+      "axes_and_legend_bounds_checked": true,
+      "outputs": {
+        "svg": {
+          "path": "docs/sc8/presentation/figures/s06_gains.svg",
+          "sha256": "d8778d834454f97bdd1fe918436647007f5f48ee7f72c224268bd99a130ba88b"
+        },
+        "png": {
+          "path": "docs/sc8/presentation/figures/s06_gains.png",
+          "sha256": "01791573f6d72fcfca4c956dbbcc3467133e7e82ec4790b9b359160bee7bd585"
+        }
+      }
+    },
+    {
+      "slide": 7,
+      "asset": "s07_fault_timeline",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_PLOTDATA.json"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_PLOTDATA.json": "1356bd2523e1a3a936a5e550d7f4c56386a0076e89f68ce6e905969293ea1b23"
+      },
+      "original_figure": "F03_joint_fault_receipts.svg",
+      "original_figure_sha256": "b0a8ec8bafcb6d8f218f82c374ddcf238b17481d79ef38cd28daabce77bc369d",
+      "section": "SC8_RESULTS E03: SC8-J seed20261020 APE/ARE and native receipt states",
+      "displayed_metric": "E03: SC8-J seed20261020 APE/ARE and native receipt states",
+      "caveat": "T-SIM; source pulses fixed. Rejoined flag persists and is not proof of accuracy recovery; full SFUISE outlier scale retained.",
+      "rendering": "Replotted from frozen summary / actual count bins; SVG with editable text and 300dpi PNG fallback.",
+      "axes_and_legend_bounds_checked": true,
+      "outputs": {
+        "svg": {
+          "path": "docs/sc8/presentation/figures/s07_fault_timeline.svg",
+          "sha256": "5b9216868f16f98ce2afca4b273647fc52a78bde3ea64c2a576cac4192ad9ecc"
+        },
+        "png": {
+          "path": "docs/sc8/presentation/figures/s07_fault_timeline.png",
+          "sha256": "ed0c564ac765287c8bbb8954c7525b44ebd3a9313c06940919a77d62058e5cb0"
+        }
+      }
+    },
+    {
+      "slide": 8,
+      "asset": "s08_horizontal",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_PLOTDATA.json"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_PLOTDATA.json": "1356bd2523e1a3a936a5e550d7f4c56386a0076e89f68ce6e905969293ea1b23"
+      },
+      "original_figure": "F05_H_Stanford.svg",
+      "original_figure_sha256": "8cf6ad7c5d09e32e503949d0f2ec9f601f6d767d26b05af36a66abf7a356f55b",
+      "section": "SC8_RESULTS E04: H PE vs PL actual log-count bins, full + zoom",
+      "displayed_metric": "E04: H PE vs PL actual log-count bins, full + zoom",
+      "caveat": "Timely bins teal (darker=more), late bins gray. Figure N=10200 per method; overall 77131 correlated receipts is a separate aggregate.",
+      "rendering": "Replotted from frozen summary / actual count bins; SVG with editable text and 300dpi PNG fallback.",
+      "axes_and_legend_bounds_checked": true,
+      "outputs": {
+        "svg": {
+          "path": "docs/sc8/presentation/figures/s08_horizontal.svg",
+          "sha256": "7768b9fde9a1a46286517b009863336925a8cd58713fc8504b8f0fad23606b70"
+        },
+        "png": {
+          "path": "docs/sc8/presentation/figures/s08_horizontal.png",
+          "sha256": "3447af3d72666555e945f8e823a03be202ce30bc75c78ebeb15c6ad836d5d887"
+        }
+      }
+    },
+    {
+      "slide": 9,
+      "asset": "s09_vertical",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_PLOTDATA.json"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_PLOTDATA.json": "1356bd2523e1a3a936a5e550d7f4c56386a0076e89f68ce6e905969293ea1b23"
+      },
+      "original_figure": "F05_V_Stanford.svg",
+      "original_figure_sha256": "565f5a144da5a502eb6e4ffc722cf6f2e1cc0257318bcb716140d7b65fd07b1c",
+      "section": "SC8_RESULTS E04: V PE vs PL actual log-count bins, full + zoom",
+      "displayed_metric": "E04: V PE vs PL actual log-count bins, full + zoom",
+      "caveat": "Timely bins teal (darker=more), late bins gray. Figure N=10200 per method; overall 77131 correlated receipts is a separate aggregate.",
+      "rendering": "Replotted from frozen summary / actual count bins; SVG with editable text and 300dpi PNG fallback.",
+      "axes_and_legend_bounds_checked": true,
+      "outputs": {
+        "svg": {
+          "path": "docs/sc8/presentation/figures/s09_vertical.svg",
+          "sha256": "be300cdc24e3aaf3407fd92cdc7ef29aa7de44efd7567ac10b47dfca118e73cf"
+        },
+        "png": {
+          "path": "docs/sc8/presentation/figures/s09_vertical.png",
+          "sha256": "9b6cd92919fe6ec89c28d6a607581dcced9f29aeaff15475b6b195d097bceb67"
+        }
+      }
+    },
+    {
+      "slide": 9,
+      "asset": "s09_availability",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_PLOTDATA.json"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_PLOTDATA.json": "1356bd2523e1a3a936a5e550d7f4c56386a0076e89f68ce6e905969293ea1b23"
+      },
+      "original_figure": "F06_AL_and_SI.svg",
+      "original_figure_sha256": "33fb3cb06b8650d43a82120a2107b546928f1043f3bebc76e1249c3c21a38a06",
+      "section": "SC8_RESULTS E04: 3 healthy seeds, timely joint / all 600 planned epochs",
+      "displayed_metric": "E04: 3 healthy seeds, timely joint / all 600 planned epochs",
+      "caveat": "Diagnostic AL only; no estimates/PL changed; no certified application requirement.",
+      "rendering": "Replotted from frozen summary / actual count bins; SVG with editable text and 300dpi PNG fallback.",
+      "axes_and_legend_bounds_checked": true,
+      "outputs": {
+        "svg": {
+          "path": "docs/sc8/presentation/figures/s09_availability.svg",
+          "sha256": "c929e73c3601db3015f5d228c82cf93a574cdb9fb19613f13f092b8a58dc79ec"
+        },
+        "png": {
+          "path": "docs/sc8/presentation/figures/s09_availability.png",
+          "sha256": "2575d460a0e08a7bbeec5976032dc681a25472ff7c1663dc1babee72585c2ed9"
+        }
+      }
+    },
+    {
+      "slide": 10,
+      "asset": "s10_window",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_PLOTDATA.json"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_PLOTDATA.json": "1356bd2523e1a3a936a5e550d7f4c56386a0076e89f68ce6e905969293ea1b23"
+      },
+      "original_figure": "F07_window_frontier.svg",
+      "original_figure_sha256": "5c48b3d655f884e04cf03bbc81929041684bc5dbd778dfa8d954b9e940877eb2",
+      "section": "SC8_RESULTS E05: 14 actual window runs, common epochs1101–2100",
+      "displayed_metric": "E05: 14 actual window runs, common epochs1101–2100",
+      "caveat": "LF, LI and replay coupled; same seed/stream, no universal trend; resource markers are sampled RSS, not peak.",
+      "rendering": "Replotted from frozen summary / actual count bins; SVG with editable text and 300dpi PNG fallback.",
+      "axes_and_legend_bounds_checked": true,
+      "outputs": {
+        "svg": {
+          "path": "docs/sc8/presentation/figures/s10_window.svg",
+          "sha256": "846935ea5adf45e1aed3ab88b4127a6c0a54a387d42bc46fe86aa154ee395161"
+        },
+        "png": {
+          "path": "docs/sc8/presentation/figures/s10_window.png",
+          "sha256": "ce8a4f9164dc74b4a64105d66bf745fed93fe845e83675ebbb7c3a43118293d3"
+        }
+      }
+    },
+    {
+      "slide": 11,
+      "asset": "s11_latency",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_PLOTDATA.json"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_PLOTDATA.json": "1356bd2523e1a3a936a5e550d7f4c56386a0076e89f68ce6e905969293ea1b23"
+      },
+      "original_figure": "F08_latency_and_breakdown.svg",
+      "original_figure_sha256": "04842ddbdeac383615537624044efa97ac81f193c1461736b1c3ec8113e1b5b2",
+      "section": "SC8_RESULTS E06: all measured E01/E03 main core/sink latencies and exclusive means",
+      "displayed_metric": "E06: all measured E01/E03 main core/sink latencies and exclusive means",
+      "caveat": "CDF counts are frame descriptions, not independent trials; SFUISE has different capabilities/cutoffs; E06 performance repeats listed separately.",
+      "rendering": "Replotted from frozen summary / actual count bins; SVG with editable text and 300dpi PNG fallback.",
+      "axes_and_legend_bounds_checked": true,
+      "outputs": {
+        "svg": {
+          "path": "docs/sc8/presentation/figures/s11_latency.svg",
+          "sha256": "c54e7a55fc38edc39cfaf76e8cad47b2816e84cb3d5bb8c3859f943adc77636e"
+        },
+        "png": {
+          "path": "docs/sc8/presentation/figures/s11_latency.png",
+          "sha256": "d33cc3c51a13669d67ede0892b164e947d388c3c917f54ff91ba2428d2f9b0e4"
+        }
+      }
+    },
+    {
+      "slide": 12,
+      "asset": "s12_ablation",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_PLOTDATA.json"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_PLOTDATA.json": "1356bd2523e1a3a936a5e550d7f4c56386a0076e89f68ce6e905969293ea1b23"
+      },
+      "original_figure": "F09_ablations.svg",
+      "original_figure_sha256": "3c9444b45e83d7e06b1c6ce400d3c2b18626569b47605e371431fdbbed0d4f5e",
+      "section": "SC8_RESULTS E07: raw ablation values and signed matched-FULL percent changes",
+      "displayed_metric": "E07: raw ablation values and signed matched-FULL percent changes",
+      "caveat": "G2 no qualified output. Joint+sample0/support combined reversion; M same-center witness distinct from full-trajectory A and measured P.",
+      "rendering": "Replotted from frozen summary / actual count bins; SVG with editable text and 300dpi PNG fallback.",
+      "axes_and_legend_bounds_checked": true,
+      "outputs": {
+        "svg": {
+          "path": "docs/sc8/presentation/figures/s12_ablation.svg",
+          "sha256": "50371bdbdba92a87f43b69439694dfa8b1c98f9a4fa3e99705610638c5f37ff6"
+        },
+        "png": {
+          "path": "docs/sc8/presentation/figures/s12_ablation.png",
+          "sha256": "b5ea929cb78e80fe3f500f544a7f8fa7fc24e38f078d6036f0557b5cb62f73d8"
+        }
+      }
+    },
+    {
+      "slide": 13,
+      "asset": "s13_long",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_PLOTDATA.json"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_PLOTDATA.json": "1356bd2523e1a3a936a5e550d7f4c56386a0076e89f68ce6e905969293ea1b23"
+      },
+      "original_figure": "F10_long_streams.svg",
+      "original_figure_sha256": "778cc0293e808e5dde4184bdc50d3072664aef9c75ba673cd3a3629c6d574a1d",
+      "section": "SC8_RESULTS E08: all saved long-stream APE/ARE, rolling core P95 and sampled RSS",
+      "displayed_metric": "E08: all saved long-stream APE/ARE, rolling core P95 and sampled RSS",
+      "caveat": "Actual extrema/events from frozen compact data; FULL ends7171; late episode not confirmed; sampled RSS not process peak.",
+      "rendering": "Replotted from frozen summary / actual count bins; SVG with editable text and 300dpi PNG fallback.",
+      "axes_and_legend_bounds_checked": true,
+      "outputs": {
+        "svg": {
+          "path": "docs/sc8/presentation/figures/s13_long.svg",
+          "sha256": "2682e50bac66ede6e0505b115b8fa11ea9fd60ff2b6af6d139da19bc85922077"
+        },
+        "png": {
+          "path": "docs/sc8/presentation/figures/s13_long.png",
+          "sha256": "bbe6caa40216d6505131a1562dc47fab23d8e5dadbfc88ed8dc3b7e7d51dd76e"
+        }
+      }
+    }
+  ],
+  "native_visual_sources": [
+    {
+      "slide": 1,
+      "rendering": "Native editable PowerPoint shapes / text / connectors",
+      "source_path": [
+        "research/sc6_service.cpp",
+        "research/rolling_policy.hpp",
+        "docs/fde_next/SC7_RESULTS.md",
+        "docs/sc8/SC8_RESULTS.md"
+      ],
+      "data_digest": {
+        "research/sc6_service.cpp": "7d25afa624325992c47f5ac9d6bd531d671f3c2c83c5e50d27398a029574808f",
+        "research/rolling_policy.hpp": "410666e55ec00f6e6079e7bb55886c4f8b787affbb8b963ad592559d8e658b39",
+        "docs/fde_next/SC7_RESULTS.md": "4954500c66b33d0e3451d84c0f282ab2b626e799a968607690f9f7980f754a54",
+        "docs/sc8/SC8_RESULTS.md": "ce68057bb37f233a39e049be713d3912f68fb07ee217fac340ee80340f1f9848"
+      },
+      "section": "Architecture",
+      "displayed_metric": "One FGO / one commit and rolling position certificate; registered 20/200 Hz and 30/30 policy",
+      "caveat": "Historical documentation supplies architecture only; real raw unqualified."
+    },
+    {
+      "slide": 2,
+      "rendering": "Native editable PowerPoint shapes / text / connectors",
+      "source_path": [
+        "config/sc8_experiments.yaml",
+        "docs/sc8/SC8_METRICS.json"
+      ],
+      "data_digest": {
+        "config/sc8_experiments.yaml": "97fbbc2ac788e84b8f5ab2e00e0d9188c0c6389978fe321df629a5cca03603d8",
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97"
+      },
+      "section": "E00",
+      "displayed_metric": "E00 evidence lanes, six recording durations, 143 outcomes / 159 attempts + ROS",
+      "caveat": "SUCCESS is process exit; physical references and CAL boundaries remain open."
+    },
+    {
+      "slide": 14,
+      "rendering": "Native editable PowerPoint shapes / text / connectors",
+      "source_path": [
+        "docs/sc8/SC8_METRICS.json",
+        "docs/sc8/SC8_RESULTS.md"
+      ],
+      "data_digest": {
+        "docs/sc8/SC8_METRICS.json": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+        "docs/sc8/SC8_RESULTS.md": "ce68057bb37f233a39e049be713d3912f68fb07ee217fac340ee80340f1f9848"
+      },
+      "section": "SC8 synthesis",
+      "displayed_metric": "E00–E08 evidence-to-claim synthesis",
+      "caveat": "No empirical risk certification, real qualification or omitted-study substitution."
+    },
+    {
+      "slide": 15,
+      "rendering": "Native editable PowerPoint shapes / text / connectors",
+      "source_path": [
+        "docs/requirements/sc8_advisor_slides/SC8_ADVISOR_SLIDES_REQUIREMENTS.md",
+        "docs/sc8/presentation/STORYBOARD.json"
+      ],
+      "data_digest": {
+        "docs/requirements/sc8_advisor_slides/SC8_ADVISOR_SLIDES_REQUIREMENTS.md": "5acff1118fc8d8320dd11f371f9ade7185d63bddb526a9942811f28cb1866451",
+        "docs/sc8/presentation/STORYBOARD.json": "a3054c201762ed5a317b282aabc55a028154522ca60b066a1b2185cdcedd183d"
+      },
+      "section": "Requirements slide15",
+      "displayed_metric": "Four advisor questions / requested decisions",
+      "caveat": "Proposed next actions, not executed future validation."
+    }
+  ]
+}

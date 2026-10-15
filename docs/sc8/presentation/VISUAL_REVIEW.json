@@ -1,0 +1,99 @@
+{
+  "status": "PASS",
+  "reviewer": "Codex visual inspection",
+  "method": "Opened all 15 rendered slides individually, plus contact sheet; re-opened revised slides after layout/axis fixes. Unchanged final slides were verified by identical preview SHA256.",
+  "pptx_sha256": "45a08956d9f1e9e7fe2d76318e306024851374626316dd7150ce33ed88118532",
+  "pdf_sha256": "ae1e7b8b3faec26f8db25c0092c5908019e5d35c75146cfb275c4e8658d2f28d",
+  "slides": [
+    {
+      "slide": 1,
+      "status": "PASS",
+      "preview_sha256": "5020588c2853c9f183e8d0c486c86b69b25d05c83b52dd4314ac7a0095cf24fe",
+      "observations": "Editable native flow nodes, arrows and rolling boundary inset readable; single commit and conditional tag-only scope explicit."
+    },
+    {
+      "slide": 2,
+      "status": "PASS",
+      "preview_sha256": "31951cce95ff111d04c0df0b81912fc9a631b0314d40523d8cda81239b35e479",
+      "observations": "All three producer-to-estimator-to-qualification lanes and six recording rows readable; process outcomes not called full trajectories."
+    },
+    {
+      "slide": 3,
+      "status": "PASS",
+      "preview_sha256": "406fbfbd3a821dfa82503f23eba0e57dcce92c3f735cbcf0ed1e40676d6150ce",
+      "observations": "Exactly three seeds and four distinct method styles; full/noFDE coincident scores and noncausal final view clearly separated."
+    },
+    {
+      "slide": 4,
+      "status": "PASS",
+      "preview_sha256": "62f5177d238fe4980dec4b8f6b49f96ced3766b19966fc845727e522d789a063",
+      "observations": "R3 XY/height axes and separated legend intact; CAL, Walk reference and STAR gyro caveats visible, including 15.85 km frozen-interface result."
+    },
+    {
+      "slide": 5,
+      "status": "PASS",
+      "preview_sha256": "1e2f8cdcf34e322844f07fa53a2d4c69d6d88a15d7afe893226d1d571ede3124",
+      "observations": "Coverage bars and original denominators agree; R3 FULL is NA; Walk rates are temporal and real raw PL remains unqualified."
+    },
+    {
+      "slide": 6,
+      "status": "PASS",
+      "preview_sha256": "439bbf79296a6b8e3376c5767c6ed1e35aa5b901284d525854a541743e6d11eb",
+      "observations": "Zero reference and all negative per-seed gains intact; black mean markers and separate attitude effects readable."
+    },
+    {
+      "slide": 7,
+      "status": "PASS",
+      "preview_sha256": "064d9a54afdc64689885aa8a370da27d6223b1c0ac00f86e11e1522cdb30423a",
+      "observations": "Full SFUISE outlier scale, hybrid APE scale, fault bands and actual prior/bridge/rejoined receipt markers readable."
+    },
+    {
+      "slide": 8,
+      "status": "PASS",
+      "preview_sha256": "c1c49671b3c7d003a38601ab7cb5f01c3dfc43cf7ecd2a06e679e357a5b9bda4",
+      "observations": "Full/zoom horizontal Stanford axes intact; PE/PL diagonal, research ALs, late bins, N and non-independent risk caveat explicit."
+    },
+    {
+      "slide": 9,
+      "status": "PASS",
+      "preview_sha256": "68d830afcb3a876ce977508a1bc6c944232ecf502eaf04d1c8c12db4cc75a96b",
+      "observations": "Full/zoom vertical panels, all three healthy AL points and denominator table readable without overlap."
+    },
+    {
+      "slide": 10,
+      "status": "PASS",
+      "preview_sha256": "3c26ee4c0d753abcc524907eef3e267f1bc6ed6578ca1840ca0ead1a2c4422e0",
+      "observations": "Complete axis labels, actual window curves, sampled-RSS bubbles and matched common-interval table readable; cost and fault benefit both visible. Fixed LF=300 / LI=30,100,300 note was re-opened and checked in the final render."
+    },
+    {
+      "slide": 11,
+      "status": "PASS",
+      "preview_sha256": "b3cd2c8170637d14277a8d464a50a32c19b5d1e98468632785e618954859ab86",
+      "observations": "Core/sink line styles and exclusive-mean breakdown readable; main versus E06 repeat IDs and nominal-only capability separated."
+    },
+    {
+      "slide": 12,
+      "status": "PASS",
+      "preview_sha256": "94d96297d9e1a08aee4654ae8c6dfb2403cf9eca470caf49d341abb492b2e0ad",
+      "observations": "All signed ablation cells, dark-cell labels, G2 NA and measured abort cost readable; M/A/P and combined switch distinguished."
+    },
+    {
+      "slide": 13,
+      "status": "PASS",
+      "preview_sha256": "fab3bc89f7c660cf719d729eda0a01b1f7e819b27e7c07f96c28014579dfc41d",
+      "observations": "FULL output ends at actual epoch7171 with blank suffix; high ARE, queue counts, refused epochs and nonconstant storage boundary visible."
+    },
+    {
+      "slide": 14,
+      "status": "PASS",
+      "preview_sha256": "ac8de4b0152bbe323c5f1409e13e86e723254104e9e8acc2762b975022ccaff1",
+      "observations": "All five evidence-to-claim rows and additional omitted metrics/studies readable; no hardware qualification claim."
+    },
+    {
+      "slide": 15,
+      "status": "PASS",
+      "preview_sha256": "7868de493d937d2b8233cc23dd2dc544d04ed1d0db0f655f92f09a75759aa668",
+      "observations": "All four complete advisor questions and requested decisions readable; final main slide is actionable discussion, not thank-you."
+    }
+  ]
+}

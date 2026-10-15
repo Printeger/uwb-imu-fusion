@@ -238,3 +238,7 @@ compile_commands.json
 !/docs/requirements/sc8/SC8_EXPERIMENT_HANDBOOK.md
 !/docs/requirements/sc8/SC8_PLAN.template.yaml
 !/docs/requirements/sc8/GOAL_SC8.txt
+
+# Formal SC8 advisor presentation contract; build previews stay in /.cache/.
+!/docs/requirements/sc8_advisor_slides/
+!/docs/requirements/sc8_advisor_slides/SC8_ADVISOR_SLIDES_REQUIREMENTS.md

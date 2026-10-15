@@ -1,0 +1,1508 @@
+{
+  "schema": "sc8-slide-claims-v1",
+  "metrics_sha256": "08a3f841d3e176c2fc8b647befdeffdbed2da112e12ddec3528f4937fb82af97",
+  "claims": [
+    {
+      "slide": 3,
+      "label": "Healthy timing and timely-spatial profile passes",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/tested_profile_deadline_pass",
+        "/runs/23/tested_profile_deadline_pass",
+        "/runs/26/tested_profile_deadline_pass"
+      ],
+      "operation": "sum",
+      "value": 3,
+      "format": "d",
+      "suffix": "",
+      "display": "3"
+    },
+    {
+      "slide": 3,
+      "label": "Healthy APE minimum",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/views/O-FULL/ape_m/rmse",
+        "/runs/23/views/O-FULL/ape_m/rmse",
+        "/runs/26/views/O-FULL/ape_m/rmse"
+      ],
+      "operation": "min",
+      "value": 0.04871762078338972,
+      "format": ".7f",
+      "suffix": "",
+      "display": "0.0487176"
+    },
+    {
+      "slide": 3,
+      "label": "Healthy APE maximum",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/views/O-FULL/ape_m/rmse",
+        "/runs/23/views/O-FULL/ape_m/rmse",
+        "/runs/26/views/O-FULL/ape_m/rmse"
+      ],
+      "operation": "max",
+      "value": 0.05264686291824378,
+      "format": ".7f",
+      "suffix": "",
+      "display": "0.0526469"
+    },
+    {
+      "slide": 8,
+      "label": "Overall qualified correlated receipts",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/integrity/spatial_valid",
+        "/runs/21/integrity/spatial_valid",
+        "/runs/23/integrity/spatial_valid",
+        "/runs/24/integrity/spatial_valid",
+        "/runs/26/integrity/spatial_valid",
+        "/runs/27/integrity/spatial_valid",
+        "/runs/29/integrity/spatial_valid",
+        "/runs/30/integrity/spatial_valid",
+        "/runs/32/integrity/spatial_valid",
+        "/runs/33/integrity/spatial_valid",
+        "/runs/54/integrity/spatial_valid",
+        "/runs/55/integrity/spatial_valid",
+        "/runs/57/integrity/spatial_valid",
+        "/runs/58/integrity/spatial_valid",
+        "/runs/60/integrity/spatial_valid",
+        "/runs/61/integrity/spatial_valid",
+        "/runs/63/integrity/spatial_valid",
+        "/runs/64/integrity/spatial_valid",
+        "/runs/66/integrity/spatial_valid",
+        "/runs/67/integrity/spatial_valid",
+        "/runs/69/integrity/spatial_valid",
+        "/runs/70/integrity/spatial_valid",
+        "/runs/72/integrity/spatial_valid",
+        "/runs/73/integrity/spatial_valid",
+        "/runs/75/integrity/spatial_valid",
+        "/runs/76/integrity/spatial_valid",
+        "/runs/78/integrity/spatial_valid",
+        "/runs/79/integrity/spatial_valid",
+        "/runs/81/integrity/spatial_valid",
+        "/runs/82/integrity/spatial_valid",
+        "/runs/84/integrity/spatial_valid",
+        "/runs/85/integrity/spatial_valid",
+        "/runs/87/integrity/spatial_valid",
+        "/runs/88/integrity/spatial_valid",
+        "/runs/108/integrity/spatial_valid",
+        "/runs/109/integrity/spatial_valid",
+        "/runs/110/integrity/spatial_valid",
+        "/runs/111/integrity/spatial_valid",
+        "/runs/112/integrity/spatial_valid",
+        "/runs/113/integrity/spatial_valid",
+        "/runs/114/integrity/spatial_valid",
+        "/runs/115/integrity/spatial_valid",
+        "/runs/116/integrity/spatial_valid",
+        "/runs/117/integrity/spatial_valid",
+        "/runs/118/integrity/spatial_valid",
+        "/runs/119/integrity/spatial_valid",
+        "/runs/120/integrity/spatial_valid",
+        "/runs/121/integrity/spatial_valid",
+        "/runs/122/integrity/spatial_valid",
+        "/runs/123/integrity/spatial_valid",
+        "/runs/124/integrity/spatial_valid",
+        "/runs/125/integrity/spatial_valid",
+        "/runs/126/integrity/spatial_valid",
+        "/runs/127/integrity/spatial_valid",
+        "/runs/128/integrity/spatial_valid",
+        "/runs/129/integrity/spatial_valid",
+        "/runs/130/integrity/spatial_valid",
+        "/runs/131/integrity/spatial_valid",
+        "/runs/132/integrity/spatial_valid",
+        "/runs/133/integrity/spatial_valid",
+        "/runs/134/integrity/spatial_valid",
+        "/runs/135/integrity/spatial_valid",
+        "/runs/136/integrity/spatial_valid",
+        "/runs/137/integrity/spatial_valid",
+        "/runs/138/integrity/spatial_valid",
+        "/runs/141/integrity/spatial_valid",
+        "/runs/142/integrity/spatial_valid"
+      ],
+      "operation": "sum",
+      "value": 77131,
+      "format": ",d",
+      "suffix": "",
+      "display": "77,131"
+    },
+    {
+      "slide": 8,
+      "label": "Overall H+V observed underbounds",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/integrity/axes/H/underbound",
+        "/runs/20/integrity/axes/V/underbound",
+        "/runs/21/integrity/axes/H/underbound",
+        "/runs/21/integrity/axes/V/underbound",
+        "/runs/23/integrity/axes/H/underbound",
+        "/runs/23/integrity/axes/V/underbound",
+        "/runs/24/integrity/axes/H/underbound",
+        "/runs/24/integrity/axes/V/underbound",
+        "/runs/26/integrity/axes/H/underbound",
+        "/runs/26/integrity/axes/V/underbound",
+        "/runs/27/integrity/axes/H/underbound",
+        "/runs/27/integrity/axes/V/underbound",
+        "/runs/29/integrity/axes/H/underbound",
+        "/runs/29/integrity/axes/V/underbound",
+        "/runs/30/integrity/axes/H/underbound",
+        "/runs/30/integrity/axes/V/underbound",
+        "/runs/32/integrity/axes/H/underbound",
+        "/runs/32/integrity/axes/V/underbound",
+        "/runs/33/integrity/axes/H/underbound",
+        "/runs/33/integrity/axes/V/underbound",
+        "/runs/54/integrity/axes/H/underbound",
+        "/runs/54/integrity/axes/V/underbound",
+        "/runs/55/integrity/axes/H/underbound",
+        "/runs/55/integrity/axes/V/underbound",
+        "/runs/57/integrity/axes/H/underbound",
+        "/runs/57/integrity/axes/V/underbound",
+        "/runs/58/integrity/axes/H/underbound",
+        "/runs/58/integrity/axes/V/underbound",
+        "/runs/60/integrity/axes/H/underbound",
+        "/runs/60/integrity/axes/V/underbound",
+        "/runs/61/integrity/axes/H/underbound",
+        "/runs/61/integrity/axes/V/underbound",
+        "/runs/63/integrity/axes/H/underbound",
+        "/runs/63/integrity/axes/V/underbound",
+        "/runs/64/integrity/axes/H/underbound",
+        "/runs/64/integrity/axes/V/underbound",
+        "/runs/66/integrity/axes/H/underbound",
+        "/runs/66/integrity/axes/V/underbound",
+        "/runs/67/integrity/axes/H/underbound",
+        "/runs/67/integrity/axes/V/underbound",
+        "/runs/69/integrity/axes/H/underbound",
+        "/runs/69/integrity/axes/V/underbound",
+        "/runs/70/integrity/axes/H/underbound",
+        "/runs/70/integrity/axes/V/underbound",
+        "/runs/72/integrity/axes/H/underbound",
+        "/runs/72/integrity/axes/V/underbound",
+        "/runs/73/integrity/axes/H/underbound",
+        "/runs/73/integrity/axes/V/underbound",
+        "/runs/75/integrity/axes/H/underbound",
+        "/runs/75/integrity/axes/V/underbound",
+        "/runs/76/integrity/axes/H/underbound",
+        "/runs/76/integrity/axes/V/underbound",
+        "/runs/78/integrity/axes/H/underbound",
+        "/runs/78/integrity/axes/V/underbound",
+        "/runs/79/integrity/axes/H/underbound",
+        "/runs/79/integrity/axes/V/underbound",
+        "/runs/81/integrity/axes/H/underbound",
+        "/runs/81/integrity/axes/V/underbound",
+        "/runs/82/integrity/axes/H/underbound",
+        "/runs/82/integrity/axes/V/underbound",
+        "/runs/84/integrity/axes/H/underbound",
+        "/runs/84/integrity/axes/V/underbound",
+        "/runs/85/integrity/axes/H/underbound",
+        "/runs/85/integrity/axes/V/underbound",
+        "/runs/87/integrity/axes/H/underbound",
+        "/runs/87/integrity/axes/V/underbound",
+        "/runs/88/integrity/axes/H/underbound",
+        "/runs/88/integrity/axes/V/underbound",
+        "/runs/108/integrity/axes/H/underbound",
+        "/runs/108/integrity/axes/V/underbound",
+        "/runs/109/integrity/axes/H/underbound",
+        "/runs/109/integrity/axes/V/underbound",
+        "/runs/110/integrity/axes/H/underbound",
+        "/runs/110/integrity/axes/V/underbound",
+        "/runs/111/integrity/axes/H/underbound",
+        "/runs/111/integrity/axes/V/underbound",
+        "/runs/112/integrity/axes/H/underbound",
+        "/runs/112/integrity/axes/V/underbound",
+        "/runs/113/integrity/axes/H/underbound",
+        "/runs/113/integrity/axes/V/underbound",
+        "/runs/114/integrity/axes/H/underbound",
+        "/runs/114/integrity/axes/V/underbound",
+        "/runs/115/integrity/axes/H/underbound",
+        "/runs/115/integrity/axes/V/underbound",
+        "/runs/116/integrity/axes/H/underbound",
+        "/runs/116/integrity/axes/V/underbound",
+        "/runs/117/integrity/axes/H/underbound",
+        "/runs/117/integrity/axes/V/underbound",
+        "/runs/118/integrity/axes/H/underbound",
+        "/runs/118/integrity/axes/V/underbound",
+        "/runs/119/integrity/axes/H/underbound",
+        "/runs/119/integrity/axes/V/underbound",
+        "/runs/120/integrity/axes/H/underbound",
+        "/runs/120/integrity/axes/V/underbound",
+        "/runs/121/integrity/axes/H/underbound",
+        "/runs/121/integrity/axes/V/underbound",
+        "/runs/122/integrity/axes/H/underbound",
+        "/runs/122/integrity/axes/V/underbound",
+        "/runs/123/integrity/axes/H/underbound",
+        "/runs/123/integrity/axes/V/underbound",
+        "/runs/124/integrity/axes/H/underbound",
+        "/runs/124/integrity/axes/V/underbound",
+        "/runs/125/integrity/axes/H/underbound",
+        "/runs/125/integrity/axes/V/underbound",
+        "/runs/126/integrity/axes/H/underbound",
+        "/runs/126/integrity/axes/V/underbound",
+        "/runs/127/integrity/axes/H/underbound",
+        "/runs/127/integrity/axes/V/underbound",
+        "/runs/128/integrity/axes/H/underbound",
+        "/runs/128/integrity/axes/V/underbound",
+        "/runs/129/integrity/axes/H/underbound",
+        "/runs/129/integrity/axes/V/underbound",
+        "/runs/130/integrity/axes/H/underbound",
+        "/runs/130/integrity/axes/V/underbound",
+        "/runs/131/integrity/axes/H/underbound",
+        "/runs/131/integrity/axes/V/underbound",
+        "/runs/132/integrity/axes/H/underbound",
+        "/runs/132/integrity/axes/V/underbound",
+        "/runs/133/integrity/axes/H/underbound",
+        "/runs/133/integrity/axes/V/underbound",
+        "/runs/134/integrity/axes/H/underbound",
+        "/runs/134/integrity/axes/V/underbound",
+        "/runs/135/integrity/axes/H/underbound",
+        "/runs/135/integrity/axes/V/underbound",
+        "/runs/136/integrity/axes/H/underbound",
+        "/runs/136/integrity/axes/V/underbound",
+        "/runs/137/integrity/axes/H/underbound",
+        "/runs/137/integrity/axes/V/underbound",
+        "/runs/138/integrity/axes/H/underbound",
+        "/runs/138/integrity/axes/V/underbound",
+        "/runs/141/integrity/axes/H/underbound",
+        "/runs/141/integrity/axes/V/underbound",
+        "/runs/142/integrity/axes/H/underbound",
+        "/runs/142/integrity/axes/V/underbound"
+      ],
+      "operation": "sum",
+      "value": 0,
+      "format": "d",
+      "suffix": "",
+      "display": "0"
+    },
+    {
+      "slide": 2,
+      "label": "SUCCESS",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/logical_run_status_counts/SUCCESS"
+      ],
+      "operation": "identity",
+      "value": 130,
+      "format": "d",
+      "suffix": "",
+      "display": "130"
+    },
+    {
+      "slide": 2,
+      "label": "RESOURCE_LIMIT",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/logical_run_status_counts/RESOURCE_LIMIT"
+      ],
+      "operation": "identity",
+      "value": 12,
+      "format": "d",
+      "suffix": "",
+      "display": "12"
+    },
+    {
+      "slide": 2,
+      "label": "FAIL",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/logical_run_status_counts/FAIL"
+      ],
+      "operation": "identity",
+      "value": 1,
+      "format": "d",
+      "suffix": "",
+      "display": "1"
+    },
+    {
+      "slide": 2,
+      "label": "Unique registered runs",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/registered"
+      ],
+      "operation": "identity",
+      "value": 143,
+      "format": "d",
+      "suffix": "",
+      "display": "143"
+    },
+    {
+      "slide": 2,
+      "label": "Retained execution attempts",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/attempt_processes"
+      ],
+      "operation": "identity",
+      "value": 159,
+      "format": "d",
+      "suffix": "",
+      "display": "159"
+    },
+    {
+      "slide": 3,
+      "label": "Healthy ARE min",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/views/O-FULL/are_rad/rmse",
+        "/runs/23/views/O-FULL/are_rad/rmse",
+        "/runs/26/views/O-FULL/are_rad/rmse"
+      ],
+      "operation": "min",
+      "value": 0.07783599714055835,
+      "format": ".4f",
+      "suffix": "",
+      "display": "0.0778"
+    },
+    {
+      "slide": 3,
+      "label": "Healthy ARE max",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/views/O-FULL/are_rad/rmse",
+        "/runs/23/views/O-FULL/are_rad/rmse",
+        "/runs/26/views/O-FULL/are_rad/rmse"
+      ],
+      "operation": "max",
+      "value": 0.14540571490349005,
+      "format": ".4f",
+      "suffix": "",
+      "display": "0.1454"
+    },
+    {
+      "slide": 3,
+      "label": "Healthy seed20 core P95",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/timing/core_ms/p95"
+      ],
+      "operation": "identity",
+      "value": 23.725824,
+      "format": ".2f",
+      "suffix": "",
+      "display": "23.73"
+    },
+    {
+      "slide": 3,
+      "label": "Healthy seed20 sink P95",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/timing/measurement_to_sink_ms/p95"
+      ],
+      "operation": "identity",
+      "value": 23.89284,
+      "format": ".2f",
+      "suffix": "",
+      "display": "23.89"
+    },
+    {
+      "slide": 4,
+      "label": "STAR R5 frozen-interface APE km",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/50/views/S-ONLINE/ape_m/rmse"
+      ],
+      "operation": "kilometers",
+      "value": 15.85484314223839,
+      "format": ".2f",
+      "suffix": "",
+      "display": "15.85"
+    },
+    {
+      "slide": 5,
+      "label": "R1 O-FULL covered",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/36/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/covered"
+      ],
+      "operation": "identity",
+      "value": 204,
+      "format": "d",
+      "suffix": "",
+      "display": "204"
+    },
+    {
+      "slide": 5,
+      "label": "R1 O-FULL planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/36/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/planned"
+      ],
+      "operation": "identity",
+      "value": 3805,
+      "format": "d",
+      "suffix": "",
+      "display": "3805"
+    },
+    {
+      "slide": 5,
+      "label": "R1 O-FULL coverage percent",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/36/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/fraction"
+      ],
+      "operation": "percent",
+      "value": 5.361366622864652,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "5.36%"
+    },
+    {
+      "slide": 5,
+      "label": "R1 O-NOFDE covered",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/37/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/covered"
+      ],
+      "operation": "identity",
+      "value": 3295,
+      "format": "d",
+      "suffix": "",
+      "display": "3295"
+    },
+    {
+      "slide": 5,
+      "label": "R1 O-NOFDE planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/37/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/planned"
+      ],
+      "operation": "identity",
+      "value": 3805,
+      "format": "d",
+      "suffix": "",
+      "display": "3805"
+    },
+    {
+      "slide": 5,
+      "label": "R1 O-NOFDE coverage percent",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/37/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/fraction"
+      ],
+      "operation": "percent",
+      "value": 86.59658344283837,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "86.60%"
+    },
+    {
+      "slide": 5,
+      "label": "R2 O-FULL covered",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/39/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/covered"
+      ],
+      "operation": "identity",
+      "value": 236,
+      "format": "d",
+      "suffix": "",
+      "display": "236"
+    },
+    {
+      "slide": 5,
+      "label": "R2 O-FULL planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/39/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/planned"
+      ],
+      "operation": "identity",
+      "value": 4083,
+      "format": "d",
+      "suffix": "",
+      "display": "4083"
+    },
+    {
+      "slide": 5,
+      "label": "R2 O-FULL coverage percent",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/39/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/fraction"
+      ],
+      "operation": "percent",
+      "value": 5.780063678667647,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "5.78%"
+    },
+    {
+      "slide": 5,
+      "label": "R2 O-NOFDE covered",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/40/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/covered"
+      ],
+      "operation": "identity",
+      "value": 3483,
+      "format": "d",
+      "suffix": "",
+      "display": "3483"
+    },
+    {
+      "slide": 5,
+      "label": "R2 O-NOFDE planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/40/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/planned"
+      ],
+      "operation": "identity",
+      "value": 4083,
+      "format": "d",
+      "suffix": "",
+      "display": "4083"
+    },
+    {
+      "slide": 5,
+      "label": "R2 O-NOFDE coverage percent",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/40/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/fraction"
+      ],
+      "operation": "percent",
+      "value": 85.30492285084496,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "85.30%"
+    },
+    {
+      "slide": 5,
+      "label": "R3 O-NOFDE covered",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/43/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/covered"
+      ],
+      "operation": "identity",
+      "value": 16602,
+      "format": "d",
+      "suffix": "",
+      "display": "16602"
+    },
+    {
+      "slide": 5,
+      "label": "R3 O-NOFDE planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/43/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/planned"
+      ],
+      "operation": "identity",
+      "value": 16617,
+      "format": "d",
+      "suffix": "",
+      "display": "16617"
+    },
+    {
+      "slide": 5,
+      "label": "R3 O-NOFDE coverage percent",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/43/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/fraction"
+      ],
+      "operation": "percent",
+      "value": 99.90973099837515,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "99.91%"
+    },
+    {
+      "slide": 5,
+      "label": "R4 O-FULL covered",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/45/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/covered"
+      ],
+      "operation": "identity",
+      "value": 1591,
+      "format": "d",
+      "suffix": "",
+      "display": "1591"
+    },
+    {
+      "slide": 5,
+      "label": "R4 O-FULL planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/45/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/planned"
+      ],
+      "operation": "identity",
+      "value": 3344,
+      "format": "d",
+      "suffix": "",
+      "display": "3344"
+    },
+    {
+      "slide": 5,
+      "label": "R4 O-FULL coverage percent",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/45/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/fraction"
+      ],
+      "operation": "percent",
+      "value": 47.577751196172244,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "47.58%"
+    },
+    {
+      "slide": 5,
+      "label": "R4 O-NOFDE covered",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/46/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/covered"
+      ],
+      "operation": "identity",
+      "value": 2741,
+      "format": "d",
+      "suffix": "",
+      "display": "2741"
+    },
+    {
+      "slide": 5,
+      "label": "R4 O-NOFDE planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/46/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/planned"
+      ],
+      "operation": "identity",
+      "value": 3344,
+      "format": "d",
+      "suffix": "",
+      "display": "3344"
+    },
+    {
+      "slide": 5,
+      "label": "R4 O-NOFDE coverage percent",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/46/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/fraction"
+      ],
+      "operation": "percent",
+      "value": 81.96770334928229,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "81.97%"
+    },
+    {
+      "slide": 5,
+      "label": "R5 O-FULL covered",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/48/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/covered"
+      ],
+      "operation": "identity",
+      "value": 505,
+      "format": "d",
+      "suffix": "",
+      "display": "505"
+    },
+    {
+      "slide": 5,
+      "label": "R5 O-FULL planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/48/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/planned"
+      ],
+      "operation": "identity",
+      "value": 35342,
+      "format": "d",
+      "suffix": "",
+      "display": "35342"
+    },
+    {
+      "slide": 5,
+      "label": "R5 O-FULL coverage percent",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/48/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/fraction"
+      ],
+      "operation": "percent",
+      "value": 1.428894799388829,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "1.43%"
+    },
+    {
+      "slide": 5,
+      "label": "R5 O-NOFDE covered",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/49/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/covered"
+      ],
+      "operation": "identity",
+      "value": 34861,
+      "format": "d",
+      "suffix": "",
+      "display": "34861"
+    },
+    {
+      "slide": 5,
+      "label": "R5 O-NOFDE planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/49/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/planned"
+      ],
+      "operation": "identity",
+      "value": 35342,
+      "format": "d",
+      "suffix": "",
+      "display": "35342"
+    },
+    {
+      "slide": 5,
+      "label": "R5 O-NOFDE coverage percent",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/49/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/fraction"
+      ],
+      "operation": "percent",
+      "value": 98.63901307226529,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "98.64%"
+    },
+    {
+      "slide": 5,
+      "label": "R6 O-FULL covered",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/51/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/covered"
+      ],
+      "operation": "identity",
+      "value": 723,
+      "format": "d",
+      "suffix": "",
+      "display": "723"
+    },
+    {
+      "slide": 5,
+      "label": "R6 O-FULL planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/51/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/planned"
+      ],
+      "operation": "identity",
+      "value": 12993,
+      "format": "d",
+      "suffix": "",
+      "display": "12993"
+    },
+    {
+      "slide": 5,
+      "label": "R6 O-FULL coverage percent",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/51/views/O-FDE-ENG/output_coverage_on_GT_TEST_grid/fraction"
+      ],
+      "operation": "percent",
+      "value": 5.564534749480489,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "5.56%"
+    },
+    {
+      "slide": 5,
+      "label": "R6 O-NOFDE covered",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/52/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/covered"
+      ],
+      "operation": "identity",
+      "value": 12701,
+      "format": "d",
+      "suffix": "",
+      "display": "12701"
+    },
+    {
+      "slide": 5,
+      "label": "R6 O-NOFDE planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/52/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/planned"
+      ],
+      "operation": "identity",
+      "value": 12993,
+      "format": "d",
+      "suffix": "",
+      "display": "12993"
+    },
+    {
+      "slide": 5,
+      "label": "R6 O-NOFDE coverage percent",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/52/views/O-ENG-NOFDE/output_coverage_on_GT_TEST_grid/fraction"
+      ],
+      "operation": "percent",
+      "value": 97.75263603478797,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "97.75%"
+    },
+    {
+      "slide": 6,
+      "label": "UWB mean APE gain",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/paired/11/gains/ape_m/off_minus_on",
+        "/paired/12/gains/ape_m/off_minus_on",
+        "/paired/13/gains/ape_m/off_minus_on"
+      ],
+      "operation": "mean",
+      "value": -0.007908375094424715,
+      "format": "+.6f",
+      "suffix": "",
+      "display": "-0.007908"
+    },
+    {
+      "slide": 6,
+      "label": "UWB mean ARE gain",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/paired/11/gains/are_rad/off_minus_on",
+        "/paired/12/gains/are_rad/off_minus_on",
+        "/paired/13/gains/are_rad/off_minus_on"
+      ],
+      "operation": "mean",
+      "value": 0.05805963808949255,
+      "format": "+.5f",
+      "suffix": "",
+      "display": "+0.05806"
+    },
+    {
+      "slide": 6,
+      "label": "Accel mean APE gain",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/paired/14/gains/ape_m/off_minus_on",
+        "/paired/15/gains/ape_m/off_minus_on",
+        "/paired/16/gains/ape_m/off_minus_on"
+      ],
+      "operation": "mean",
+      "value": 0.09236262770633723,
+      "format": "+.6f",
+      "suffix": "",
+      "display": "+0.092363"
+    },
+    {
+      "slide": 6,
+      "label": "Accel mean ARE gain",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/paired/14/gains/are_rad/off_minus_on",
+        "/paired/15/gains/are_rad/off_minus_on",
+        "/paired/16/gains/are_rad/off_minus_on"
+      ],
+      "operation": "mean",
+      "value": -1.1356175699410431,
+      "format": "+.5f",
+      "suffix": "",
+      "display": "-1.13562"
+    },
+    {
+      "slide": 6,
+      "label": "Gyro mean APE gain",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/paired/17/gains/ape_m/off_minus_on",
+        "/paired/18/gains/ape_m/off_minus_on",
+        "/paired/19/gains/ape_m/off_minus_on"
+      ],
+      "operation": "mean",
+      "value": -0.06773266972525735,
+      "format": "+.6f",
+      "suffix": "",
+      "display": "-0.067733"
+    },
+    {
+      "slide": 6,
+      "label": "Gyro mean ARE gain",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/paired/17/gains/are_rad/off_minus_on",
+        "/paired/18/gains/are_rad/off_minus_on",
+        "/paired/19/gains/are_rad/off_minus_on"
+      ],
+      "operation": "mean",
+      "value": -1.23141105612959,
+      "format": "+.5f",
+      "suffix": "",
+      "display": "-1.23141"
+    },
+    {
+      "slide": 6,
+      "label": "Joint mean APE gain",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/paired/20/gains/ape_m/off_minus_on",
+        "/paired/21/gains/ape_m/off_minus_on",
+        "/paired/22/gains/ape_m/off_minus_on"
+      ],
+      "operation": "mean",
+      "value": 0.1147924861442348,
+      "format": "+.6f",
+      "suffix": "",
+      "display": "+0.114792"
+    },
+    {
+      "slide": 6,
+      "label": "Joint mean ARE gain",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/paired/20/gains/are_rad/off_minus_on",
+        "/paired/21/gains/are_rad/off_minus_on",
+        "/paired/22/gains/are_rad/off_minus_on"
+      ],
+      "operation": "mean",
+      "value": 0.20434989231845532,
+      "format": "+.5f",
+      "suffix": "",
+      "display": "+0.20435"
+    },
+    {
+      "slide": 7,
+      "label": "Fault accel amplitude",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/81/episodes/0/amplitude"
+      ],
+      "operation": "identity",
+      "value": 20.0,
+      "format": ".0f",
+      "suffix": "",
+      "display": "20"
+    },
+    {
+      "slide": 7,
+      "label": "Fault first bridge",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/81/episodes/0/first_bridge"
+      ],
+      "operation": "identity",
+      "value": 121,
+      "format": "d",
+      "suffix": "",
+      "display": "121"
+    },
+    {
+      "slide": 7,
+      "label": "Fault UWB amplitude",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/81/episodes/1/amplitude"
+      ],
+      "operation": "identity",
+      "value": 2.25,
+      "format": ".2f",
+      "suffix": "",
+      "display": "2.25"
+    },
+    {
+      "slide": 9,
+      "label": "2/3 seed20261020 availability",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/integrity/joint_AL/2~13/timely_within_AL",
+        "/runs/20/integrity/planned"
+      ],
+      "operation": "fraction_percent",
+      "value": 4.833333333333333,
+      "format": ".3f",
+      "suffix": "%",
+      "display": "4.833%"
+    },
+    {
+      "slide": 9,
+      "label": "2/3 seed20261021 availability",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/23/integrity/joint_AL/2~13/timely_within_AL",
+        "/runs/23/integrity/planned"
+      ],
+      "operation": "fraction_percent",
+      "value": 5.666666666666666,
+      "format": ".3f",
+      "suffix": "%",
+      "display": "5.667%"
+    },
+    {
+      "slide": 9,
+      "label": "2/3 seed20261022 availability",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/26/integrity/joint_AL/2~13/timely_within_AL",
+        "/runs/26/integrity/planned"
+      ],
+      "operation": "fraction_percent",
+      "value": 3.5000000000000004,
+      "format": ".3f",
+      "suffix": "%",
+      "display": "3.500%"
+    },
+    {
+      "slide": 9,
+      "label": "5/5 seed20261020 availability",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/integrity/joint_AL/5~15/timely_within_AL",
+        "/runs/20/integrity/planned"
+      ],
+      "operation": "fraction_percent",
+      "value": 99.83333333333333,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "99.83%"
+    },
+    {
+      "slide": 9,
+      "label": "5/5 seed20261021 availability",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/23/integrity/joint_AL/5~15/timely_within_AL",
+        "/runs/23/integrity/planned"
+      ],
+      "operation": "fraction_percent",
+      "value": 99.66666666666667,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "99.67%"
+    },
+    {
+      "slide": 9,
+      "label": "5/5 seed20261022 availability",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/26/integrity/joint_AL/5~15/timely_within_AL",
+        "/runs/26/integrity/planned"
+      ],
+      "operation": "fraction_percent",
+      "value": 100.0,
+      "format": ".2f",
+      "suffix": "%",
+      "display": "100.00%"
+    },
+    {
+      "slide": 10,
+      "label": "Healthy APE (m) 30/30",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/117/views/O-FULL/ape_m/rmse"
+      ],
+      "operation": "identity",
+      "value": 0.04753681584962997,
+      "format": ".8f",
+      "suffix": "",
+      "display": "0.04753682"
+    },
+    {
+      "slide": 10,
+      "label": "Healthy APE (m) 1000/1000",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/125/views/O-FULL/ape_m/rmse"
+      ],
+      "operation": "identity",
+      "value": 0.04754146728133638,
+      "format": ".8f",
+      "suffix": "",
+      "display": "0.04754147"
+    },
+    {
+      "slide": 10,
+      "label": "Healthy core P95 (ms) 30/30",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/117/timing/core_ms/p95"
+      ],
+      "operation": "identity",
+      "value": 25.09563,
+      "format": ".3f",
+      "suffix": "",
+      "display": "25.096"
+    },
+    {
+      "slide": 10,
+      "label": "Healthy core P95 (ms) 1000/1000",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/125/timing/core_ms/p95"
+      ],
+      "operation": "identity",
+      "value": 795.50062,
+      "format": ".3f",
+      "suffix": "",
+      "display": "795.501"
+    },
+    {
+      "slide": 10,
+      "label": "Fault APE (m) 30/30",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/118/views/O-FULL/ape_m/rmse"
+      ],
+      "operation": "identity",
+      "value": 0.10345833444285944,
+      "format": ".8f",
+      "suffix": "",
+      "display": "0.10345833"
+    },
+    {
+      "slide": 10,
+      "label": "Fault APE (m) 1000/1000",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/126/views/O-FULL/ape_m/rmse"
+      ],
+      "operation": "identity",
+      "value": 0.0540464180981714,
+      "format": ".8f",
+      "suffix": "",
+      "display": "0.05404642"
+    },
+    {
+      "slide": 11,
+      "label": "E01 H / seed20 FULL core",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/timing/core_ms/p95"
+      ],
+      "operation": "identity",
+      "value": 23.725824,
+      "format": ".3f",
+      "suffix": "",
+      "display": "23.726"
+    },
+    {
+      "slide": 11,
+      "label": "E01 H / seed20 FULL sink",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/20/timing/measurement_to_sink_ms/p95"
+      ],
+      "operation": "identity",
+      "value": 23.89284,
+      "format": ".3f",
+      "suffix": "",
+      "display": "23.893"
+    },
+    {
+      "slide": 11,
+      "label": "E06 J / seed20 FULL core",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/142/timing/core_ms/p95"
+      ],
+      "operation": "identity",
+      "value": 24.892582,
+      "format": ".3f",
+      "suffix": "",
+      "display": "24.893"
+    },
+    {
+      "slide": 11,
+      "label": "E06 J / seed20 FULL sink",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/142/timing/measurement_to_sink_ms/p95"
+      ],
+      "operation": "identity",
+      "value": 25.161516,
+      "format": ".3f",
+      "suffix": "",
+      "display": "25.162"
+    },
+    {
+      "slide": 11,
+      "label": "E01 H / seed20 NOM core",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/35/timing/core_ms/p95"
+      ],
+      "operation": "identity",
+      "value": 2.100102,
+      "format": ".3f",
+      "suffix": "",
+      "display": "2.100"
+    },
+    {
+      "slide": 11,
+      "label": "E01 H / seed20 NOM sink",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/35/timing/measurement_to_sink_ms/p95"
+      ],
+      "operation": "identity",
+      "value": 2.3029309999955103,
+      "format": ".3f",
+      "suffix": "",
+      "display": "2.303"
+    },
+    {
+      "slide": 11,
+      "label": "Real engineering max measurable core P95",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/36/timing/core_ms/p95",
+        "/runs/39/timing/core_ms/p95",
+        "/runs/42/timing/core_ms/p95",
+        "/runs/45/timing/core_ms/p95",
+        "/runs/48/timing/core_ms/p95",
+        "/runs/51/timing/core_ms/p95"
+      ],
+      "operation": "max",
+      "value": 13099.003941,
+      "format": ".1f",
+      "suffix": "",
+      "display": "13099.0"
+    },
+    {
+      "slide": 11,
+      "label": "Real engineering max measurable sink P95",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/36/timing/measurement_to_sink_ms/p95",
+        "/runs/39/timing/measurement_to_sink_ms/p95",
+        "/runs/42/timing/measurement_to_sink_ms/p95",
+        "/runs/45/timing/measurement_to_sink_ms/p95",
+        "/runs/48/timing/measurement_to_sink_ms/p95",
+        "/runs/51/timing/measurement_to_sink_ms/p95"
+      ],
+      "operation": "max",
+      "value": 1136293.0644889998,
+      "format": ".3g",
+      "suffix": "",
+      "display": "1.14e+06"
+    },
+    {
+      "slide": 12,
+      "label": "G2 measured abort core",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/135/timing/core_ms/p95"
+      ],
+      "operation": "identity",
+      "value": 4.873826,
+      "format": ".3f",
+      "suffix": "",
+      "display": "4.874"
+    },
+    {
+      "slide": 12,
+      "label": "E07-SC8-D0-O-ABL-SUPPORT-20261020-30x30 HPL",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/131/integrity/axes/H/pl/mean"
+      ],
+      "operation": "identity",
+      "value": 2.8219693313764114,
+      "format": ".5f",
+      "suffix": "",
+      "display": "2.82197"
+    },
+    {
+      "slide": 12,
+      "label": "E07-SC8-D0-O-ABL-SUPPORT-20261020-30x30 VPL",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/131/integrity/axes/V/pl/mean"
+      ],
+      "operation": "identity",
+      "value": 5.828644805473667,
+      "format": ".5f",
+      "suffix": "",
+      "display": "5.82864"
+    },
+    {
+      "slide": 12,
+      "label": "E07-SC8-D0-O-ABL-JOINT-20261020-30x30 HPL",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/132/integrity/axes/H/pl/mean"
+      ],
+      "operation": "identity",
+      "value": 3.4929057571691335,
+      "format": ".5f",
+      "suffix": "",
+      "display": "3.49291"
+    },
+    {
+      "slide": 12,
+      "label": "E07-SC8-D0-O-ABL-JOINT-20261020-30x30 VPL",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/132/integrity/axes/V/pl/mean"
+      ],
+      "operation": "identity",
+      "value": 6.303368376571824,
+      "format": ".5f",
+      "suffix": "",
+      "display": "6.30337"
+    },
+    {
+      "slide": 12,
+      "label": "E07-SC8-J-O-ABL-SUPPORT-20261020-30x30 HPL",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/133/integrity/axes/H/pl/mean"
+      ],
+      "operation": "identity",
+      "value": 3.010207573680657,
+      "format": ".5f",
+      "suffix": "",
+      "display": "3.01021"
+    },
+    {
+      "slide": 12,
+      "label": "E07-SC8-J-O-ABL-SUPPORT-20261020-30x30 VPL",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/133/integrity/axes/V/pl/mean"
+      ],
+      "operation": "identity",
+      "value": 3.943327123104826,
+      "format": ".5f",
+      "suffix": "",
+      "display": "3.94333"
+    },
+    {
+      "slide": 12,
+      "label": "E07-SC8-J-O-ABL-JOINT-20261020-30x30 HPL",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/134/integrity/axes/H/pl/mean"
+      ],
+      "operation": "identity",
+      "value": 3.6798465806776806,
+      "format": ".5f",
+      "suffix": "",
+      "display": "3.67985"
+    },
+    {
+      "slide": 12,
+      "label": "E07-SC8-J-O-ABL-JOINT-20261020-30x30 VPL",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/134/integrity/axes/V/pl/mean"
+      ],
+      "operation": "identity",
+      "value": 4.418083110314748,
+      "format": ".5f",
+      "suffix": "",
+      "display": "4.41808"
+    },
+    {
+      "slide": 13,
+      "label": "L0 FULL committed",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/136/max_committed_epoch"
+      ],
+      "operation": "identity",
+      "value": 5000,
+      "format": "d",
+      "suffix": "",
+      "display": "5000"
+    },
+    {
+      "slide": 13,
+      "label": "L0 FULL planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/136/planned_epochs"
+      ],
+      "operation": "identity",
+      "value": 5000,
+      "format": "d",
+      "suffix": "",
+      "display": "5000"
+    },
+    {
+      "slide": 13,
+      "label": "L0 FULL queue peak",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/136/source_delivery_counts/queue_peak"
+      ],
+      "operation": "identity",
+      "value": 13,
+      "format": "d",
+      "suffix": "",
+      "display": "13"
+    },
+    {
+      "slide": 13,
+      "label": "L1 FULL committed",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/137/max_committed_epoch"
+      ],
+      "operation": "identity",
+      "value": 7171,
+      "format": "d",
+      "suffix": "",
+      "display": "7171"
+    },
+    {
+      "slide": 13,
+      "label": "L1 FULL planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/137/planned_epochs"
+      ],
+      "operation": "identity",
+      "value": 10000,
+      "format": "d",
+      "suffix": "",
+      "display": "10000"
+    },
+    {
+      "slide": 13,
+      "label": "L1 FULL queue peak",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/137/source_delivery_counts/queue_peak"
+      ],
+      "operation": "identity",
+      "value": 80,
+      "format": "d",
+      "suffix": "",
+      "display": "80"
+    },
+    {
+      "slide": 13,
+      "label": "L1 NOFDE committed",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/138/max_committed_epoch"
+      ],
+      "operation": "identity",
+      "value": 10000,
+      "format": "d",
+      "suffix": "",
+      "display": "10000"
+    },
+    {
+      "slide": 13,
+      "label": "L1 NOFDE planned",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/138/planned_epochs"
+      ],
+      "operation": "identity",
+      "value": 10000,
+      "format": "d",
+      "suffix": "",
+      "display": "10000"
+    },
+    {
+      "slide": 13,
+      "label": "L1 NOFDE queue peak",
+      "source": "docs/sc8/SC8_METRICS.json",
+      "paths": [
+        "/runs/138/source_delivery_counts/queue_peak"
+      ],
+      "operation": "identity",
+      "value": 15,
+      "format": "d",
+      "suffix": "",
+      "display": "15"
+    }
+  ]
+}

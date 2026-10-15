@@ -1,0 +1,277 @@
+{
+  "schema": "sc8-advisor-storyboard-v1",
+  "main_slide_count": 15,
+  "locked_before_authoring": true,
+  "requirements_path": "docs/requirements/sc8_advisor_slides/SC8_ADVISOR_SLIDES_REQUIREMENTS.md",
+  "requirements_sha256": "5acff1118fc8d8320dd11f371f9ade7185d63bddb526a9942811f28cb1866451",
+  "missing_goal_file": "Referenced GOAL_SC8_ADVISOR_SLIDES.txt absent; current user objective and complete 15-slide requirements used without inventing a replacement.",
+  "slides": [
+    {
+      "number": 1,
+      "title": "The System Today: One FGO, Joint Fault Handling, Rolling Integrity",
+      "question": "How are estimation, fault exclusion and protection connected in the live UWB–IMU system?",
+      "takeaway": "A coupled incremental estimator and rolling fault-aware position integrity layer goes beyond a per-epoch UWB RAIM test.",
+      "caption": "Raw measurements drive one incremental FGO and parallel fault monitors; the selector commits at most one native update. A rolling certificate carries state uncertainty, fault consequences and source/risk identity across marginalization.",
+      "speaker_notes": [
+        "Follow the single estimator path and the two fault-monitor inputs into the hypothesis pool.",
+        "Proof proposal precedes commit; final HPL/VPL are bound to the actual commit receipt and tag center.",
+        "The boundary carries position, velocity, rotation, biases, historical faults and shared source/risk identity.",
+        "The risk horizon is not the 30-epoch explicit window; no second FGO or all-history resolve is required."
+      ],
+      "evidence": "Architecture",
+      "figures": [],
+      "target_seconds": 65
+    },
+    {
+      "number": 2,
+      "title": "E00 — What Was Actually Tested, and Which Comparisons Are Valid?",
+      "question": "Which datasets, ground truths and algorithm modes support a defensible comparison?",
+      "takeaway": "Comparability comes before APE rankings: Walk reference and STAR input contracts remain open.",
+      "caption": "Rows identify pre-registered real recordings, rather than six successful examples. The producer-to-estimator lanes keep conditional simulation integrity separate from empirical real data and overlays.",
+      "speaker_notes": [
+        "SUCCESS is a process exit status, not proof of complete input or output coverage.",
+        "Simulation is the only registered source with conditional raw qualification.",
+        "Real recordings use O-FDE-ENG / O-ENG-NOFDE; semi-synthetic labels concern the added fault only.",
+        "Own-Vicon calibration uses a disclosed segmented TEST-involved fit; SFUISE official rejection remains enabled."
+      ],
+      "evidence": "E00",
+      "figures": [],
+      "target_seconds": 60
+    },
+    {
+      "number": 3,
+      "title": "E01 — Healthy Simulation: Good Accuracy Under the Declared Model",
+      "question": "How accurately does the coupled pipeline localize without imposed faults?",
+      "takeaway": "The healthy pipeline delivers approximately 5 cm tag RMSE in the registered simulated model.",
+      "caption": "Each point is one independent seed; lower world-frame tag APE is better, without trajectory alignment. SFUISE uses sensor-only initialization, while ours receives an independently noisy initial observation: this is not an optimizer-only comparison.",
+      "speaker_notes": [
+        "All three fixed healthy seeds are shown, without seed selection or fitted alignment.",
+        "FULL and NOFDE coincide on the healthy source; SFUISE online and final are distinct views.",
+        "Final history excludes the support-invalid bootstrap prefix; it is neither causal nor a full batch optimum.",
+        "The approximate five-centimeter result is conditional on the registered simulation and initialization information."
+      ],
+      "evidence": "E01",
+      "figures": [
+        "s03_healthy"
+      ],
+      "target_seconds": 60
+    },
+    {
+      "number": 4,
+      "title": "E02 — Real-Data Validation Is Currently an Interface Problem",
+      "question": "Which real-data comparisons can we physically interpret?",
+      "takeaway": "Apparent algorithm failures cannot yet be separated from missing physical frame and timing validation.",
+      "caption": "Traces show the frozen own-Vicon TEST output and height reference, with its GT-assisted calibration disclosed. The matrix separates physically unresolved Walk references and STAR input conventions from conditional empirical scoring.",
+      "speaker_notes": [
+        "Use R3 as an empirical example, not an independently calibrated blind test.",
+        "Its registered TEST begins at 16.678774643 seconds; FULL has no complete TEST trajectory.",
+        "Walk physical APE, ARE and RPE are unavailable despite saved numerical proxy distances.",
+        "STAR kilometer-scale divergence is retained in the frozen report, but the gyro input contract prevents intrinsic method ranking."
+      ],
+      "evidence": "E02",
+      "figures": [
+        "s04_vicon"
+      ],
+      "target_seconds": 60
+    },
+    {
+      "number": 5,
+      "title": "E02 — Real FDE Execution, Not Nominal Localization, Is the Bottleneck",
+      "question": "Can the fault-handling pipeline sustain a complete real recording?",
+      "takeaway": "The main real-data blocker is FDE execution continuity, beyond nominal FGO data loading.",
+      "caption": "Bars show coverage of the registered GT TEST grid, with interpolation limited to 100 ms; NA is not zero. This measures emitted-output continuity, not accuracy or raw integrity, and Walk coverage is temporal only.",
+      "speaker_notes": [
+        "The denominator is each original GT TEST grid within IMU source bounds, not successful matches or commit attempts.",
+        "Walk percentages describe time coverage only; the physical reference is unresolved.",
+        "The R3 FULL TEST coverage is unavailable and must not be drawn as a zero bar.",
+        "Four of six engineering FULL runs hit the registered resource stop; all real raw PL remains unqualified."
+      ],
+      "evidence": "E02",
+      "figures": [
+        "s05_coverage"
+      ],
+      "target_seconds": 60
+    },
+    {
+      "number": 6,
+      "title": "E03 — FDE Benefits Are Fault-Dependent, Not Uniformly Positive",
+      "question": "Does FDE actually improve position and attitude accuracy?",
+      "takeaway": "Accel/joint positioning improves, but gyro-only accuracy and state recovery remain unresolved.",
+      "caption": "Each point is a matched seed; positive OFF−ON means FDE reduced RMSE, while negative values show degradation. Position improvement cannot cancel worsening body attitude, particularly under accel or gyro faults.",
+      "speaker_notes": [
+        "Three independently registered seeds per fault class supply the matched ON/OFF gains.",
+        "UWB-only is not uniformly positive; accelerometer positioning gains accompany worse attitude.",
+        "Gyro-only has a large negative seed and negative mean position and attitude gains.",
+        "Joint-fault mean attitude gain hides per-seed variation; no significance claim is made from three seeds."
+      ],
+      "evidence": "E03",
+      "figures": [
+        "s06_gains"
+      ],
+      "target_seconds": 60
+    },
+    {
+      "number": 7,
+      "title": "E03 — Real Isolation Can Still Be Followed by Estimation Drift",
+      "question": "What happens before, during and after a detected joint fault?",
+      "takeaway": "Post-FDE state consistency and recovery determine net accuracy; isolation alone is insufficient.",
+      "caption": "Bands mark source-level injections and receipt rows mark actual detection, isolation, prior repair and rejoined state. The APE axis is linear below 0.1 m and logarithmic above; a successful transaction does not certify state-error recovery.",
+      "speaker_notes": [
+        "The title uses real isolation to mean actual native transactions; this example is T-SIM, not a real recording.",
+        "The exact stream is SC8-J, seed 20261020, 600 epochs.",
+        "The raw accel pulse is 20 m/s² for 500 ms and UWB bias is 2.25 m for three epochs.",
+        "Rejoined is a persistent state flag; episode success requires actual prior replacement, bridge and consecutive post-bridge rejoined commits."
+      ],
+      "evidence": "E03",
+      "figures": [
+        "s07_fault_timeline"
+      ],
+      "target_seconds": 65
+    },
+    {
+      "number": 8,
+      "title": "E04 — Horizontal Stanford: Conservative Bounds, Conditional Coverage",
+      "question": "How do horizontal position errors relate to the emitted HPL?",
+      "takeaway": "Horizontal bounds cover the registered errors but remain much wider than the observed error.",
+      "caption": "HPE is horizontal and HPL vertical; darker teal log-count bins have more timely samples, and points above dashed y=x are empirically covered. Gray bins are late (excluded from timely availability); dotted lines mark research ALs (2/5/10 m), and zero correlated violations do not establish empirical 10^-6 risk.",
+      "speaker_notes": [
+        "The Stanford panels use actual histogram counts for the registered E01/E03 main cases.",
+        "Overall qualified receipt total includes other experiments and must not be confused with this figure denominator.",
+        "An HPL above HPE is coverage, whereas an HPL above HAL is unavailable at that alert limit.",
+        "The conditional theorem comes from the declared source event, not independence of these correlated observations."
+      ],
+      "evidence": "E04",
+      "figures": [
+        "s08_horizontal"
+      ],
+      "target_seconds": 60
+    },
+    {
+      "number": 9,
+      "title": "E04 — Vertical Stanford: Availability Depends on the Application AL",
+      "question": "Why can a centimeter-level estimate still be unavailable?",
+      "takeaway": "PL tightness and application availability are distinct from estimator accuracy, especially vertically.",
+      "caption": "VPE is horizontal and VPL vertical; darker teal bins contain more timely samples, gray bins are late, and bins above dashed y=x have VPL≥VPE. Dotted research ALs (3/5/10 m) test admissibility; the healthy AL comparison changes evaluation only, not estimates or PL, and is not certification.",
+      "speaker_notes": [
+        "Vertical bounds can exceed the chosen VAL even when VPE is small.",
+        "Healthy joint availability divides timely H/V-admissible receipts by all 600 planned epochs per seed.",
+        "Research 2/3 and 5/5 meter ALs are post-processing diagnostics and do not alter solver parameters.",
+        "No hardware safety requirement or real-data protection qualification is inferred."
+      ],
+      "evidence": "E04",
+      "figures": [
+        "s09_vertical",
+        "s09_availability"
+      ],
+      "target_seconds": 60
+    },
+    {
+      "number": 10,
+      "title": "E05 — 30 vs 1000 Epochs: When Is a Longer Window Worth It?",
+      "question": "Does retaining much more history improve accuracy or integrity enough to justify the cost?",
+      "takeaway": "Keep 30/30 as the online reference; extend history only when measured recovery benefits justify cost.",
+      "caption": "APE uses the same complete 1,000-epoch scoring interval; bubble area denotes sampled RSS, not process peak. LF, LI and recovery replay vary together in the coupled sweep, so its fault benefit cannot be attributed to PL alone.",
+      "speaker_notes": [
+        "Every plotted configuration ran 2100 epochs and the common scoring interval is 1101 through 2100.",
+        "Coupled LF=LI uses 30, 100, 300, 600 and 1000 actual UWB epochs; 1000 is 50 seconds.",
+        "The fixed LF=300 sweep uses LI=30, 100 and 300, reusing the shared 300/300 result.",
+        "The resource marker is a sampled RSS maximum, not the unknown between-sample peak; larger windows are intentionally allowed to miss real-time targets."
+      ],
+      "evidence": "E05",
+      "figures": [
+        "s10_window"
+      ],
+      "target_seconds": 65
+    },
+    {
+      "number": 11,
+      "title": "E06 — Runtime Breakdown: Fast Simulation, Expensive Real FDE",
+      "question": "Where does the computation go, and which timing numbers are comparable?",
+      "takeaway": "The small-window simulated full path meets study P95 targets; current real engineering FDE does not.",
+      "caption": "Curves show measured whole-service latency; solid is core and dashed is sink, while stacked bars contain additive exclusive means. Stage P95s are not additive, and SFUISE buffering/software-clock timing represents different capabilities.",
+      "speaker_notes": [
+        "Core and sink nearest-rank P95 targets remain 40 and 50 milliseconds; timely spatial fraction must also exceed 95 percent.",
+        "The healthy seed20 main E01 profile and the E06 joint repeat have distinct run IDs.",
+        "The nominal-only two-millisecond path lacks the full integrity capability and is not a like-for-like speed claim.",
+        "All measurable slow and abort frames remain; censored suffixes have no imputed timing and no complete-stream throughput claim."
+      ],
+      "evidence": "E06",
+      "figures": [
+        "s11_latency"
+      ],
+      "target_seconds": 60
+    },
+    {
+      "number": 12,
+      "title": "E07 — Ablations: Which Integrity Components Actually Matter?",
+      "question": "Are rolling constraints and recovery logic causally necessary, or just complexity?",
+      "takeaway": "Set constraints and geometry-aware numerical recovery have measurable effects; failures remain visible.",
+      "caption": "Cells show actual values and signed changes from matched FULL; red means increase and blue means decrease. G2 has no qualified output, so APE/PL are NA; the joint/sample0 switch also removes support and cannot isolate both effects.",
+      "speaker_notes": [
+        "M means same committed center, A means full trajectory comparison and P means performance.",
+        "Disabling terminal support reverts to a valid conservative box.",
+        "The joint/sample0 ablation is a combined joint-plus-support reversion, not two independently isolated effects.",
+        "G2 disables dedicated numerical recovery and commits zero of eighty epochs; its measured abort cost is retained in the report."
+      ],
+      "evidence": "E07",
+      "figures": [
+        "s12_ablation"
+      ],
+      "target_seconds": 60
+    },
+    {
+      "number": 13,
+      "title": "E08 — Long-Run Integrity: Healthy Complete, Repeated-Fault Case Censored",
+      "question": "Does the full pipeline sustain 10,000 epochs and process the last injected fault?",
+      "takeaway": "Continuous recovery at scale is unproven: FULL stops where the no-FDE route continues.",
+      "caption": "Curves stop at actual committed output; a blank FULL suffix is unprocessed data, not zero error. Vertical marks are scheduled faults, and the final episode beyond epoch 7171 was not verified by FULL.",
+      "speaker_notes": [
+        "Process SUCCESS does not imply the ten-thousand-epoch FULL plan completed.",
+        "The producer released the full schedule but queue delivery and actual commits ended early for FULL.",
+        "NOFDE continues to the final scheduled episode, but it implements a different fault-handling policy.",
+        "Slots grow with time despite a bounded active state window; there is no constant-memory or perpetual full-state observability claim."
+      ],
+      "evidence": "E08",
+      "figures": [
+        "s13_long"
+      ],
+      "target_seconds": 60
+    },
+    {
+      "number": 14,
+      "title": "Synthesis — What We Have Demonstrated, and What Remains Open",
+      "question": "Which claims can we defend in a paper today?",
+      "takeaway": "The strongest current contribution is conditional rolling fault-aware position integrity; real execution remains open.",
+      "caption": "Each row pairs a defensible claim with direct evidence and its limiting assumptions. Mathematical containment, empirical error, execution continuity and application certification answer different questions.",
+      "speaker_notes": [
+        "The 77131 receipts span correlated scenarios and windows, rather than independent risk trials.",
+        "State estimation, integrity validity, deadline passage and application availability are distinct results.",
+        "Real calibration, engineering execution, historical export support and missing SFUISE state metrics remain explicit gaps.",
+        "Weak-UWB amplitude and S1/S2 bias studies were not registered and are not filled with older SC7 data."
+      ],
+      "evidence": "Synthesis",
+      "figures": [],
+      "target_seconds": 60
+    },
+    {
+      "number": 15,
+      "title": "Questions for the Advisor — Decisions Needed Before the Next Study",
+      "question": "Which scope, resources and priorities should guide the next study?",
+      "takeaway": "Requested outcome: agree on the paper scope, calibration resource owner and research priority order.",
+      "caption": "The four questions request concrete decisions on scope, calibration resources, recovery priorities and application requirements. The next protocol should follow those decisions before a limited, newly frozen rerun.",
+      "speaker_notes": [
+        "Ask for a near-term publication scope rather than an abstract endorsement.",
+        "Identify an owner for independent extrinsics, clocks and held-out calibration data.",
+        "Choose whether state-recovery research or bounded engineering execution comes first.",
+        "Agree on application HAL, VAL, TTA, covered faults and failure action before the next protocol."
+      ],
+      "evidence": "Decisions",
+      "figures": [],
+      "target_seconds": 65
+    }
+  ],
+  "presentation_QA_revisions": [
+    "Balanced wrapping of long titles; same exact wording.",
+    "Clarified log-count / AL / late-bound encoding and used plain-text 10^-6 for faithful PDF extraction."
+  ]
+}

@@ -1,0 +1,1606 @@
+{
+  "status": "PASS",
+  "scope": "Presentation evidence, editability and PDF parity audit; not a new solver or physical qualification audit.",
+  "checks": [
+    {
+      "name": "requirements_byte_identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "storyboard_locked_before_authoring",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "exact_15_main_PPTX_and_PDF_slides",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "16_by_9_geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "frozen_result_status",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "frozen_computation_identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "frozen_metrics_plotdata_and_registry_unchanged",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "original_SC8_figure_assets_unchanged",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "1: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "1: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "1: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "1: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "1: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "1: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "1: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "1: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "1: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "2: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "2: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "2: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "2: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "2: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "2: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "2: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "2: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "2: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "2: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "2: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "3: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "3: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "3: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "3: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "3: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "3: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "3: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "3: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "3: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "3: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "3: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "4: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "4: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "4: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "4: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "4: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "4: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "4: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "4: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "4: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "4: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "4: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "5: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "5: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "5: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "5: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "5: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "5: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "5: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "5: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "5: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "5: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "5: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "6: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "6: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "6: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "6: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "6: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "6: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "6: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "6: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "6: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "6: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "6: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "7: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "7: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "7: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "7: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "7: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "7: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "7: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "7: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "7: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "7: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "7: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "8: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "8: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "8: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "8: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "8: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "8: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "8: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "8: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "8: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "8: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "8: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "9: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "9: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "9: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "9: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "9: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "9: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "9: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "9: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "9: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "9: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "9: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "10: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "10: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "10: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "10: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "10: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "10: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "10: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "10: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "10: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "10: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "10: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "11: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "11: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "11: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "11: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "11: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "11: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "11: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "11: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "11: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "11: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "11: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "12: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "12: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "12: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "12: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "12: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "12: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "12: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "12: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "12: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "12: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "12: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "13: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "13: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "13: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "13: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "13: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "13: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "13: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "13: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "13: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "13: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "13: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "14: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "14: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "14: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "14: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "14: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "14: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "14: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "14: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "14: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "14: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "14: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "15: exact storyboard title",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "15: exact numbering",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "15: white canvas",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "15: takeaway caption and frozen source",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "15: English visible text and notes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "15: 2_to_4_English_speaker_bullets",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "15: PDF slide geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "15: PDF contains every native PPTX text box",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "15: native_fonts_at_least_9pt",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "15: all PPTX shapes within page",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "15: actual PDF preview exists",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "E00_through_E08_have_visible_evidence",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "slide1_is_editable_architecture_not_an_image",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "slide1_required_architecture_terms",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "one_graph_and_surviving_risk_explained",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "final_four_specific_decisions",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "no_generic_thank_you",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "real_engineering_labels_and_reference_gaps_visible",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "late_FULL_suffix_explicit",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "negative_gains_retained",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "conditional_receipt_count_not_risk_trial",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "all_numerical_claims_recomputed_from_frozen_JSON",
+      "passed": true,
+      "detail": {
+        "count": 97,
+        "bad": []
+      }
+    },
+    {
+      "name": "claim_source_digest",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "143_outcomes_and_160_budget",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "one_healthy_point_per_registered_seed",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s03_healthy: frozen input digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s03_healthy: original SVG provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s03_healthy: svg identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s03_healthy: png identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s03_healthy: editable_SVG_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s03_healthy: projected_chart_fonts_at_least_9pt",
+      "passed": true,
+      "detail": {
+        "minimum_pt": 10.5
+      }
+    },
+    {
+      "name": "s03_healthy: source_plot_axes_and_legends_not_cropped",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s04_vicon: frozen input digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s04_vicon: original SVG provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s04_vicon: svg identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s04_vicon: png identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s04_vicon: editable_SVG_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s04_vicon: projected_chart_fonts_at_least_9pt",
+      "passed": true,
+      "detail": {
+        "minimum_pt": 10.5
+      }
+    },
+    {
+      "name": "s04_vicon: source_plot_axes_and_legends_not_cropped",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s05_coverage: frozen input digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s05_coverage: original SVG provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s05_coverage: svg identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s05_coverage: png identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s05_coverage: editable_SVG_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s05_coverage: projected_chart_fonts_at_least_9pt",
+      "passed": true,
+      "detail": {
+        "minimum_pt": 10.5
+      }
+    },
+    {
+      "name": "s05_coverage: source_plot_axes_and_legends_not_cropped",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s06_gains: frozen input digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s06_gains: original SVG provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s06_gains: svg identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s06_gains: png identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s06_gains: editable_SVG_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s06_gains: projected_chart_fonts_at_least_9pt",
+      "passed": true,
+      "detail": {
+        "minimum_pt": 10.5
+      }
+    },
+    {
+      "name": "s06_gains: source_plot_axes_and_legends_not_cropped",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s07_fault_timeline: frozen input digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s07_fault_timeline: original SVG provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s07_fault_timeline: svg identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s07_fault_timeline: png identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s07_fault_timeline: editable_SVG_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s07_fault_timeline: projected_chart_fonts_at_least_9pt",
+      "passed": true,
+      "detail": {
+        "minimum_pt": 10.5
+      }
+    },
+    {
+      "name": "s07_fault_timeline: source_plot_axes_and_legends_not_cropped",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s08_horizontal: frozen input digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s08_horizontal: original SVG provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s08_horizontal: svg identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s08_horizontal: png identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s08_horizontal: editable_SVG_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s08_horizontal: projected_chart_fonts_at_least_9pt",
+      "passed": true,
+      "detail": {
+        "minimum_pt": 10.5
+      }
+    },
+    {
+      "name": "s08_horizontal: source_plot_axes_and_legends_not_cropped",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s09_vertical: frozen input digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s09_vertical: original SVG provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s09_vertical: svg identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s09_vertical: png identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s09_vertical: editable_SVG_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s09_vertical: projected_chart_fonts_at_least_9pt",
+      "passed": true,
+      "detail": {
+        "minimum_pt": 10.5
+      }
+    },
+    {
+      "name": "s09_vertical: source_plot_axes_and_legends_not_cropped",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s09_availability: frozen input digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s09_availability: original SVG provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s09_availability: svg identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s09_availability: png identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s09_availability: editable_SVG_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s09_availability: projected_chart_fonts_at_least_9pt",
+      "passed": true,
+      "detail": {
+        "minimum_pt": 10.5
+      }
+    },
+    {
+      "name": "s09_availability: source_plot_axes_and_legends_not_cropped",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s10_window: frozen input digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s10_window: original SVG provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s10_window: svg identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s10_window: png identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s10_window: editable_SVG_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s10_window: projected_chart_fonts_at_least_9pt",
+      "passed": true,
+      "detail": {
+        "minimum_pt": 10.5
+      }
+    },
+    {
+      "name": "s10_window: source_plot_axes_and_legends_not_cropped",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s11_latency: frozen input digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s11_latency: original SVG provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s11_latency: svg identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s11_latency: png identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s11_latency: editable_SVG_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s11_latency: projected_chart_fonts_at_least_9pt",
+      "passed": true,
+      "detail": {
+        "minimum_pt": 10.5
+      }
+    },
+    {
+      "name": "s11_latency: source_plot_axes_and_legends_not_cropped",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s12_ablation: frozen input digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s12_ablation: original SVG provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s12_ablation: svg identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s12_ablation: png identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s12_ablation: editable_SVG_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s12_ablation: projected_chart_fonts_at_least_9pt",
+      "passed": true,
+      "detail": {
+        "minimum_pt": 10.5
+      }
+    },
+    {
+      "name": "s12_ablation: source_plot_axes_and_legends_not_cropped",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s13_long: frozen input digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s13_long: original SVG provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s13_long: svg identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s13_long: png identity",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s13_long: editable_SVG_text",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "s13_long: projected_chart_fonts_at_least_9pt",
+      "passed": true,
+      "detail": {
+        "minimum_pt": 10.5
+      }
+    },
+    {
+      "name": "s13_long: source_plot_axes_and_legends_not_cropped",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "native_diagrams_and_tables_have_provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "native slide 1: actual source digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "native slide 2: actual source digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "native slide 14: actual source digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "native slide 15: actual source digests",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Stanford O-FULL H full: actual bins",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Stanford O-FULL H zoom: actual bins",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Stanford O-FULL V full: actual bins",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Stanford O-FULL V zoom: actual bins",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Stanford O-NOFDE H full: actual bins",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Stanford O-NOFDE H zoom: actual bins",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Stanford O-NOFDE V full: actual bins",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Stanford O-NOFDE V zoom: actual bins",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "all_12_vector_assets_embedded_with_raster_fallback",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "no_missing_PPTX_relationship_targets",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "measured_native_text_fits_declared_boxes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "PDF_rendered_from_current_actual_PPTX",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "every_final_slide_visually_reviewed",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "reviewed_contact_sheet_present",
+      "passed": true,
+      "detail": null
+    }
+  ],
+  "pptx_sha256": "45a08956d9f1e9e7fe2d76318e306024851374626316dd7150ce33ed88118532",
+  "pdf_sha256": "ae1e7b8b3faec26f8db25c0092c5908019e5d35c75146cfb275c4e8658d2f28d",
+  "minimum_native_font_pt": 9.5,
+  "numerical_claim_count": 97,
+  "sources": {
+    "tools/sc8_advisor_slides.py": "7a57f98ecab5181ca2d28de55e7bb433ec8481ddd5225cf075fa859ea3d31918",
+    "tools/sc8_slides_figures.py": "a555100af588f5d300920eaeddfefc9a3aee7c9ef9aef9a3ea6a8c02ddcdaa83",
+    "tools/verify_sc8_advisor_slides.py": "5fbc72fd1e5c93b7af983320bc0973b654b34d5abdf984581cf1a51e503b3565",
+    "docs/sc8/presentation/STORYBOARD.json": "a3054c201762ed5a317b282aabc55a028154522ca60b066a1b2185cdcedd183d",
+    "docs/requirements/sc8_advisor_slides/SC8_ADVISOR_SLIDES_REQUIREMENTS.md": "5acff1118fc8d8320dd11f371f9ade7185d63bddb526a9942811f28cb1866451"
+  },
+  "frozen_result_status": "SC8_EVALUATED_WITH_EXECUTION_GAPS",
+  "render": {
+    "renderer": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8-slides/lo/usr/lib/libreoffice/program/soffice",
+    "pptx_sha256": "45a08956d9f1e9e7fe2d76318e306024851374626316dd7150ce33ed88118532",
+    "pdf_sha256": "ae1e7b8b3faec26f8db25c0092c5908019e5d35c75146cfb275c4e8658d2f28d",
+    "pages": 15,
+    "mode": "Actual PPTX → LibreOffice Impress PDF → PyMuPDF slide previews"
+  },
+  "visual_review": {
+    "status": "PASS",
+    "reviewer": "Codex visual inspection",
+    "method": "Opened all 15 rendered slides individually, plus contact sheet; re-opened revised slides after layout/axis fixes. Unchanged final slides were verified by identical preview SHA256.",
+    "pptx_sha256": "45a08956d9f1e9e7fe2d76318e306024851374626316dd7150ce33ed88118532",
+    "pdf_sha256": "ae1e7b8b3faec26f8db25c0092c5908019e5d35c75146cfb275c4e8658d2f28d",
+    "slides": [
+      {
+        "slide": 1,
+        "status": "PASS",
+        "preview_sha256": "5020588c2853c9f183e8d0c486c86b69b25d05c83b52dd4314ac7a0095cf24fe",
+        "observations": "Editable native flow nodes, arrows and rolling boundary inset readable; single commit and conditional tag-only scope explicit."
+      },
+      {
+        "slide": 2,
+        "status": "PASS",
+        "preview_sha256": "31951cce95ff111d04c0df0b81912fc9a631b0314d40523d8cda81239b35e479",
+        "observations": "All three producer-to-estimator-to-qualification lanes and six recording rows readable; process outcomes not called full trajectories."
+      },
+      {
+        "slide": 3,
+        "status": "PASS",
+        "preview_sha256": "406fbfbd3a821dfa82503f23eba0e57dcce92c3f735cbcf0ed1e40676d6150ce",
+        "observations": "Exactly three seeds and four distinct method styles; full/noFDE coincident scores and noncausal final view clearly separated."
+      },
+      {
+        "slide": 4,
+        "status": "PASS",
+        "preview_sha256": "62f5177d238fe4980dec4b8f6b49f96ced3766b19966fc845727e522d789a063",
+        "observations": "R3 XY/height axes and separated legend intact; CAL, Walk reference and STAR gyro caveats visible, including 15.85 km frozen-interface result."
+      },
+      {
+        "slide": 5,
+        "status": "PASS",
+        "preview_sha256": "1e2f8cdcf34e322844f07fa53a2d4c69d6d88a15d7afe893226d1d571ede3124",
+        "observations": "Coverage bars and original denominators agree; R3 FULL is NA; Walk rates are temporal and real raw PL remains unqualified."
+      },
+      {
+        "slide": 6,
+        "status": "PASS",
+        "preview_sha256": "439bbf79296a6b8e3376c5767c6ed1e35aa5b901284d525854a541743e6d11eb",
+        "observations": "Zero reference and all negative per-seed gains intact; black mean markers and separate attitude effects readable."
+      },
+      {
+        "slide": 7,
+        "status": "PASS",
+        "preview_sha256": "064d9a54afdc64689885aa8a370da27d6223b1c0ac00f86e11e1522cdb30423a",
+        "observations": "Full SFUISE outlier scale, hybrid APE scale, fault bands and actual prior/bridge/rejoined receipt markers readable."
+      },
+      {
+        "slide": 8,
+        "status": "PASS",
+        "preview_sha256": "c1c49671b3c7d003a38601ab7cb5f01c3dfc43cf7ecd2a06e679e357a5b9bda4",
+        "observations": "Full/zoom horizontal Stanford axes intact; PE/PL diagonal, research ALs, late bins, N and non-independent risk caveat explicit."
+      },
+      {
+        "slide": 9,
+        "status": "PASS",
+        "preview_sha256": "68d830afcb3a876ce977508a1bc6c944232ecf502eaf04d1c8c12db4cc75a96b",
+        "observations": "Full/zoom vertical panels, all three healthy AL points and denominator table readable without overlap."
+      },
+      {
+        "slide": 10,
+        "status": "PASS",
+        "preview_sha256": "3c26ee4c0d753abcc524907eef3e267f1bc6ed6578ca1840ca0ead1a2c4422e0",
+        "observations": "Complete axis labels, actual window curves, sampled-RSS bubbles and matched common-interval table readable; cost and fault benefit both visible. Fixed LF=300 / LI=30,100,300 note was re-opened and checked in the final render."
+      },
+      {
+        "slide": 11,
+        "status": "PASS",
+        "preview_sha256": "b3cd2c8170637d14277a8d464a50a32c19b5d1e98468632785e618954859ab86",
+        "observations": "Core/sink line styles and exclusive-mean breakdown readable; main versus E06 repeat IDs and nominal-only capability separated."
+      },
+      {
+        "slide": 12,
+        "status": "PASS",
+        "preview_sha256": "94d96297d9e1a08aee4654ae8c6dfb2403cf9eca470caf49d341abb492b2e0ad",
+        "observations": "All signed ablation cells, dark-cell labels, G2 NA and measured abort cost readable; M/A/P and combined switch distinguished."
+      },
+      {
+        "slide": 13,
+        "status": "PASS",
+        "preview_sha256": "fab3bc89f7c660cf719d729eda0a01b1f7e819b27e7c07f96c28014579dfc41d",
+        "observations": "FULL output ends at actual epoch7171 with blank suffix; high ARE, queue counts, refused epochs and nonconstant storage boundary visible."
+      },
+      {
+        "slide": 14,
+        "status": "PASS",
+        "preview_sha256": "ac8de4b0152bbe323c5f1409e13e86e723254104e9e8acc2762b975022ccaff1",
+        "observations": "All five evidence-to-claim rows and additional omitted metrics/studies readable; no hardware qualification claim."
+      },
+      {
+        "slide": 15,
+        "status": "PASS",
+        "preview_sha256": "7868de493d937d2b8233cc23dd2dc544d04ed1d0db0f655f92f09a75759aa668",
+        "observations": "All four complete advisor questions and requested decisions readable; final main slide is actionable discussion, not thank-you."
+      }
+    ]
+  },
+  "preserved_user_files": [
+    "docs/sc8/SC8_RESULTS.html",
+    "docs/sc8/SC8_RESULTS.pdf"
+  ],
+  "pushed": false
+}
