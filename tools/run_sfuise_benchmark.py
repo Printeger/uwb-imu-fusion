@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import os
 import resource
 import shutil
@@ -109,7 +110,7 @@ def shlex_quote(value: str) -> str:
     return shlex.quote(value)
 
 
-def _write_bag(cache: Path, destination: Path):
+def _write_bag(cache: Path, destination: Path, lossless_toa: bool = False):
     # Imports intentionally happen only in the subprocess sourced from the
     # isolated workspace so custom message resolution cannot leak from the
     # user's main catkin overlay.
@@ -117,6 +118,7 @@ def _write_bag(cache: Path, destination: Path):
     import rospy
     from geometry_msgs.msg import Point
     from sensor_msgs.msg import Imu
+    from std_msgs.msg import Float64MultiArray
     from isas_msgs.msg import AnchorPosition, Anchorlist, RTLSRange, RTLSStick
 
     manifest = json.loads((cache / "manifest.json").read_text())
@@ -145,19 +147,31 @@ def _write_bag(cache: Path, destination: Path):
         groups.append(range_rows[begin:end])
         begin = end
     destination.parent.mkdir(parents=True, exist_ok=True)
+    def exact_stamp(t):
+        value_ns = float(t) * 1e9
+        # Match TimestampNs::fromSeconds/std::round (ties away from zero).
+        normalized_ns = math.floor(value_ns + .5) if value_ns >= 0 else math.ceil(value_ns - .5)
+        ns = round(EPOCH_OFFSET_S * 1e9) + normalized_ns
+        return rospy.Time(ns // 1000000000, ns % 1000000000)
     with rosbag.Bag(str(destination), "w") as bag:
         anchor_msg = Anchorlist()
         for row in anchors:
             item = AnchorPosition(id=int(row["anchor_id"]))
             item.position = Point(float(row["x"]), float(row["y"]), float(row["z"]))
             anchor_msg.anchor.append(item)
-        # Upstream initializes anchors after 20 lists; provide exactly 20
-        # identical copies before sensor data starts.
+        # The generic cache can begin with a negative IMU timestamp or with
+        # UWB well before IMU. The upstream solver assumes both buffers are
+        # populated when the static map unlocks initialization. Keep every
+        # original sensor stamp/value; delay only static-map readiness under
+        # one common protocol, with its real startup wait counted in playback.
+        first_valid_range = min(float(r["t"]) for r in range_rows
+                                if int(r["valid"]) != 0)
+        map_ready = max(float(imu_rows[0]["t"]), first_valid_range) + .025
         for index in range(20):
-            stamp = rospy.Time.from_sec(EPOCH_OFFSET_S + index * 1e-3)
+            stamp = exact_stamp(map_ready + index * 1e-3)
             bag.write("/EstimationInterface/anchor_list", anchor_msg, stamp)
         for row in imu_rows:
-            stamp = rospy.Time.from_sec(EPOCH_OFFSET_S + float(row["t"]))
+            stamp = exact_stamp(row["t"])
             msg = Imu()
             msg.header.stamp = stamp
             msg.linear_acceleration.x = float(row["ax"])
@@ -168,7 +182,7 @@ def _write_bag(cache: Path, destination: Path):
             msg.angular_velocity.z = float(row["gz"])
             bag.write("/EstimationInterface/imu_ds", msg, stamp)
         for group in groups:
-            stamp = rospy.Time.from_sec(EPOCH_OFFSET_S + float(group[-1]["t"]))
+            stamp = exact_stamp(group[-1]["t"])
             msg = RTLSStick()
             msg.header.stamp = stamp
             msg.id = primary
@@ -177,7 +191,7 @@ def _write_bag(cache: Path, destination: Path):
                 item.id = int(row["anchor_id"])
                 # Native SFUISE data keeps the official offset in its YAML.
                 # Other adapters already froze known offsets into `range`.
-                item.range = float(row["range_raw"] if manifest["dataset"] == "SFUISE"
+                item.range = float(row["range_raw"] if manifest["dataset"] == "SFUISE" and not lossless_toa
                                    else row["range"])
                 item.ra = int(row["valid"])
                 item.pos = Point(float(row["anchor_x"]), float(row["anchor_y"]),
@@ -186,15 +200,31 @@ def _write_bag(cache: Path, destination: Path):
             msg.noga = len(msg.ranges)
             msg.nora = sum(int(item.ra != 0) for item in msg.ranges)
             bag.write("/EstimationInterface/toa_ds", msg, stamp)
+            if lossless_toa:
+                # Official RTLSRange.range is float32, while the frozen raw
+                # simulation and calibrated CSV ranges are doubles. Feed the
+                # identical double observations into unchanged TOAData math.
+                # The legacy message remains an observer-only timestamp feed;
+                # the observed estimator explicitly unsubscribes from it.
+                payload = [float(stamp.to_nsec()), float(len(group))]
+                for row in group:
+                    observed = row["range"]
+                    payload.extend([float(row["anchor_id"]), float(observed), float(row["valid"])])
+                bag.write("/EstimationInterface/toa_ds64", Float64MultiArray(data=payload), stamp)
     return {"imu": len(imu_rows), "uwb_messages": len(groups),
-            "uwb_ranges": len(range_rows), "anchors": len(anchors)}
+            "uwb_ranges": len(range_rows), "anchors": len(anchors),
+            "map_ready_sensor_s": map_ready,
+            "toa_transport": "FLOAT64_LOSSLESS" if lossless_toa else "OFFICIAL_FLOAT32",
+            "toa_calibration": "CANONICAL_RANGE_PREAPPLIED_ONCE" if lossless_toa else "OFFICIAL_NATIVE_OFFSET",
+            "map_ready_policy": "both_sensor_streams_then_25ms; original sensor stamps unchanged"}
 
 
-def write_bag_subprocess(setup: Path, cache: Path, bag: Path) -> dict:
+def write_bag_subprocess(setup: Path, cache: Path, bag: Path, lossless_toa: bool = False) -> dict:
     command = ["bash", "-c",
                f"source {shlex_quote(str(setup))} && "
                f"python3 {shlex_quote(str(Path(__file__).resolve()))} _write-bag "
-               f"--cache {shlex_quote(str(cache))} --bag {shlex_quote(str(bag))}"]
+               f"--cache {shlex_quote(str(cache))} --bag {shlex_quote(str(bag))}" +
+               (" --toa64" if lossless_toa else "")]
     result = subprocess.check_output(command, text=True)
     return json.loads(result.strip().splitlines()[-1])
 
@@ -207,7 +237,7 @@ def frequency(path: Path) -> float:
     return float(1.0 / np.median(delta)) if delta.size else 1.0
 
 
-def runtime_config(cache: Path, destination: Path) -> tuple[dict, list[float]]:
+def runtime_config(cache: Path, destination: Path, lossless_toa: bool = False) -> tuple[dict, list[float]]:
     manifest = json.loads((cache / "manifest.json").read_text())
     dataset = manifest["dataset"]
     source_name = "config_test_isas-walk1.yaml"
@@ -235,7 +265,7 @@ def runtime_config(cache: Path, destination: Path) -> tuple[dict, list[float]]:
                   imu_sample_coeff=1, uwb_sample_coeff=1, acc_ratio=False,
                   gyro_unit=False, if_tdoa=False, if_reject_uwb=True,
                   offset=lever)
-    if dataset == "SFUISE":
+    if dataset == "SFUISE" and not lossless_toa:
         config["toa_offset"] = [float(native_offsets.get(str(aid),
                                      native_offsets.get(aid, 0.0))) for aid in anchor_ids]
     else:
@@ -278,12 +308,13 @@ def run_one(setup: Path, cache: Path, run: Path, playback_rate: float = 2.0,
         if path.exists():
             path.unlink()
     bag = run / "input.bag"
-    counts = write_bag_subprocess(setup, cache, bag)
-    config, lever = runtime_config(cache, run / "sfuise.yaml")
+    counts = write_bag_subprocess(setup, cache, bag, lossless_toa=observer)
+    config, lever = runtime_config(cache, run / "sfuise.yaml", lossless_toa=observer)
     env = source_environment(setup)
     env.update(OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1")
     if observer:
         env['SC8_SFUISE_OBSERVER'] = str(run / 'observer.csv')
+        env['SC8_SFUISE_TOA64'] = '1'
     logs = []
     processes = []
     fusion_process = None
@@ -308,6 +339,7 @@ def run_one(setup: Path, cache: Path, run: Path, playback_rate: float = 2.0,
                          "sfuise_trajectory_adapter",
                          f"_output_path:={run / 'trajectory.tum'}",
                          f"_metadata_path:={run / 'adapter.meta'}",
+                         f"_playback_rate:={playback_rate}",
                          "_lever_arm_body_m:=[" + ",".join(map(str, lever)) + "]"]),
         ]
         for name, command in commands:
@@ -346,6 +378,11 @@ def run_one(setup: Path, cache: Path, run: Path, playback_rate: float = 2.0,
                 key, value = line.split("=", 1); metadata[key] = value
     received_toa = int(metadata.get("toa_timestamps", 0))
     count_match = received_toa == counts["uwb_messages"]
+    solver_final = {}
+    if observer:
+        final_path=run/'observer.csv.final.json'
+        if final_path.exists():solver_final=json.loads(final_path.read_text())
+        count_match = count_match and solver_final.get('imu_received')==counts['imu'] and solver_final.get('toa_received')==counts['uwb_messages']
     fusion_returncode = fusion_process.returncode if fusion_process else None
     status = "SUCCESS" if samples >= 2 and count_match and fusion_returncode in (0, -signal.SIGINT) else "FAIL"
     if status == "SUCCESS":
@@ -371,6 +408,8 @@ def run_one(setup: Path, cache: Path, run: Path, playback_rate: float = 2.0,
                   metadata.get("native_average_window_runtime", "nan")),
               "realtime_factor": wall_s / max(1e-9, common.csv_duration(cache / "imu.csv")),
               "official_uwb_rejection": bool(config["if_reject_uwb"])}
+    result['solver_final_receipt'] = solver_final
+    result['root_sensor_counts_match'] = count_match
     result['observer_enabled'] = observer
     result['fusion_executable'] = fusion_executable
     result['source_clock_resolution_s'] = .001
@@ -472,13 +511,14 @@ def parser():
     hidden = sub.add_parser("_write-bag")
     hidden.add_argument("--cache", required=True)
     hidden.add_argument("--bag", required=True)
+    hidden.add_argument("--toa64", action="store_true")
     return result
 
 
 def main():
     args = parser().parse_args()
     if args.command == "_write-bag":
-        print(json.dumps(_write_bag(Path(args.cache), Path(args.bag))))
+        print(json.dumps(_write_bag(Path(args.cache), Path(args.bag), args.toa64)))
         return 0
     return globals()["command_" + args.command](args)
 

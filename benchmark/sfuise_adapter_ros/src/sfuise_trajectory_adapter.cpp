@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <chrono>
+#include <limits>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
@@ -31,8 +33,9 @@ class TrajectoryAdapter {
     cutoff_.open(output_path_ + ".online_cutoff.csv");
     if (!online_ || !cutoff_) throw std::runtime_error("cannot open online export");
     online_ << std::setprecision(17);
-    cutoff_ << "state_ns,window_information_cutoff_ns,observed_sensor_cutoff_ns,estimate_index,calibration_index,published_wall_time,source_clock_at_sink_ns,revision_index\n";
+    cutoff_ << "state_ns,window_right_boundary_ns,observed_sensor_cutoff_ns,estimate_index,calibration_index,published_wall_time,source_clock_at_sink_ns,revision_index,source_clock_raw_ns,mode\n";
     cutoff_ << std::setprecision(17);
+    private_nh.param<double>("playback_rate",playback_rate_,1.0);
     sub_clock_=nh_.subscribe("/clock",100,&TrajectoryAdapter::ClockCallback,this);
     std::vector<double> lever{0.0, 0.0, 0.0};
     private_nh.getParam("lever_arm_body_m", lever);
@@ -58,7 +61,17 @@ class TrajectoryAdapter {
  private:
   void ClockCallback(const rosgraph_msgs::Clock::ConstPtr& msg) {
     source_clock_ns_=msg->clock.toNSec();
+    const auto now=std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    // Best observed source-clock/monotonic mapping. It continues after EOF,
+    // so a delayed final output cannot gain a frozen-clock latency discount.
+    source_offset_ns_=std::min(source_offset_ns_,static_cast<int64_t>(std::llround(static_cast<long double>(now)*playback_rate_))-source_clock_ns_);
   }
+  int64_t SourceClockAtSink() const {
+    if(source_offset_ns_==std::numeric_limits<int64_t>::max())return 0;
+    const auto now=std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    return static_cast<int64_t>(std::llround(static_cast<long double>(now)*playback_rate_))-source_offset_ns_;
+  }
+
   void StartCallback(const std_msgs::Int64::ConstPtr& msg) {
     global_start_ns_ = msg->data;
     have_start_ = true;
@@ -128,8 +141,8 @@ class TrajectoryAdapter {
                 << ' ' << q.z() << ' ' << q.w() << '\n';
         cutoff_ << t_ns << ',' << t_ns+1 << ',' << latest_sensor_ns_ << ','
                 << estimate_messages_+1 << ',' << calibration_messages_ << ','
-                << ros::WallTime::now().toSec() << ',' << source_clock_ns_
-                << ",0\n";
+                << ros::WallTime::now().toSec() << ',' << SourceClockAtSink()
+                << ",0," << source_clock_ns_ << ",first_causal\n";
         online_records_.push_back({t_ns,local.itpPosition(t_ns),q_nav_body,
                                    q_nav_uwb_,t_nav_uwb_});
         last_online_ns_ = t_ns; ++online_samples_;
@@ -143,6 +156,9 @@ class TrajectoryAdapter {
   void WriteOutputs() {
     if (written_) return;
     written_ = true;
+    const double final_published_wall=ros::WallTime::now().toSec();
+    std::ofstream final_receipts(output_path_+".final_receipts.csv");
+    final_receipts<<std::setprecision(17)<<"state_ns,published_wall_time,source_clock_at_sink_ns,revision_index,mode,max_sensor_stamp_used_upper_ns,input_cutoff_scope\n";
     std::ofstream trajectory(output_path_);
     if (!trajectory) throw std::runtime_error("cannot open output trajectory");
     trajectory << std::setprecision(17);
@@ -189,6 +205,8 @@ class TrajectoryAdapter {
         write(online_final,record.time,record.position,record.orientation,q_nav_uwb_,t_nav_uwb_);
         write(history_online,record.time,history_p,history_q,record.world_rotation,record.world_translation);
         write(history_final,record.time,history_p,history_q,q_nav_uwb_,t_nav_uwb_);
+        final_receipts<<record.time<<','<<final_published_wall<<','<<SourceClockAtSink()<<','<<estimate_messages_
+            <<",final_history,"<<latest_sensor_ns_<<",WHOLE_EXPORT_INPUT_UPPER_BOUND_NOT_PER_POINT_REVISION\n";
       }
     }
     std::ofstream metadata(metadata_path_);
@@ -202,9 +220,11 @@ class TrajectoryAdapter {
              << "toa_timestamps=" << toa_times_ns_.size() << '\n'
              << "trajectory_samples=" << count << '\n'
              << "historical_semantics=final_knots_final_calibration\n"
+             << "historical_revision_index=export_generation_not_per_point_update_count\n"
+             << "source_clock_mapping=min_observed_scaled_monotonic_minus_clock_offset; continues_after_eof\n"
              << "online_semantics=current_window_last_observed_calibration\n"
              << "online_samples=" << online_samples_ << '\n'
-             << "online_cutoff_semantics=window_boundary_and_observed_sensor_timestamps;message_has_no_exact_input_receipt\n"
+             << "online_cutoff_semantics=window_boundary_and_callback_timestamps;numeric_input_receipt_joined_from_observer_by_state_ns\n"
              << std::setprecision(17)
              << "native_average_window_runtime=" << last_native_average_runtime_ << '\n';
   }
@@ -219,7 +239,8 @@ class TrajectoryAdapter {
   std::vector<OnlineRecord> online_records_;
   ros::Subscriber sub_start_, sub_calib_, sub_estimate_, sub_toa_, sub_imu_;
   ros::Subscriber sub_clock_;
-  int64_t source_clock_ns_=0;
+  double playback_rate_=1.;
+  int64_t source_clock_ns_=0,source_offset_ns_=std::numeric_limits<int64_t>::max();
   SplineState global_;
   Eigen::Quaterniond q_nav_uwb_{Eigen::Quaterniond::Identity()};
   Eigen::Vector3d t_nav_uwb_{Eigen::Vector3d::Zero()};

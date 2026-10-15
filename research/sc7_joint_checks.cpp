@@ -2,6 +2,8 @@
 #include <tbb/global_control.h>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
+#include <cstdlib>
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
 using I=RollingInterval;
 void require(bool v,const char* why){if(!v)throw std::runtime_error(why);}
@@ -42,10 +44,11 @@ int main(){try{
  Eigen::Vector3d lever(0,0,.2);Eigen::AngleAxisd yaw(.2,Eigen::Vector3d::UnitZ());require((yaw*lever-lever).norm()==0 && (yaw*Eigen::Vector3d(0,0,9.81)-Eigen::Vector3d(0,0,9.81)).norm()==0,"yaw witness changed static observations");
  // Original temporal-only held alarm must still repair the real dirty
  // marginal prior, or refuse when its support lies beyond replay.
+ const std::string check_root=std::getenv("SC8_CHECK_CACHE")?std::getenv("SC8_CHECK_CACHE"):".cache/sc7";std::filesystem::create_directories(check_root);
  for(bool outside:{false,true}){
   auto config=YAML::LoadFile("config/sc7.yaml");auto resolved=researchLaw("config/sc7.yaml");config["closure"]=YAML::Clone(resolved["closure"]);
   if(outside){config["rolling_integrity"]=YAML::Clone(resolved["rolling_integrity"]);config["rolling_integrity"]["recovery_extra_epochs"]=0;}
-  std::string path=outside?".cache/sc7/joint-outside.yaml":".cache/sc7/joint-held.yaml";{std::ofstream out(path);out<<config;}
+  std::string path=check_root+(outside?"/joint-outside.yaml":"/joint-held.yaml");{std::ofstream out(path);out<<config;}
   Sc6Provider held(path,"D1_G_E",20261010,outside?104:120);Sc6Service service(held.law,held.cfg,held.initial,held.lever,held.domain,held.imu.front(),true,false,true);int release=outside?100:95,repairs=0,rejoins=0;
   for(int k=1;k<=held.epochs;++k){auto r=service.step(held.certify(k),k>=release);require(r.bound.valid && r.source_prefix==21+128*k,"new held source/raw chain lost");if(!outside && k==release){require(r.action.boundary_repair && r.action.history_marginalized && !r.action.removed_prior_slots.empty(),"new held lost dirty-prior restoration");++repairs;}if(!outside && release<k && k<=release+4){require(r.action.rejoined && !r.action.current_bridge,"new held lost healthy rejoin4");++rejoins;}if(outside && k>=release)require(r.action.recovery=="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE" && !r.action.boundary_repair && !r.action.current_bridge,"new outside replay fabricated restoration");}
   require(outside || (repairs==1 && rejoins==4),"new held restore denominator");std::cout<<"SC7 held/outside "<<outside<<" actual="<<service.updateCount()-1<<" repair="<<repairs<<" rejoin="<<rejoins<<'\n';

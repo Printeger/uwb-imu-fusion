@@ -18,15 +18,25 @@ STAR 使用官方几何与现有固定 ID 对应，不用 R5/R6 GT 拟合。20 m
 
 实测 requested `O-FULL` 对应的研究 SC7 源 producer 仍拒绝。新增明确命名的 `O-FDE-ENG` 调用现有 general production pipeline，`O-ENG-NOFDE` 调用其 off 路径；这不是 SC7 完整恢复/PL 的替代验收。将分别报告实际候选、原生提交、失败、输出 coverage 与拒绝。通用 pipeline 不能借用未认证的 Gaussian 诊断签发 raw PL。
 
-SFUISE 本地 SHA 为 `75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d`，remote `KIT-ISAS/SFUISE`，入口源码干净且保持只读。官方测距剔除开启。另构建该固定源码的只读观察版本，新增输入截止、输出时刻、core/CPU 计时；原始数值语句逆向剥离后逐字节相同。确定性双实例检查通过：1746 条相同输入事件、122875 次 knot 逐项核对，状态/标定/官方剔除开关一致。SFUISE 官方传感器初始化和 ours 独立初始观测/共用传感器初始化的区别必须披露，不称两种初始化提供完全相同的信息。
+SFUISE 本地 SHA 为 `75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d`，remote `KIT-ISAS/SFUISE`，入口源码干净且保持只读。官方测距剔除开启。另构建该固定源码的只读观察版本，新增输入截止、输出时刻、core/CPU 计时；原始数值语句逆向剥离后逐字节相同。确定性双实例检查通过：1746 条相同输入事件、122891 次 knot 逐项核对，状态/标定/官方剔除开关一致。SFUISE 官方传感器初始化和 ours 独立初始观测/共用传感器初始化的区别必须披露，不称两种初始化提供完全相同的信息。
 
 ## 已完成的局部验证（不是正式主结果）
 
-- 独立评分器 9 项测试通过，并与本地冻结 `evo v1.29.0` 核对 APE、ARE、body SE(3) RPE。包括姿态符号、单位、杆臂、时移、刚体变换、错序/重复、缺帧与 nearest-rank 慢值测试。
+- 独立评分器 10 项测试通过，并与本地冻结 `evo v1.29.0` 核对 APE、ARE、body SE(3) RPE。包括姿态符号、单位、杆臂、时移、刚体变换、错序/重复、缺帧与 nearest-rank 慢值测试。
 - 原始输入测试通过：SC8-H/U/A/G/J 各 1401 个 IMU 样本、1120 条 range，共用独立初始观测及全部标准噪声 draw；纯 IMU case 无新增 UWB 故障。UWB 2.25 m/3 历元、加速度 20 m/s²/500 ms、陀螺 1 rad/s/500 ms，在 raw 层按 manifest 注入。原 SC7 F0 与其显式 SC8 等价描述的原始行完全一致。
 - 当前健康仿真冒烟 ON/OFF 各 80 次提交，160/160 条件 raw 合格；状态、H/V PL、source、generation、parent、版本与 bound_method 一致。未放开任何窗口或 source guard。
 - R1 SFUISE 20 s 固定前缀运行成功，一次求解导出在线与历史。不能将这条接口冒烟的数值用作 E02 正式结果。
 - R1 工程 FDE 两次配置预检失败已保留：缺 estimation_tuning 版本、以及 nominal-only tuning 对 on profile 的拒绝。修正为 runner 显式调用同一个现有传感器初始化函数，未修改核心 guard。第三次实际求解完成，约 499.98 s，期间观测到 `NO_VALID_CANDIDATE`、`AMBIGUOUS_UNAVAILABLE`、原生提交与显著积压。
+
+## 新版 direct/ROS 合同复核
+
+R3 固定短前缀在统一实际杆臂后，通过当前 direct/ROS fde=off 对照：899/899 样本，tag 最大差 `2.5855843e-10 m`，姿态最大差 `1.7075473e-6 deg`（阈值均 `1e-5`）。GT topics 发布为 0，禁止的 truth subscriptions 为空。此为相同输入/初始化/提交路径的离线等价性检验，20× 回放不作源时延或实时资格证据。历史报告中的差异不能作为本轮路径不成立的结论。
+
+W0 发现并修正生成配置的 `realtime.lever_arm_body_m` 没有跟随 canonical CSV 杆臂的问题。已完成的第一条工程诊断保存为 `SUPERSEDED_INTERFACE_DIAGNOSTIC`；当时正在运行的 R2 保存为 `CANCELLED`，原因是接口配置修正，未据精度挑选。修正后的六条工程冒烟均已结束：R1/R2/R6 完成，R3/R4/R5 在登记的 1200 s wall 上限处 RESOURCE_LIMIT。完成不等于实时或完整功能 PASS。前述 nominal 的实际构造器使用 CSV 杆臂，其数值输出不因此重标为新配置运行。
+
+R6 SFUISE 首版前缀发生 SIGSEGV (`-11`)，其 IMU 早于首个 range 约 0.7 s。W0 将静态 anchor-map ready 固定到首个合法 IMU/range 均到达后 25 ms；原始传感器时间和值未改变。该协议下六条前缀均完成。随后发现原 RTLSRange float32 wire 会量化 canonical double，新增 Float64 ToA wire（仅输入适配，内部仍为原 TOAData double），六条再次完成。旧失败与两个 superseded 协议全部保留，不混为同一冻结方法。六条 bag 中的 IMU/ToA double、有效位、ID、ns 时间及 offset 只应用一次均精确核对通过；SFUISE 原始数值语句与固定源码相同，双实例检查通过。
+
+W0 当前 22 个逻辑运行：19 SUCCESS、3 RESOURCE_LIMIT。保留 38 个执行 attempt，另有 direct/ROS 辅助求解 1 次；143 个逻辑计划加 16 个额外 attempt、辅助 1 次，预计总量 160。不得自动重试新增求解。E06 两次串行确认不是独立精度样本。正式仿真输入改用与求解完全同一 ELF 的 source-only 导出，以消除不同入口模板实例带来的约 1e-15 浮点差异；该步骤不构造估计器、不计求解次数。实测叠加故障保留原始 sensor X 方向，经冻结旋转进入 canonical body frame，不能冒充注册单 body 轴 raw 定理。
 
 ## 断点与复现
 
@@ -37,10 +47,11 @@ SFUISE 本地 SHA 为 `75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d`，remote `KIT-I
 ```bash
 python3 tools/sc8_experiments.py preflight --build
 python3 tools/sc8_sfuise_observer.py
+python3 tools/sc8_sfuise_observer.py check
 python3 tools/test_sc8_metrics.py
 python3 tools/test_sc8_inputs.py
 python3 tools/sc8_experiments.py register
 python3 tools/sc8_experiments.py run --group E00
 ```
 
-`register` 保留已经存在的登记；`run` 复用有身份的已执行记录。显式 `--retry-failed` 保存旧失败到原 attempt 目录，新建后续 attempt。尚未完成 W0，因此没有正式计算冻结 SHA、W1 主结果、论文图或完成状态。
+`register` 保留已经存在的登记；`run` 复用有身份的已执行记录。显式 `--retry-failed` 保存旧失败到原 attempt 目录，新建后续 attempt。W0 接口验证已完成；提交当前代码后执行 `freeze`，保存实际源、ELF、DSO、平台与校准数值，然后运行 `run --group E01,E02,E03`。当前仍无正式主结果或结项声明。

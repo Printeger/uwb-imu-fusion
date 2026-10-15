@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <cstdlib>
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
 void require(bool x,const char* why){if(!x)throw std::runtime_error(why);}
 template<class F>void refuses(F f){bool caught=false;try{f();}catch(const std::exception&){caught=true;}require(caught,"required fail closed");}
@@ -52,11 +53,11 @@ int main(){try{
  // Temporal-only gyro FD, deliberately held past alarm retirement. The
  // original temporal identity must drive actual dirty marginal-prior repair,
  // or explicit beyond-replay refusal, not an empty absolute-pool support.
- std::filesystem::create_directories(".cache/sc6-closure");
+ const std::string check_root=std::getenv("SC8_CHECK_CACHE")?std::getenv("SC8_CHECK_CACHE"):".cache/sc6-closure";std::filesystem::create_directories(check_root);
  for(bool outside:{false,true}){
   auto config=YAML::LoadFile("config/sc6_closure.yaml");auto cases=config["closure"]["additional_cases"];auto episode=cases["D1_G_E"]["faults"][0];episode[0]=61;episode[4]=61;
   if(outside){config["rolling_integrity"]=YAML::Clone(researchLaw("config/sc5_open.yaml")["rolling_integrity"]);config["rolling_integrity"]["recovery_extra_epochs"]=0;}
-  std::string path=outside?".cache/sc6-closure/check-temporal-outside.yaml":".cache/sc6-closure/check-temporal-polluted.yaml";{std::ofstream out(path);out<<config;}
+  std::string path=check_root+(outside?"/check-temporal-outside.yaml":"/check-temporal-polluted.yaml");{std::ofstream out(path);out<<config;}
   Sc6Provider held(path,"D1_G_E",20261010,outside?104:120);Sc6Service actual(held.law,held.cfg,held.initial,held.lever,held.domain,held.imu.front(),true,false,true);
   int release=outside?100:95,repair=0,rejoin=0;
   for(int k=1;k<=held.epochs;++k){auto r=actual.step(held.certify(k),k>=release);require(r.bound.valid && r.source_prefix==21+128*k,"held temporal raw/event lost");

@@ -11,6 +11,8 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+import resource
+import re
 import yaml
 import numpy as np
 
@@ -68,6 +70,7 @@ def prepare():
     """Fresh adapters; CAL-only transforms. Does not inspect algorithm APE."""
     import pandas as pd
     from scipy.spatial.transform import Rotation
+    frozen_cal=yaml.safe_load(REGISTRY.read_text()).get('calibration',{}) if REGISTRY.exists() else {}
     inventory=[]
     for rid,family,name in CANDIDATES:
         config=datasets.load_config(ROOT/f'config/benchmark/{family}.yaml')
@@ -81,7 +84,7 @@ def prepare():
     caldir=CACHE/'calibration';caldir.mkdir(parents=True,exist_ok=True)
     calw=caldir/'walk1_world.json'
     if not calw.exists():
-        cal=datasets.fit_sfuise_world_calibration([CACHE/'data/CAL-W'])
+        cal=copy.deepcopy(frozen_cal['walk1_world.json']) if frozen_cal else datasets.fit_sfuise_world_calibration([CACHE/'data/CAL-W'])
         cal.update(scope='CAL-W_ISAS-Walk1_ONLY',test_involved=False,
                    identification='range-derived rigid world fit; model adequacy not guaranteed')
         save(calw,cal)
@@ -103,7 +106,7 @@ def prepare():
         for name in ['imu.csv','gt.csv','uwb.csv']:
             df=pd.read_csv(CACHE/'data/R3'/name)
             df[df.t<=cut].to_csv(prefix/name,index=False,float_format='%.17g')
-        cal=datasets.fit_own_vicon_calibration([prefix])
+        cal=copy.deepcopy(frozen_cal['own_prefix20.json']) if frozen_cal else datasets.fit_own_vicon_calibration([prefix])
         a,b=datasets._own_gyro_pairs([prefix],cal['time_imu_to_gt_s'])
         singular=np.linalg.svd(a-a.mean(axis=0),compute_uv=False)
         cal.update(scope='R3_FIXED_FIRST_20_PERCENT',test_involved=True,
@@ -120,6 +123,9 @@ def prepare():
         doc['sc8_calibration_scope']=('CAL-W_ONLY' if entry['family']=='sfuise' else
                                       'R3_PREFIX20_TEST_INVOLVED_CALIBRATION_OPEN' if entry['family']=='own_vicon' else 'OFFICIAL')
         doc['test_involved_calibration']=entry['family']=='own_vicon'
+        if entry['family']=='sfuise':doc['provenance']['gt_world_transform']='CAL-W_ONLY_GT_ASSISTED_FROZEN'
+        if entry['family']=='own_vicon':doc['provenance']['extrinsic']='R3_PREFIX20_GT_ASSISTED_TEST_INVOLVED_CALIBRATION_OPEN'
+        if entry['family']=='starloc' and doc['provenance'].get('landmarks')!='v1':doc['provenance']['anchor_id_mapping_provenance']='OFFICIAL_RADIO_IDS_IDENTITY'
         doc['statistical_qualification']='UNQUALIFIED_REAL_SOURCE'
         doc['files']=datasets.rows_file_metadata(dest)
         save(dest/'manifest.json',doc)
@@ -208,6 +214,8 @@ def registry_design():
             add('E00',rid,method,prefix_s=20.)
     add('E00','SC8-H','O-FULL',epochs=80,hook='audit')
     add('E00','SC8-H','O-NOFDE',epochs=80,hook='plain')
+    add('E00','SC8-J','O-FULL',epochs=160)
+    add('E00','SC8-J','O-NOFDE',epochs=160)
     for stream,seeds in [('SC8-H',SEEDS),('SC8-D0',SEEDS[:1]),('SC8-G2',SEEDS[:1])]:
         for seed in seeds:
             for method in ['O-FULL','O-NOFDE','SFUISE']:add('E01',stream,method,seed)
@@ -225,12 +233,16 @@ def registry_design():
     pairs=[(30,30),(100,100),(300,300),(600,600),(1000,1000),(300,30),(300,100)]
     for window in pairs:
         for stream in ['SC8-WH','SC8-WJ']:add('E05',stream,'O-FULL',window=window)
-    for size in [100,300,600,1000]:
-        add('E05',f'SC8-WH','O-CANARY',window=(size,size),epochs=size+2)
+    # Large-window canary is the actual LF+2 prefix of its healthy 2100 run.
+    # It continues in the SAME process/event after native retirement is observed.
+    for entry in entries:
+        if entry['group']=='E05' and entry['stream']=='SC8-WH' and entry['window'][0]>30 and entry['window'][0]==entry['window'][1]:
+            entry['in_process_canary_epoch']=entry['window'][0]+2
     for stream in ['SC8-D0','SC8-J']:
         for variant in ['O-ABL-SUPPORT','O-ABL-JOINT']:add('E07',stream,variant)
     add('E07','SC8-G2','O-ABL-G2',epochs=80)
     for stream,method in [('SC8-L0','O-FULL'),('SC8-L1','O-FULL'),('SC8-L1','O-NOFDE')]:add('E08',stream,method)
+    for stream in ['SC8-H','SC8-J']:add('E06',stream,'O-FULL')
     assert len(entries)<=160 and len({e['id'] for e in entries})==len(entries)
     available=int(next(l.split()[1] for l in Path('/proc/meminfo').read_text().splitlines() if l.startswith('MemAvailable:')))*1024
     return dict(schema='sc8-experiments-v1',entry_head=json.loads((CACHE/'entry.json').read_text())['head'],
@@ -282,6 +294,7 @@ def physical_digest(cache):
 def input_for(entry,registry):
     stream=entry['stream'];name=stream+'-'+str(entry['seed'])
     if 'prefix_s' in entry:name+='-prefix'+str(entry['prefix_s'])
+    if stream.startswith('SC8-') and entry['group']!='E00':name+='-native-export-v1'
     dest=CACHE/'inputs'/name
     if (dest/'manifest.json').exists():return dest
     dest.mkdir(parents=True,exist_ok=True)
@@ -293,7 +306,7 @@ def input_for(entry,registry):
         config_path=dest/'source.yaml';config_path.write_text(yaml.safe_dump(config))
         audit=dest/'raw.input'
         count=registry['cases'][stream]['epochs']
-        code=command([BIN/'sc7_checks','inputs',config_path,stream,count,entry['seed'],audit],dest/'generate.log')
+        code=command([BIN/'epoch_raim_runner',config_path,audit,stream,'sc6','on',count,'tight-optimized','offline',entry['seed'],'inputs'],dest/'generate.log')
         if code:raise RuntimeError('source generation failed')
         import run_dataset_benchmark as ds
         from scipy.spatial.transform import Rotation
@@ -341,10 +354,19 @@ def input_for(entry,registry):
             onset=20.005 if rid=='R3' else 6.005;uwb_onset=onset+.045
             anchor=min(int(r['anchor_id']) for r in rows['uwb.csv'])
             if fault in ['FG','FJ']:
-                axis='gx' if fault=='FG' else 'ax';amplitude=1. if fault=='FG' else 20.
+                # A single ORIGINAL sensor axis, transformed by the frozen
+                # interface rotation. This equals injection before calibration;
+                # it never adds independent faults to preintegrated intervals.
+                fields=['gx','gy','gz'] if fault=='FG' else ['ax','ay','az']
+                amplitude=1. if fault=='FG' else 20.
+                rotation=np.asarray(manifest.get('provenance',{}).get('rotation_body_from_imu_matrix',np.eye(3)))
+                delta=rotation[:,0]*amplitude
+                clock_offset=manifest.get('provenance',{}).get('time_imu_to_gt_s',0.)
                 for i,row in enumerate(rows['imu.csv']):
                     if onset<=float(row['t'])<onset+.5:
-                        row[axis]=float(row[axis])+amplitude;affected.append(['imu',i,float(row['t']),axis,amplitude])
+                        for field,change in zip(fields,delta):row[field]=float(row[field])+float(change)
+                        affected.append(['imu',i,float(row['t']),float(row['t'])-clock_offset,
+                                         'ORIGINAL_SENSOR_X',amplitude,delta.tolist()])
             if fault in ['FU','FJ']:
                 for row in rows['uwb.csv']:
                     if int(row['anchor_id'])==anchor and uwb_onset<=float(row['t'])<uwb_onset+.15:
@@ -371,6 +393,9 @@ def dataset_config(entry,inputs,run):
     imu=common.read_csv(inputs/'imu.csv');maxgap=max(np.diff([float(r['t']) for r in imu]))
     cfg['imu']['max_gap_s']=max(cfg['imu']['max_gap_s'],float(maxgap)+1e-6)
     manifest=json.loads((inputs/'manifest.json').read_text());window=manifest.get('epoch_batch_window_s',0.)
+    range_rows=common.read_csv(inputs/'uwb.csv')
+    primary=next(r for r in range_rows if int(r['tag_id'])==int(manifest['primary_tag']))
+    cfg['realtime']['lever_arm_body_m']=[float(primary[k]) for k in ['lever_x','lever_y','lever_z']]
     cfg['incremental']['max_time_skew_s']=max(cfg['incremental']['max_time_skew_s'],window+1e-6)
     cfg['incremental']['epoch_bin_s']=max(cfg['incremental']['epoch_bin_s'],cfg['incremental']['max_time_skew_s'])
     cfg['incremental']['fixed_lag_epochs']=entry['window'][0]
@@ -385,16 +410,19 @@ def dataset_config(entry,inputs,run):
 def current_identity():
     paths=subprocess.check_output(['git','ls-files','research','src','include','apps','tools','benchmark','config','CMakeLists.txt'],text=True).splitlines()
     paths+=['tools/sc8_experiments.py','tools/sc8_metrics.py','tools/sc8_sfuise_observer.py','tools/test_sc8_metrics.py']
-    digest=hashlib.sha256()
+    digest=hashlib.sha256();compute_digest=hashlib.sha256()
+    protocol={'tools/sc8_experiments.py','tools/run_dataset_benchmark.py','tools/run_sfuise_benchmark.py','tools/benchmark_common.py','tools/sc8_sfuise_observer.py'}
     for p in sorted(set(paths)):
         if p=='config/sc8_experiments.yaml':continue
-        if (ROOT/p).is_file():digest.update(p.encode()+b'\0'+(ROOT/p).read_bytes())
+        if (ROOT/p).is_file():
+            content=p.encode()+b'\0'+(ROOT/p).read_bytes();digest.update(content)
+            if not p.startswith('tools/') or p in protocol:compute_digest.update(content)
     sfuise_ws=ROOT.parents[1]/'.uwb_benchmark/sfuise_isolated_ws/devel/lib'
     binaries=[BIN/'epoch_raim_runner',BIN/'nominal_dataset_runner',BIN.parent/'libuwb_imu_pl.so',
               sfuise_ws/'uwb_benchmark_sfuise_adapter/sfuise_sc8_observed',
               sfuise_ws/'uwb_benchmark_sfuise_adapter/sfuise_trajectory_adapter',sfuise_ws/'sfuise/SplineFusion']
     return dict(head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
-                source_content_sha256=digest.hexdigest(),binaries={str(p):sha(p) for p in binaries if p.exists()})
+                source_content_sha256=digest.hexdigest(),computational_content_sha256=compute_digest.hexdigest(),binaries={str(p):sha(p) for p in binaries if p.exists()})
 
 
 def run_one(entry,registry,retry_failed=False):
@@ -409,12 +437,24 @@ def run_one(entry,registry,retry_failed=False):
         attempt+=1;run=CACHE/'runs'/(entry['id']+'-attempt'+str(attempt));run.mkdir(parents=True,exist_ok=True);status_path=run/'execution.json'
     if status_path.exists():
         previous=json.loads(status_path.read_text())
-        if entry['group']!='E00' and (previous['identity']['source_content_sha256']!=ident['source_content_sha256'] or previous['identity']['binaries']!=ident['binaries']):
+        if entry['group']!='E00' and (previous['identity'].get('computational_content_sha256',previous['identity']['source_content_sha256'])!=ident['computational_content_sha256'] or previous['identity']['binaries']!=ident['binaries']):
             raise RuntimeError('source/binary changed: preserve previous result and explicitly version affected run '+entry['id'])
+        for name,expected_hash in previous.get('output_hashes',{}).items():
+            if not (run/name).exists() or sha(run/name)!=expected_hash:raise RuntimeError('cached output identity changed '+str(run/name))
         print('REUSE',entry['id'],previous['status'],flush=True);return previous
+    count=len(list((CACHE/'runs').glob('*/execution.json')))+sum(a.get('processes',0) for a in registry.get('auxiliary_solver_audits',[]))
+    assert count<registry['maximum_solver_processes'],'registered 160-process ceiling reached; preserve remaining run IDs'
     inputs=input_for(entry,registry);method=entry['requested_method'];start=time.monotonic()
+    expected=('SFUISE_PINNED_OBSERVED' if method=='SFUISE' else
+              method if entry['track']=='T-SIM' else
+              'O-NOM' if method=='O-NOM' else 'O-FDE-ENG' if method=='O-FULL' else 'O-ENG-NOFDE')
     result=dict(run=entry,attempt=attempt,identity=ident,input_digest=physical_digest(inputs),inputs=str(inputs.relative_to(ROOT)),
-                status='RUNNING',requested_method=method)
+                input_manifest_sha256=sha(inputs/'manifest.json'),
+                input_files={p.name:sha(p) for p in inputs.iterdir() if p.name in ['imu.csv','uwb.csv','anchors.csv','gt.csv']},
+                status='RUNNING',requested_method=method,effective_method=expected)
+    result['actual_run_id']=entry['id']+'@'+hashlib.sha256(json.dumps(dict(entry=entry,input=result['input_digest'],identity=ident['binaries'],code=ident['computational_content_sha256']),sort_keys=True).encode()).hexdigest()[:16]
+    result['owner_pid']=os.getpid()
+    before_cpu=resource.getrusage(resource.RUSAGE_CHILDREN)
     save(status_path,result)
     print('START',entry['id'],flush=True)
     if method=='SFUISE':
@@ -445,7 +485,25 @@ def run_one(entry,registry,retry_failed=False):
                             slow=[float(r['core_ms'])>2000 for r in rows[-20:] if r.get('core_ms')]
                             if len(slow)==20 and all(slow):reason='20_CONSECUTIVE_CORE_OVER_2S'
                         except (ValueError,TypeError):pass # partial last write
-                    if reason:proc.terminate();break
+                    canary_epoch=entry.get('in_process_canary_epoch')
+                    if canary_epoch and trace.exists() and not (run/'canary.json').exists():
+                        candidates=[r for r in rows if r.get('epoch') and None not in r.values() and int(float(r['epoch']))==canary_epoch]
+                        if candidates:
+                            row=candidates[0]
+                            admitted=row.get('updates')=='1' and row.get('qualified')=='1' and row.get('x0')=='0'
+                            save(run/'canary.json',dict(epoch=canary_epoch,admitted=admitted,receipt={k:row.get(k) for k in ['version','generation','parent','boundary','x0','active_states','proof_explicit']},same_process_continues=True))
+                            if not admitted:reason='CANARY_NATIVE_RETIREMENT_REFUSED'
+                    if reason:
+                        stopped=time.monotonic_ns()
+                        console=(run/'console.log').read_text()
+                        active=re.findall(r'SC8 ACTIVE epoch=(\d+) start_steady_ns=(\d+)',console)
+                        obs=dict(reason=reason,stop_monotonic_ns=stopped,completed_rows=len(rows) if trace.exists() else 0)
+                        if active:
+                            last_complete=max([int(float(r.get('epoch',0))) for r in rows if r.get('epoch') and None not in r.values()],default=0)
+                            obs.update(active_epoch=int(active[-1][0]),frame_inflight=int(active[-1][0])>last_complete)
+                            if obs['frame_inflight']:obs['inflight_service_elapsed_lower_bound_ms']=(stopped-int(active[-1][1]))/1e6
+                        save(run/'resource_limit.json',obs)
+                        proc.terminate();break
                 time.sleep(.5)
             try:code=proc.wait(timeout=10)
             except subprocess.TimeoutExpired:proc.kill();code=proc.wait()
@@ -461,19 +519,127 @@ def run_one(entry,registry,retry_failed=False):
         result.update(status='RESOURCE_LIMIT' if (run/'resource_limit.json').exists() else 'SUCCESS' if code==0 else 'FAIL',returncode=code,details=stat,command=list(map(str,args)),
                       effective_method='O-NOM' if method=='O-NOM' else 'O-FDE-ENG' if method=='O-FULL' else 'O-ENG-NOFDE')
     result['elapsed_s']=time.monotonic()-start
-    result['output_hashes']={p.name:sha(p) for p in run.iterdir() if p.is_file() and p.suffix in ['.csv','.tum','.input','.yaml']}
+    after_cpu=resource.getrusage(resource.RUSAGE_CHILDREN)
+    result['children_cpu_s']=after_cpu.ru_utime+after_cpu.ru_stime-before_cpu.ru_utime-before_cpu.ru_stime
+    result['children_cpu_scope']='root solver only for native/dataset; includes bag generation/player/adapter/master for SFUISE'
+    result['thread_policy']={'tbb':1,'blas':1,'candidate_workers':1}
+    if entry['track']=='T-SIM' and method not in ['O-NOM','SFUISE']:
+        native_rows=list(csv.DictReader((run/'trace.csv').open())) if (run/'trace.csv').exists() else []
+        complete=[r for r in native_rows if r.get('updates')=='1' and None not in r.values()]
+        from sc8_analysis import verify_native_input
+        result['native_input_parity']=verify_native_input(run/'trace.csv.input',inputs)
+        result['fde_executed']=method!='O-NOFDE' and bool(complete)
+        result['statistical_qualification']='CONDITIONAL_REGISTERED_SIMULATION_RAW' if any(r.get('qualified')=='1' for r in complete) else 'REFUSED_OR_NO_QUALIFIED_OUTPUT'
+        result['pl_method']=sorted({r.get('bound_method') for r in complete})
+        result['scope_id']='raw-source-rw-v1/sc7/open/200Hz-20Hz/8anchors/'+registry['cases'][entry['stream']]['motion']+'/'+registry['cases'][entry['stream']]['geometry']
+    elif method=='SFUISE':
+        result.update(fde_executed=False,official_range_rejection=True,statistical_qualification='NO_MATCHED_RAW_PL_METHOD',pl_method='NA',scope_id='OFFICIAL_SFUISE_TOA_PINNED_NATIVE_INIT')
+    else:
+        attempt_rows=list(csv.DictReader((run/'attempts.csv').open())) if (run/'attempts.csv').exists() else []
+        result.update(fde_executed=method=='O-FULL' and any(r.get('fde_status') not in ['FDE_DISABLED','NOMINAL_ONLY'] for r in attempt_rows),
+            statistical_qualification='NO_PL_METHOD' if method=='O-NOM' else 'UNQUALIFIED_REAL_SOURCE',
+            pl_method='NA',scope_id='FGO_ONLY' if method=='O-NOM' else 'GENERAL_PRODUCTION_PIPELINE_DIAGNOSTIC_NOT_SC7_RECOVERY')
+    if (run/'resource_limit.json').exists():result['resource_observation']=json.loads((run/'resource_limit.json').read_text())
+
+    result['output_hashes']={p.name:sha(p) for p in run.iterdir() if p.is_file() and p.name!='execution.json' and p.suffix in ['.csv','.tum','.input','.yaml','.json','.meta']}
     save(status_path,result);print('END',entry['id'],result['status'],round(result['elapsed_s'],2),flush=True)
     return result
 
 
 def run_groups(groups,only=None,retry_failed=False):
+    import fcntl
+    CACHE.mkdir(parents=True,exist_ok=True)
+    lock=(CACHE/'driver.lock').open('w')
+    fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     registry=yaml.safe_load(REGISTRY.read_text());groups=groups.split(',')
+    if any(g!='E00' for g in groups):
+        assert registry.get('phase')=='FROZEN','complete W0 and freeze before formal experiments'
+        ident=current_identity();frozen=registry['frozen']['identity']
+        assert ident['computational_content_sha256']==frozen['computational_content_sha256'] and ident['binaries']==frozen['binaries'],'frozen computation changed'
+        assert hashlib.sha256(json.dumps({k:registry[k] for k in ['seeds','cases','runs','resource_stops','evaluation','calibration','inventory']},sort_keys=True).encode()).hexdigest()==frozen['design_sha256'],'registered design changed'
     for entry in registry['runs']:
-        if entry['group'] in groups and (only is None or only in entry['id']):run_one(entry,registry,retry_failed)
+        if entry['group'] not in groups or (only is not None and only not in entry['id']):continue
+        try:run_one(entry,registry,retry_failed)
+        except Exception as error:
+            # Preserve failed postprocessing and continue unrelated registered
+            # experiments. Never retry automatically or discard process cost.
+            candidates=list((CACHE/'runs').glob(entry['id']+'*/execution.json'))
+            if candidates:
+                path=max(candidates,key=lambda p:json.loads(p.read_text()).get('attempt',1))
+                result=json.loads(path.read_text())
+                if result['status']=='RUNNING':result['status']='EXECUTION_ERROR'
+                result['runner_error']=repr(error);save(path,result)
+            save(CACHE/'runner-errors'/(entry['id']+'.json'),dict(id=entry['id'],error=repr(error)))
+            print('ERROR',entry['id'],repr(error),flush=True)
+
+
+
+def freeze():
+    """Freeze actual computational sources/binaries/protocol after W0."""
+    registry=yaml.safe_load(REGISTRY.read_text())
+    if registry.get('phase')=='FROZEN':
+        ident=current_identity();expected=registry['frozen']['identity']
+        assert ident['computational_content_sha256']==expected['computational_content_sha256'] and ident['binaries']==expected['binaries'],'frozen computational identity changed'
+        print('FROZEN identity retained',expected['head'],flush=True);return
+    assert not subprocess.check_output(['git','status','--porcelain','-uno'],text=True).strip(),'save W0 computational code before freeze'
+    entries=[e for e in registry['runs'] if e['group']=='E00']
+    for e in entries:
+        paths=list((CACHE/'runs').glob(e['id']+'*/execution.json'))
+        assert paths,'missing W0 interface attempt '+e['id']
+        last=max(paths,key=lambda p:json.loads(p.read_text()).get('attempt',1))
+        assert json.loads(last.read_text())['status'] not in ['RUNNING','SUPERSEDED_INTERFACE_DIAGNOSTIC','SUPERSEDED_TRANSPORT_ENCODING_DIAGNOSTIC'],'W0 incomplete '+e['id']
+    required=[CACHE/'input-checks/result.json',CACHE/'input-checks/bag-parity.json',CACHE/'sfuise_observer/check.json',CACHE/'equivalence/R3/equivalence.json']
+    for path in required:
+        data=json.loads(path.read_text());assert data.get('status')=='PASS' or data.get('returncode')==0,'W0 validation failed '+str(path)
+    original=registry['entry_head']
+    critical=['research/rolling_policy.hpp','research/time_uniform_event.hpp','config/sc7.yaml','config/sc6.yaml','config/sc6_closure.yaml','config/fde_off.yaml','config/fde_joint_order1.yaml']
+    unchanged={}
+    for name in critical:
+        before=subprocess.check_output(['git','show',original+':'+name])
+        assert before==(ROOT/name).read_bytes(),'source/risk/window law changed '+name
+        unchanged[name]=sha(ROOT/name)
+    calibration={name:json.loads((CACHE/'calibration'/name).read_text()) for name in ['walk1_world.json','own_prefix20.json','own_cal_o.json']}
+    import scipy
+    import evo
+    import run_sfuise_benchmark as sf
+    sf.checked_pin()
+    libraries={}
+    for binary in [BIN/'epoch_raim_runner',BIN/'nominal_dataset_runner',sf.workspace(CACHE)/'devel/lib/uwb_benchmark_sfuise_adapter/sfuise_sc8_observed']:
+        output=subprocess.check_output(['ldd',str(binary)],env=environment(),text=True)
+        for path in re.findall(r'=> (/\S+)',output):
+            if Path(path).is_file():libraries[path]=sha(path)
+    registry['phase']='FROZEN'
+    registry['frozen']=dict(identity=current_identity(),platform=common.system_identity(),
+        numpy=np.__version__,scipy=scipy.__version__,evo=evo.__version__,
+        lscpu=subprocess.check_output(['lscpu'],text=True),uname=subprocess.check_output(['uname','-a'],text=True).strip(),
+        loaded_libraries=libraries,unchanged_contracts=unchanged,
+        baseline_pin=sf.PIN,baseline_observer=json.loads((CACHE/'sfuise_observer/patch_identity.json').read_text()),
+        no_push=True,validated_W0={str(p.relative_to(ROOT)):sha(p) for p in required})
+    registry['calibration']=calibration
+    registry['inventory']=json.loads((CACHE/'inventory.json').read_text())
+    registry['frozen']['design_sha256']=hashlib.sha256(json.dumps({k:registry[k] for k in ['seeds','cases','runs','resource_stops','evaluation','calibration','inventory']},sort_keys=True).encode()).hexdigest()
+    REGISTRY.write_text(yaml.safe_dump(registry,sort_keys=False,allow_unicode=True))
+    print('FROZEN',registry['frozen']['identity']['head'],'planned',len(registry['runs']),'upper',registry['maximum_solver_processes'],flush=True)
+
+
+def checks():
+    """One focused final regression, not a historical campaign."""
+    checks=[('sc7_checks',[]),('sc7_joint_checks',[]),('sc7_support_checks',[]),
+            ('sc6_closure_checks',[]),('raw_range_checks',[]),('time_uniform_event_checks',[]),
+            ('open_rolling_checks',[]),('sc5_event_checks',[])]
+    targets=[name for name,_ in checks]
+    assert command(['cmake','--build',BUILD,'--target',*targets,'-j2'],CACHE/'final-check-build.log')==0
+    results=[]
+    for name,args in checks:
+        code=command([BIN/name,*args],CACHE/(name+'-final.log'),env=dict(environment(),SC8_CHECK_CACHE=str(CACHE/'core-check-fixtures')));results.append(dict(check=name,returncode=code))
+    for script in ['test_sc8_metrics.py','test_sc8_inputs.py']:
+        code=command(['python3','tools/'+script],CACHE/(script+'-final.log'));results.append(dict(check=script,returncode=code))
+    save(CACHE/'final-checks.json',results)
+    assert all(r['returncode']==0 for r in results),'required final regression failed'
 
 
 def parser():
-    p=argparse.ArgumentParser(__doc__);p.add_argument('command',choices=['preflight','register','run'])
+    p=argparse.ArgumentParser(__doc__);p.add_argument('command',choices=['preflight','register','freeze','run','evaluate','figures','report','checks'])
     p.add_argument('--build',action='store_true');p.add_argument('--group',default='E00');p.add_argument('--only');p.add_argument('--retry-failed',action='store_true');return p
 
 if __name__=='__main__':
@@ -481,3 +647,14 @@ if __name__=='__main__':
     if args.command=='preflight':preflight(args.build)
     elif args.command=='register':register()
     elif args.command=='run':run_groups(args.group,args.only,args.retry_failed)
+    elif args.command=='freeze':freeze()
+    elif args.command=='checks':checks()
+    elif args.command=='figures':
+        from sc8_analysis import figures
+        figures()
+    elif args.command=='report':
+        from sc8_analysis import report
+        report()
+    elif args.command=='evaluate':
+        from sc8_analysis import evaluate
+        evaluate()

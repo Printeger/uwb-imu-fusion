@@ -19,6 +19,8 @@ struct Sc6Result {
  std::array<double,6> temporal_difference{},temporal_radius{},temporal_margin{};size_t temporal_alerts=0;
  std::array<double,6> fault_theta_low{},fault_theta_high{};
  double prepare_ms=0,candidate_ms=0,proof_ms=0,commit_ms=0,cleanup_ms=0;
+ // Observation-only exclusive subdivisions of the existing inclusive spans.
+ double imu_fd_ms=0,graph_prepare_ms=0,state_receipt_ms=0,finalize_ms=0,maintenance_ms=0;
 };
 class Sc6Service {
  IntegrityConfig config_;Eigen::Vector3d lever_;ResolvedRollingPolicyV1 policy_;bool optimized_;

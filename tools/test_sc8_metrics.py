@@ -34,6 +34,19 @@ class MetricsTests(unittest.TestCase):
         self.assertAlmostEqual(m['ape_m']['rmse'],np.linalg.norm(lever))
         m,_=metrics.evaluate((self.t,tag,self.q),(self.t,tag,self.q),lever)
         self.assertAlmostEqual(m['rpe_body_1s_m']['max'],0,places=12)
+    def test_rotating_tag_body_origin_and_wrong_lever(self):
+        lever=np.array([.2,0.,0.])
+        truth_rotation=Rotation.from_euler('z',self.t*.2)
+        estimate_rotation=Rotation.from_euler('z',self.t*.3)
+        gt=(self.t,truth_rotation.apply(lever),truth_rotation.as_quat())
+        estimate=(self.t,estimate_rotation.apply(lever),estimate_rotation.as_quat())
+        right,_=metrics.evaluate(estimate,gt,lever)
+        wrong,_=metrics.evaluate(estimate,gt,[0,0,0])
+        self.assertAlmostEqual(right['rpe_body_1s_m']['max'],0,places=12)
+        self.assertGreater(wrong['rpe_body_1s_m']['rmse'],.01)
+        self.assertGreater(right['rpe_tag_1s_m']['rmse'],0)
+        self.assertAlmostEqual(right['rpe_body_1s_rad']['rmse'],.1,places=12)
+
     def test_timestamp_offset_and_gaps(self):
         m,_=metrics.evaluate((self.t+.02,self.p,self.q),self.gt)
         self.assertGreater(m['ape_m']['rmse'],.015)

@@ -23,6 +23,7 @@
 #include <cmath>
 #include <cstdint>
 #include <ctime>
+#include <sys/resource.h>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -364,7 +365,7 @@ std::vector<UwbBatch> batches(const std::vector<RangeRow>& ranges,
 
 void writeStatus(const boost::filesystem::path& output, const std::string& status,
                  const std::string& reason, std::size_t epochs, double wall_ms,
-                 double cpu_ms, double adapter_ms, double bootstrap_ms, bool engineering) {
+                 double cpu_ms, double adapter_ms, double bootstrap_ms, bool engineering, double release_wait_ms, double sensor_duration_s) {
   std::string escaped;
   escaped.reserve(reason.size());
   for (const char character : reason) {
@@ -377,6 +378,7 @@ void writeStatus(const boost::filesystem::path& output, const std::string& statu
       default: escaped += character;
     }
   }
+  struct rusage usage{};getrusage(RUSAGE_SELF,&usage);
   std::ofstream stream((output / "run_status.json").string());
   stream << "{\n  \"schema\": \"nominal-dataset-run/v1\",\n"
          << "  \"status\": \"" << status << "\",\n"
@@ -384,9 +386,13 @@ void writeStatus(const boost::filesystem::path& output, const std::string& statu
          << "  \"epochs\": " << epochs << ",\n"
          << "  \"wall_ms\": " << std::setprecision(17) << wall_ms << ",\n"
          << "  \"cpu_ms\": " << cpu_ms << ",\n"
+         << "  \"peak_rss_kib\": " << usage.ru_maxrss << ",\n"
+         << "  \"deliberate_release_wait_ms\": " << release_wait_ms << ",\n"
+         << "  \"wall_processing_ms\": " << wall_ms-release_wait_ms << ",\n"
+         << "  \"sensor_duration_s\": " << sensor_duration_s << ",\n"
          << "  \"adapter_ms\": " << adapter_ms << ",\n"
          << "  \"bootstrap_ms\": " << bootstrap_ms << ",\n"
-         << "  \"fde_constructed\": " << (engineering ? "true" : "false") << ",\n  \"pl_constructed\": false,\n"
+         << "  \"general_integrity_pipeline_constructed\": " << (engineering ? "true" : "false") << ",\n  \"raw_pl_constructed\": false,\n"
          << "  \"initialization_provenance\": \"measurement_bootstrap\"\n}\n";
 }
 
@@ -402,6 +408,8 @@ int run(const boost::filesystem::path& config_path,
   std::size_t committed = 0;
   double adapter_ms = 0.0;
   double bootstrap_ms = 0.0;
+  bool pipeline_constructed=false;
+  double deliberate_release_wait_ms=0,sensor_duration_s=0;
   try {
     const auto adapter_start = Clock::now();
     auto config = uwb_imu_pl::IntegrityConfigLoader::load(config_path.string());
@@ -424,6 +432,18 @@ int run(const boost::filesystem::path& config_path,
     NavigationState initial;
     Eigen::Matrix<double,15,1> initial_priors=config.realtime.prior_sigmas;
     const bool supplied_observation=bool(manifest["initial_observation"]);
+    const double source_begin=std::min(imu.front().timestamp.seconds(),ranges.front().time_s);
+    sensor_duration_s=std::max(imu.back().timestamp.seconds(),ranges.back().time_s)-source_begin;
+    const auto source_release_origin=Clock::now();
+    // Metadata/file preload is separate from source arrival. A causal startup
+    // may consume its two-second prefix only after those physical times arrive.
+    if(paced && tuning.causal_bootstrap && !supplied_observation){
+      const auto wait_start=Clock::now();
+      std::this_thread::sleep_until(source_release_origin+std::chrono::duration_cast<Clock::duration>(
+          std::chrono::duration<double>(imu.front().timestamp.seconds()+2.-source_begin)));
+      deliberate_release_wait_ms+=elapsedMs(wait_start);
+    }
+
     if (supplied_observation) {
       // Independent noisy observation exported by Sc6Provider, never gt.csv.
       const auto obs=manifest["initial_observation"];
@@ -496,32 +516,38 @@ int run(const boost::filesystem::path& config_path,
       uwb_imu_pl::IntegrityMonitor monitor(config.risk,config.snapshot.rank_tolerance,
                                            config.snapshot.max_condition_number);
       pipeline=std::make_unique<uwb_imu_pl::RealtimeIntegrityPipeline>(&estimator,monitor);
+      pipeline_constructed=true;
     }
     // SC8 exports only empirical estimator states from this general pipeline.
     // Its Gaussian diagnostics never acquire SC7 raw-source qualification.
     std::ofstream attempts((output/"attempts.csv").string());
-    attempts<<std::setprecision(17)<<"batch,t,committed,backend_updates,transaction_id,action_id,action,fde_status,core_ms,measurement_to_sink_ms,state_age_ms,max_sensor_stamp_used,published_wall_time,revision_index,scope,statistical_qualification\n";
-    const auto release_origin=Clock::now();
-    const double sensor_origin=initial.timestamp.seconds();
+    attempts<<std::setprecision(17)<<"batch,t,committed,backend_updates,transaction_id,action_id,action,fde_status,core_ms,measurement_to_sink_ms,state_age_ms,max_sensor_stamp_used,published_wall_time,revision_index,scope,statistical_qualification,detector_valid,detector_passed,detector_statistic,detector_threshold,detector_dof,base_graph_version,history_removed_groups,history_added_groups,bridge_active,bridge_epochs,reinit_required,internal_protected_output\n";
+    const auto release_origin=source_release_origin;
+    const double sensor_origin=source_begin;
     // Independent publisher: immutable source availability advances on absolute
     // sensor time even while a solver is busy. Preload/init costs are separate.
+    std::vector<double> release_times;
     struct Publisher {
       std::atomic<bool> stop{false};std::atomic<double> watermark;
       std::thread worker;
       Publisher(double t):watermark(t){}
       ~Publisher(){stop=true;if(worker.joinable())worker.join();}
-    } publisher(sensor_origin);
-    if(paced)publisher.worker=std::thread([&]{
-      for(const auto& sample:imu){
-        double t=sample.timestamp.seconds();if(t<=sensor_origin)continue;
-        auto deadline=release_origin+std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(t-sensor_origin));
-        // Small waits also allow prompt cancellation after solver failure.
-        while(!publisher.stop && Clock::now()<deadline)std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        if(publisher.stop)return;
-        publisher.watermark=t;
-      }
-      publisher.watermark=imu.back().timestamp.seconds();
-    });
+    } publisher(initial.timestamp.seconds());
+    if(paced){
+      release_times.reserve(imu.size()+uwb_batches.size());
+      for(const auto& sample:imu)release_times.push_back(sample.timestamp.seconds());
+      for(const auto& batch:uwb_batches)release_times.push_back(batch.timestamp.seconds());
+      std::sort(release_times.begin(),release_times.end());
+      publisher.worker=std::thread([&]{
+        for(double t:release_times){
+          if(t<=initial.timestamp.seconds())continue;
+          auto deadline=release_origin+std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(t-sensor_origin));
+          while(!publisher.stop && Clock::now()<deadline)std::this_thread::sleep_for(std::chrono::microseconds(100));
+          if(publisher.stop)return;
+          publisher.watermark=t;
+        }
+      });
+    }
     std::set<double> pending_oracles;
     if(!oracle_times.empty())for(const auto& item:split(oracle_times))pending_oracles.insert(std::stod(item));
     std::ofstream oracle;
@@ -558,8 +584,12 @@ int run(const boost::filesystem::path& config_path,
       if ((tuning.causal_bootstrap || supplied_observation) ? !(initial.timestamp<batch.timestamp) :
           batch.timestamp.seconds() < initial.timestamp.seconds() + 2.0) continue;
       if (imu.back().timestamp < batch.timestamp) continue;
-      if(paced)while(publisher.watermark.load()<batch.timestamp.seconds() && !publisher.stop)
-        std::this_thread::sleep_for(std::chrono::microseconds(100));
+      if(paced){
+        const auto wait_start=Clock::now();
+        while(publisher.watermark.load()<batch.timestamp.seconds() && !publisher.stop)
+          std::this_thread::sleep_for(std::chrono::microseconds(100));
+        deliberate_release_wait_ms+=elapsedMs(wait_start);
+      }
       const auto epoch_start=Clock::now();
       while (imu_index < imu.size() && !(batch.timestamp < imu[imu_index].timestamp)) {
         if(pipeline)pipeline->ingestImu(imu[imu_index++]);else estimator.ingestImu(imu[imu_index++]);
@@ -583,6 +613,12 @@ int run(const boost::filesystem::path& config_path,
         pipeline_result.transaction_id=receipt.transaction_id.value();
         pipeline_result.fde_status="NOMINAL_ONLY";
       }
+      const auto state_start=Clock::now();
+      NavigationState state;
+      if(pipeline_result.batch_committed)state=estimator.currentState();
+      const double state_wall=elapsedMs(state_start);
+      const Eigen::Vector3d tag_position=state.position_world_m+state.q_world_body*primary_lever;
+      const Eigen::Quaterniond q=state.q_world_body.normalized();
       const auto sink=Clock::now();
       const double core=std::chrono::duration<double,std::milli>(sink-epoch_start).count();
       const double latency=std::chrono::duration<double,std::milli>(sink-release_origin).count()
@@ -593,14 +629,19 @@ int run(const boost::filesystem::path& config_path,
         <<pipeline_result.selected_action_type<<','<<pipeline_result.fde_status<<','<<core<<','
         <<(paced?latency:NAN)<<','<<(paced?latency:NAN)<<','<<max_used<<','
         <<std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count()
-        <<",0,GENERAL_PRODUCTION_PIPELINE,UNQUALIFIED_REAL_SOURCE\n";
+        <<",0,"<<(pipeline ? "GENERAL_PRODUCTION_PIPELINE" : "FGO_ONLY")<<','
+        <<(supplied_observation ? "SIMULATION_NO_PL_METHOD" : "UNQUALIFIED_REAL_SOURCE")<<','
+        <<pipeline_result.detector.numerically_valid<<','<<pipeline_result.detector.passed<<','
+        <<pipeline_result.detector.statistic<<','<<pipeline_result.detector.threshold<<','<<pipeline_result.detector.dof<<','
+        <<pipeline_result.base_graph_version<<',';
+      auto write_ids=[&](const auto& ids){for(size_t i=0;i<ids.size();++i)attempts<<(i ? "|" : "")<<ids[i];};
+      write_ids(pipeline_result.historical_groups_removed);attempts<<',';write_ids(pipeline_result.historical_groups_added);
+      attempts<<','<<(pipeline_result.bridge_audit ? pipeline_result.bridge_audit->active : false)<<','
+        <<(pipeline_result.bridge_audit ? pipeline_result.bridge_audit->consecutive_epochs : 0)<<','
+        <<pipeline_result.controlled_reinitialization_required<<','<<pipeline_result.publication.protected_output<<'\n';
+      attempts.flush();
       if(!pipeline_result.batch_committed)continue;
-      const auto state_start = Clock::now();
-      const NavigationState state = estimator.currentState();
-      const double state_wall = elapsedMs(state_start);
       const double epoch_total=elapsedMs(epoch_start);
-      const Eigen::Vector3d tag_position = state.position_world_m + state.q_world_body * primary_lever;
-      const Eigen::Quaterniond q = state.q_world_body.normalized();
       while(!pending_oracles.empty() && *pending_oracles.begin()<=state.timestamp.seconds()) {
         const double requested=*pending_oracles.begin();pending_oracles.erase(pending_oracles.begin());
         const auto snapshot=uwb_imu_pl::P106ReadOnlyGraphSnapshotPeer::capture(estimator);
@@ -682,12 +723,12 @@ int run(const boost::filesystem::path& config_path,
           << "\noutput_semantics: online_current_state\n";
     writeStatus(output, "SUCCESS", "", committed, elapsedMs(wall_start),
                 1000.0 * (std::clock() - cpu_start) / CLOCKS_PER_SEC,
-                adapter_ms, bootstrap_ms,pipeline_mode!="none");
+                adapter_ms, bootstrap_ms,pipeline_constructed,deliberate_release_wait_ms,sensor_duration_s);
     return 0;
   } catch (const std::exception& error) {
     writeStatus(output, "FAIL", error.what(), committed, elapsedMs(wall_start),
                 1000.0 * (std::clock() - cpu_start) / CLOCKS_PER_SEC,
-                adapter_ms, bootstrap_ms,pipeline_mode!="none");
+                adapter_ms, bootstrap_ms,pipeline_constructed,deliberate_release_wait_ms,sensor_duration_s);
     std::cerr << error.what() << '\n';
     return 1;
   }

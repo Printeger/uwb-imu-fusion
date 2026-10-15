@@ -5,6 +5,7 @@
 #include <chrono>
 #include <ctime>
 #include <cstdlib>
+#include <std_msgs/Float64MultiArray.h>
 @UPSTREAM_INCLUDES@
 #define private public
 #define SplineFusion Sc8Reference
@@ -26,16 +27,29 @@ int main(int argc,char** argv){
   ros::NodeHandle nh("/SplineFusion");
   Sc8Reference reference(nh);Sc8Observed observed(nh);
   rosbag::Bag bag(argv[1],rosbag::bagmode::Read);rosbag::View view(bag);
-  size_t events=0,checks=0;bool have_imu=false;
+  size_t events=0,checks=0;bool have_imu=false,toa64=false;
+  for(const auto* connection:view.getConnections())if(connection->topic=="/EstimationInterface/toa_ds64")toa64=true;
   auto require=[&](bool condition){if(!condition)throw std::runtime_error("SFUISE_OBSERVER_NUMERICAL_MISMATCH event="+std::to_string(events));};
   for(const auto& item:view){
    if(auto m=item.instantiate<sensor_msgs::Imu>()){reference.getImuCallback(m);observed.getImuCallback(m);have_imu=true;}
-   else if(auto m=item.instantiate<isas_msgs::RTLSStick>()){reference.getToaCallback(m);observed.getToaCallback(m);}
+   else if(auto m=item.instantiate<isas_msgs::RTLSStick>()){
+    if(toa64)continue;
+    reference.getToaCallback(m);observed.getToaCallback(m);
+   }
+   else if(auto m=item.instantiate<std_msgs::Float64MultiArray>()){
+    // The pinned reference math already consumes double TOAData internally.
+    // Feed that same physical sequence directly, bypassing only its float32 wire.
+    const auto stamp=static_cast<int64_t>(m->data.at(0));
+    const auto n=static_cast<size_t>(m->data.at(1));
+    for(size_t i=0;i<n;++i)if(m->data.at(4+3*i)!=0)
+      reference.toa_buff.emplace_back(stamp,static_cast<uint16_t>(m->data.at(2+3*i)),m->data.at(3+3*i));
+    observed.getSc8Toa64Callback(m);
+   }
    else if(auto m=item.instantiate<isas_msgs::Anchorlist>()){reference.getAnchorCallback(m);observed.getAnchorCallback(m);}
    else continue;
    reference.run();observed.run();++events;
    // Upstream SplineState has no initialized scalar knot count until init().
-   if(!have_imu)continue;
+   if(!have_imu || !reference.if_anchor_ini)continue;
    require(reference.spline_local.numKnots()==observed.spline_local.numKnots());
    require(reference.window_count==observed.window_count);
    require(reference.imu_buff.size()==observed.imu_buff.size());

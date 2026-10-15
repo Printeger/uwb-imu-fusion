@@ -40,12 +40,22 @@ evaluation:
   real_effective_on: O-FDE-ENG_GENERAL_PRODUCTION_PIPELINE_NOT_SC7
   real_effective_off: O-ENG-NOFDE_GENERAL_PRODUCTION_PIPELINE
   real_raw_source: REFUSED; no noise/frame/anchor/rate theorem extension
+  SFUISE_static_map_readiness: max(first_imu,first_valid_primary_range)+0.025 s, all
+    sensor values/stamps preserved, same rule for every run
+  scaling_canary: LF+2 prefix of the SAME healthy 2100-epoch process; observed retirement
+    required, no restart/checkpoint/risk reset; 4 redundant processes deduplicated
+    before W1
+  SFUISE_transport: LOSSLESS_FLOAT64_TO_UPSTREAM_TOADATA; calibrated canonical ranges
+    identical to ours, offset preapplied exactly once and runtime offsets zero; legacy
+    float32 topic observer-only, unsubscribed by solver
+  extra_timing_confirmation: 'exactly two serial runs: healthy SC8-H and joint SC8-J;
+    not extra independent accuracy samples'
 inventory:
 - id: R1
   family: sfuise
   sequence: ISAS-Walk2
   cache: .cache/sc8/data/R1
-  manifest_sha256: 1b188817a10ad7f328cae8c9916e82bae9f9ce0bc4ff79bd98e1f5b44cd8b040
+  manifest_sha256: 3f9c67ce6235248557573ee4ea7d2e609a3345b24ef747c2a8c7f7bfe4d0d96f
   files:
     imu.csv:
       rows: 6229
@@ -71,7 +81,7 @@ inventory:
     gt_reference: vive_body_projected_to_physical_uwb_tag
     source_file_sha256:
       /home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk2.bag: dea07fd11d5776226be6b390574c4b3789c48cfdce6a1731996981f3f91c453c
-    gt_world_transform: joint_GT_assisted_frozen
+    gt_world_transform: CAL-W_ONLY_GT_ASSISTED_FROZEN
     world_calibration_artifact: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/calibration/walk1_world.json
   calibration_scope: CAL-W_ONLY
   source: /home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk2.bag
@@ -112,7 +122,7 @@ inventory:
   family: sfuise
   sequence: ISAS-Walk3
   cache: .cache/sc8/data/R2
-  manifest_sha256: 525d26ac1c0b2bafdbcb886c82f391d171cad8d69d5e9fcccd9f36e104d901a0
+  manifest_sha256: bafa7c70eeb191db98ccaf3748e03c216e1369aa6f0549027368de9110094ee5
   files:
     imu.csv:
       rows: 6684
@@ -138,7 +148,7 @@ inventory:
     gt_reference: vive_body_projected_to_physical_uwb_tag
     source_file_sha256:
       /home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk3.bag: 45df7ffe69b9d8c8be7784414ffcdc6e0f4674d0d7b8db3541e567e757bae0a0
-    gt_world_transform: joint_GT_assisted_frozen
+    gt_world_transform: CAL-W_ONLY_GT_ASSISTED_FROZEN
     world_calibration_artifact: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/calibration/walk1_world.json
   calibration_scope: CAL-W_ONLY
   source: /home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk3.bag
@@ -179,7 +189,7 @@ inventory:
   family: own_vicon
   sequence: 2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle
   cache: .cache/sc8/data/R3
-  manifest_sha256: e2bdf64f13149f24d9f463f3c8d9333f43d5317a368f43cdc3409db8db1ac1e8
+  manifest_sha256: 3de3782535a801cd41fd47742b0c0eca268d381184e858fce5ef8cc24dc6d025
   files:
     imu.csv:
       rows: 14680
@@ -197,7 +207,7 @@ inventory:
     acceleration: livox_g_times_9.80665
     gyro: source_radps
     anchor_aggregation: component_median
-    extrinsic: joint_GT_assisted_frozen
+    extrinsic: R3_PREFIX20_GT_ASSISTED_TEST_INVOLVED_CALIBRATION_OPEN
     source_reindexed_temporary_copy: false
     possibly_truncated: false
     source_file_sha256:
@@ -257,7 +267,7 @@ inventory:
   family: own_vicon
   sequence: 2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle
   cache: .cache/sc8/data/R4
-  manifest_sha256: a1a70d863e52ef74f17cf32261609ddf1aad340d10ebcc6d87184e2b88f62cf0
+  manifest_sha256: 97af80b241539351877bba28fb7c1e0b6583ed76db91831ae9bb02dbd092120e
   files:
     imu.csv:
       rows: 2279
@@ -275,7 +285,7 @@ inventory:
     acceleration: livox_g_times_9.80665
     gyro: source_radps
     anchor_aggregation: component_median
-    extrinsic: joint_GT_assisted_frozen
+    extrinsic: R3_PREFIX20_GT_ASSISTED_TEST_INVOLVED_CALIBRATION_OPEN
     source_reindexed_temporary_copy: true
     possibly_truncated: true
     source_file_sha256:
@@ -335,7 +345,7 @@ inventory:
   family: starloc
   sequence: loop-3d-z_s3
   cache: .cache/sc8/data/R5
-  manifest_sha256: a37b66140d69079fa7030c0a46ba2f1a0cc6da54917ec8c9aef338b0c9969b82
+  manifest_sha256: b091eed45c9fbb5a6eb35a5185f4c86594354b37af4765f599f227c3ea80bcbd
   files:
     imu.csv:
       rows: 17018
@@ -368,7 +378,7 @@ inventory:
       '6': 6
       '7': 7
       '9': 9
-    anchor_id_mapping_provenance: published_v1_room_geometry_correspondence_to_v2_radio_ids
+    anchor_id_mapping_provenance: OFFICIAL_RADIO_IDS_IDENTITY
     gt_reference: uwb_csv_official_tag_position_and_rig_orientation
     source_file_sha256:
       /home/mint/ws_fusion_uwb/data/starloc/data/loop-3d-z_s3/imu.csv: f9a18fc78c3c0dfda3fd02acc928497c8dca70de399dbe7d7edaa36bc1e7ca1f
@@ -414,7 +424,7 @@ inventory:
   family: starloc
   sequence: loop-2d-fast_s3
   cache: .cache/sc8/data/R6
-  manifest_sha256: c7928c8fe7858d3954aa94685c7e61857e4c1bed4a01d6e1cb2e4489fa25dfd7
+  manifest_sha256: f12a12c171ba24fdfd4827fb780016873b7dda2bffc3526cf3579cf6a57f7e38
   files:
     imu.csv:
       rows: 6288
@@ -447,7 +457,7 @@ inventory:
       '6': 6
       '7': 7
       '9': 9
-    anchor_id_mapping_provenance: published_v1_room_geometry_correspondence_to_v2_radio_ids
+    anchor_id_mapping_provenance: OFFICIAL_RADIO_IDS_IDENTITY
     gt_reference: uwb_csv_official_tag_position_and_rig_orientation
     source_file_sha256:
       /home/mint/ws_fusion_uwb/data/starloc/data/loop-2d-fast_s3/imu.csv: 6de764200d082a99e2bc1ab7c2a3f7f47e016697bcf27d9df75164cc7ab66ad2
@@ -493,7 +503,7 @@ inventory:
   family: sfuise
   sequence: ISAS-Walk1
   cache: .cache/sc8/data/CAL-W
-  manifest_sha256: d865c275475e687e19f3a862f165b5ea2123d82b6878808c3da0ffde3ab31bcf
+  manifest_sha256: 8e06f99c2fc7f1db716b8b821c4c19e1a9c9d55e156568dcb322617528adcd44
   files:
     imu.csv:
       rows: 4839
@@ -519,7 +529,7 @@ inventory:
     gt_reference: vive_body_projected_to_physical_uwb_tag
     source_file_sha256:
       /home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk1.bag: ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944
-    gt_world_transform: joint_GT_assisted_frozen
+    gt_world_transform: CAL-W_ONLY_GT_ASSISTED_FROZEN
     world_calibration_artifact: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/.cache/sc8/calibration/walk1_world.json
   calibration_scope: CAL-W_ONLY
   source: /home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk1.bag
@@ -560,7 +570,7 @@ inventory:
   family: own_vicon
   sequence: 2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle
   cache: .cache/sc8/data/CAL-O
-  manifest_sha256: 631b0f220be9e2cc7ae1f85f06b6de692f09b15faf5d00a14360dc8664f321a5
+  manifest_sha256: aeab5e2b06d04fd71eae0335c8845f14b8a79a614853805d2bd8a154b799b10f
   files:
     imu.csv:
       rows: 2313
@@ -578,7 +588,7 @@ inventory:
     acceleration: livox_g_times_9.80665
     gyro: source_radps
     anchor_aggregation: component_median
-    extrinsic: joint_GT_assisted_frozen
+    extrinsic: R3_PREFIX20_GT_ASSISTED_TEST_INVOLVED_CALIBRATION_OPEN
     source_reindexed_temporary_copy: true
     possibly_truncated: true
     source_file_sha256:
@@ -638,7 +648,7 @@ inventory:
   family: starloc
   sequence: loop-2d_s3
   cache: .cache/sc8/data/CAL-S
-  manifest_sha256: 899089887f2ef3c477f9ca9885cd9dd8d3eb67562b5ceae83700d1dcd9cd6257
+  manifest_sha256: 747dbdefa6386ff8e2aa8c86d5cc728b65cc0141e4faaf9c39840e240b26defc
   files:
     imu.csv:
       rows: 12013
@@ -671,7 +681,7 @@ inventory:
       '6': 6
       '7': 7
       '9': 9
-    anchor_id_mapping_provenance: published_v1_room_geometry_correspondence_to_v2_radio_ids
+    anchor_id_mapping_provenance: OFFICIAL_RADIO_IDS_IDENTITY
     gt_reference: uwb_csv_official_tag_position_and_rig_orientation
     source_file_sha256:
       /home/mint/ws_fusion_uwb/data/starloc/data/loop-2d_s3/imu.csv: 32ba1ee530680608a39d4445253bd7eb0ccff304384a474b65c5a4c27c2c0b2f
@@ -2201,6 +2211,7 @@ runs:
   - 100
   pace: offline
   track: T-SIM
+  in_process_canary_epoch: 102
 - id: E05-SC8-WJ-O-FULL-20261020-100x100
   group: E05
   stream: SC8-WJ
@@ -2221,6 +2232,7 @@ runs:
   - 300
   pace: offline
   track: T-SIM
+  in_process_canary_epoch: 302
 - id: E05-SC8-WJ-O-FULL-20261020-300x300
   group: E05
   stream: SC8-WJ
@@ -2241,6 +2253,7 @@ runs:
   - 600
   pace: offline
   track: T-SIM
+  in_process_canary_epoch: 602
 - id: E05-SC8-WJ-O-FULL-20261020-600x600
   group: E05
   stream: SC8-WJ
@@ -2261,6 +2274,7 @@ runs:
   - 1000
   pace: offline
   track: T-SIM
+  in_process_canary_epoch: 1002
 - id: E05-SC8-WJ-O-FULL-20261020-1000x1000
   group: E05
   stream: SC8-WJ
@@ -2310,50 +2324,6 @@ runs:
   - 300
   - 100
   pace: offline
-  track: T-SIM
-- id: E05-SC8-WH-O-CANARY-20261020-100x100
-  group: E05
-  stream: SC8-WH
-  requested_method: O-CANARY
-  seed: 20261020
-  window:
-  - 100
-  - 100
-  pace: offline
-  epochs: 102
-  track: T-SIM
-- id: E05-SC8-WH-O-CANARY-20261020-300x300
-  group: E05
-  stream: SC8-WH
-  requested_method: O-CANARY
-  seed: 20261020
-  window:
-  - 300
-  - 300
-  pace: offline
-  epochs: 302
-  track: T-SIM
-- id: E05-SC8-WH-O-CANARY-20261020-600x600
-  group: E05
-  stream: SC8-WH
-  requested_method: O-CANARY
-  seed: 20261020
-  window:
-  - 600
-  - 600
-  pace: offline
-  epochs: 602
-  track: T-SIM
-- id: E05-SC8-WH-O-CANARY-20261020-1000x1000
-  group: E05
-  stream: SC8-WH
-  requested_method: O-CANARY
-  seed: 20261020
-  window:
-  - 1000
-  - 1000
-  pace: offline
-  epochs: 1002
   track: T-SIM
 - id: E07-SC8-D0-O-ABL-SUPPORT-20261020-30x30
   group: E07
@@ -2436,3 +2406,51 @@ runs:
   - 30
   pace: paced
   track: T-SIM
+- id: E00-SC8-J-O-FULL-20261020-30x30
+  group: E00
+  stream: SC8-J
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+  epochs: 160
+- id: E00-SC8-J-O-NOFDE-20261020-30x30
+  group: E00
+  stream: SC8-J
+  requested_method: O-NOFDE
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+  epochs: 160
+- id: E06-SC8-H-O-FULL-20261020-30x30
+  group: E06
+  stream: SC8-H
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+- id: E06-SC8-J-O-FULL-20261020-30x30
+  group: E06
+  stream: SC8-J
+  requested_method: O-FULL
+  seed: 20261020
+  window:
+  - 30
+  - 30
+  pace: paced
+  track: T-SIM
+auxiliary_solver_audits:
+- id: E00-ROS-R3-PREFIX
+  status: SUCCESS
+  kind: deterministic_direct_ROS_equivalence
+  result: .cache/sc8/equivalence/R3/equivalence.json
+  processes: 1
