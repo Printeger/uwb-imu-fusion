@@ -25,6 +25,7 @@ class MetricsTests(unittest.TestCase):
         q=(Rotation.from_euler('x',.3)*Rotation.from_quat(self.q)).as_quat()
         m,_=metrics.evaluate((self.t,self.p,q),self.gt)
         self.assertAlmostEqual(m['are_rad']['rmse'],.3)
+        self.assertAlmostEqual(m['are_deg']['rmse'],np.degrees(.3))
         self.assertGreater(m['rpe_body_1s_m']['rmse'],.01)
         self.assertAlmostEqual(m['rpe_tag_1s_m']['max'],0,places=12)
     def test_lever(self):

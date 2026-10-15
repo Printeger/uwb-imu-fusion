@@ -60,6 +60,7 @@ def evaluate(estimate, truth, lever=(0,0,0), max_gap=.1, times=None):
             'hpe_m':summary(np.linalg.norm(d[:,:2],axis=1)),
             'vpe_m':summary(abs(d[:,2])),
             'are_rad':summary((rt.inv()*re).magnitude()),
+            'are_deg':summary(np.degrees((rt.inv()*re).magnitude())),
             'planned_grid':len(grid),'matched':int(ok.sum()),
             'coverage':float(ok.mean()) if len(ok) else None,
             'alignment':'NONE','true_bias':'NOT_EVALUATED_BY_POSE_ONLY_SCORER'}
