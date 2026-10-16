@@ -569,6 +569,8 @@ target_link_libraries(open_rolling_checks fde_research)
 
 # SC6 simulation source qualification and shared native service, research only.
 target_sources(fde_research PRIVATE research/sc6_provider.cpp research/sc6_service.cpp research/sc6_system.cpp)
+target_sources(fde_research PRIVATE research/empirical_sensor_adapter.cpp)
+set_source_files_properties(research/empirical_sensor_adapter.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
 set_source_files_properties(research/sc6_provider.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
 set_source_files_properties(research/sc6_service.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
 
@@ -635,3 +637,6 @@ target_link_libraries(sc9_dataset_runner fde_research tbb)
 set_source_files_properties(research/sc9_dataset_runner.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
 add_executable(sc9_route_checks EXCLUDE_FROM_ALL research/sc9_route_checks.cpp)
 target_link_libraries(sc9_route_checks fde_research tbb)
+add_executable(sc9_stream_checks EXCLUDE_FROM_ALL research/sc9_stream_checks.cpp)
+target_link_libraries(sc9_stream_checks fde_research tbb)
+set_source_files_properties(research/sc9_stream_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")

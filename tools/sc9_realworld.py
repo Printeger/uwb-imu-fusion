@@ -86,7 +86,7 @@ def legacy(freeze):
 
 def check(build=False):
     CACHE.mkdir(parents=True, exist_ok=True)
-    targets=['sc9_input_checks', 'sc9_event_checks', 'sc9_time_checks', 'sc9_joint_checks', 'sc9_recovery_checks', 'sc9_boundary_checks', 'sc9_core_checks', 'sc9_bootstrap_checks', 'sc9_time_factor_checks', 'sc9_topology_checks', 'sc9_route_checks']
+    targets=['sc9_input_checks', 'sc9_event_checks', 'sc9_time_checks', 'sc9_joint_checks', 'sc9_recovery_checks', 'sc9_boundary_checks', 'sc9_core_checks', 'sc9_bootstrap_checks', 'sc9_time_factor_checks', 'sc9_topology_checks', 'sc9_route_checks', 'sc9_stream_checks']
     if build:
         with (CACHE/'check-build.log').open('w') as log:
             subprocess.run(['cmake','-S',str(ROOT),'-B',str(BUILD)],env=environment(),stdout=log,stderr=subprocess.STDOUT,check=True)
@@ -643,15 +643,102 @@ def walk(args):
         raise RuntimeError('matrix contains failures; all completed prefixes retained')
 
 
+def wire_prepare(args):
+    """Recover original integer stamps/arrival order from sensor topics only."""
+    from rosbags.highlevel import AnyReader
+    import numpy as np
+    if not args.run_id or not all(c.isalnum() or c in '-_' for c in args.run_id):
+        raise ValueError('wire-prepare requires --run-id')
+    cases=args.cases.split(',') if args.cases else ['Walk2-base','Walk2-J','Walk3-base','Walk3-J']
+    allowed={'Walk2-base','Walk3-base','Walk2-U','Walk2-A','Walk2-G','Walk2-J','Walk3-J'}
+    if set(cases)-allowed:raise ValueError('unknown case')
+    for case in cases:
+        sequence,fault=case.split('-')
+        base=CACHE/f'data/ISAS-{sequence}'
+        source=base if fault=='base' else CACHE/f'injected/ISAS-{case}'
+        manifest=json.loads((base/'manifest.json').read_text())
+        bag=Path(manifest['source'])
+        expected=dict(source_bag_sha=sha(bag),model_sha=sha(CACHE/'empirical-model.json'),
+                      sensor_sha={name:sha(source/name) for name in ['imu.csv','uwb.csv','anchors.csv']})
+        if expected['source_bag_sha']!=manifest['source_sha256']:
+            raise RuntimeError('original bag identity changed')
+        destination=CACHE/'wire'/args.run_id/case
+        output_manifest=destination/'manifest.json'
+        if output_manifest.exists():
+            old=json.loads(output_manifest.read_text())
+            if old['identity']!=expected or sha(destination/'events.jsonl')!=old['events_sha']:
+                raise RuntimeError('wire input changed; use a new run ID')
+            print(case,'reused',old['events'],flush=True);continue
+        destination.mkdir(parents=True,exist_ok=True)
+        def rows(path):
+            with path.open() as stream:return list(csv.DictReader(stream))
+        base_imu=rows(base/'imu.csv');input_imu=rows(source/'imu.csv')
+        base_range=rows(base/'uwb.csv');input_range=rows(source/'uwb.csv')
+        if len(base_imu)!=len(input_imu) or len(base_range)!=len(input_range):
+            raise RuntimeError('overlay row count changed')
+        grouped={};original={}
+        for collection,target in [(input_range,grouped),(base_range,original)]:
+            for row in collection:target.setdefault(int(row['source_message']),[]).append(row)
+        anchors=[dict(id=int(row['anchor_id']),position=[float(row[k]) for k in ['x','y','z']],calibration_version=1)
+                 for row in rows(source/'anchors.csv')]
+        (destination/'anchors.json').write_text(json.dumps(anchors,indent=2)+'\n')
+        i=j=count=invalid=0;delays={'imu':[],'range':[]};first_receive=None;first_imu=None;last_receive=None
+        topics={'/waveshare_sense_hat_b','/rtls_flares'}
+        with AnyReader([bag]) as reader,(destination/'events.jsonl').open('w') as out:
+            connections=[c for c in reader.connections if c.topic in topics]
+            for connection,received,raw in reader.messages(connections=connections):
+                message=reader.deserialize(raw,connection.msgtype)
+                stamp=int(message.header.stamp.sec)*10**9+int(message.header.stamp.nanosec)
+                if received<stamp:raise RuntimeError('recorded receive precedes original header')
+                count+=1;first_receive=received if first_receive is None else first_receive;last_receive=received
+                event=dict(event_sequence=count,received_ns=received,stamp_ns=stamp)
+                if connection.topic=='/waveshare_sense_hat_b':
+                    fields=['ax','ay','az','gx','gy','gz']
+                    actual=[message.linear_acceleration.x,message.linear_acceleration.y,message.linear_acceleration.z,
+                            message.angular_velocity.x,message.angular_velocity.y,message.angular_velocity.z]
+                    if actual!=[float(base_imu[i][key]) for key in fields]:raise RuntimeError('bag/CSV ADC mismatch')
+                    values=[float(input_imu[i][key]) for key in fields]
+                    event.update(kind='imu',measurement_id=i+1,quality_flags=0,accel=values[:3],gyro=values[3:])
+                    first_imu=stamp if first_imu is None else first_imu;i+=1;delays['imu'].append(received-stamp)
+                else:
+                    current=grouped[j];old=original[j]
+                    if len(current)!=len(message.ranges) or len(old)!=len(current):raise RuntimeError('bag/CSV range membership changed')
+                    members=[]
+                    for member,row,base_row in zip(message.ranges,current,old):
+                        index=int(row['source_range']);aid=int(row['anchor_id']);valid=bool(int(row['valid']))
+                        if aid!=int(member.id) or int(row['tag_id'])!=int(message.id) or valid!=(int(member.ra)!=0) or float(base_row['range_raw'])!=float(member.range):
+                            raise RuntimeError('bag/CSV range source mismatch')
+                        if j>=2**46 or index>65535:raise RuntimeError('measurement identity capacity')
+                        identity=2**62+(j<<16)+index
+                        members.append(dict(measurement_id=identity,factor_id=identity,anchor_id=aid,tag_id=int(row['tag_id']),
+                            source_sequence=j,stamp_ns=stamp,received_ns=received,calibration_version=1,quality_flags=0,valid=valid,
+                            range_m=float(row['range']),raw_range_m=float(row['range_raw']),sigma_m=float(row['sigma']),
+                            anchor=[float(row[k]) for k in ['anchor_x','anchor_y','anchor_z']],
+                            lever=[float(row[k]) for k in ['lever_x','lever_y','lever_z']]))
+                        invalid+=not valid
+                    event.update(kind='range',batch_id=j+1,ranges=members);j+=1;delays['range'].append(received-stamp)
+                out.write(json.dumps(event,separators=(',',':'),allow_nan=False)+'\n')
+        if i!=len(input_imu) or j!=len(grouped):raise RuntimeError('wire source denominator mismatch')
+        result=dict(schema='sc9-canonical-sensor-wire-v1',identity=expected,events_sha=sha(destination/'events.jsonl'),
+                    anchors_sha=sha(destination/'anchors.json'),events=count,imu=i,batches=j,invalid_ranges=invalid,
+                    first_received_ns=first_receive,last_received_ns=last_receive,first_imu_stamp_ns=first_imu,
+                    legacy_first_imu_time_s=float(base_imu[0]['t']),source_topics=sorted(topics),
+                    arrival_minus_header_ms={k:np.quantile(np.array(v)*1e-6,[0,.5,.95,1]).tolist() for k,v in delays.items()},
+                    timing='original bag receive order and integer header/receive ns; no GT read; CAL mapping occurs in common adapter')
+        output_manifest.write_text(json.dumps(result,indent=2)+'\n');print(case,count,'sensor events',flush=True)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument('command', choices=['legacy-freeze', 'legacy-parity', 'check', 'prepare', 'calibrate', 'empirical-model', 'inject', 'walk', 'score'])
+    parser.add_argument('command', choices=['legacy-freeze', 'legacy-parity', 'check', 'prepare', 'calibrate', 'empirical-model', 'inject', 'walk', 'score', 'wire-prepare'])
     parser.add_argument('--profile',choices=['gate','full'],default='gate')
     parser.add_argument('--run-id')
     parser.add_argument('--cases',help='comma-separated Walk2-base, Walk3-base, Walk2-U/A/G/J, Walk3-J names')
     parser.add_argument('--build',action='store_true',help='configure/build all SC9 checks before running check')
     args = parser.parse_args()
-    if args.command == 'score':
+    if args.command == 'wire-prepare':
+        wire_prepare(args)
+    elif args.command == 'score':
         score_walk(args)
     elif args.command == 'walk':
         walk(args)

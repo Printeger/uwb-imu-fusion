@@ -1,6 +1,5 @@
 #include "unified_rolling_core.hpp"
-#include "measurement_bootstrap.hpp"
-#include "numerical_candidate.hpp"
+#include "empirical_sensor_adapter.hpp"
 #include "uwb_imu_pl/common/runtime_route_audit.hpp"
 #include <tbb/global_control.h>
 #include <fstream>
@@ -17,7 +16,7 @@ std::vector<Row> csv(const std::string& path){std::ifstream input(path);std::str
 double number(const Row& row,const std::string& field){const double value=std::stod(row.at(field));if(!std::isfinite(value))throw std::runtime_error("CSV_NONFINITE: "+field);return value;}
 uint64_t integer(const Row& row,const std::string& field){const auto& value=row.at(field);size_t used=0;if(value.empty() || value.front()=='-')throw std::runtime_error("CSV_UNSIGNED: "+field);const auto result=std::stoull(value,&used);if(used!=value.size())throw std::runtime_error("CSV_INTEGER: "+field);return result;}
 TimestampNs stamp(double seconds){const long double ns=static_cast<long double>(seconds)*1000000000.L;if(!std::isfinite(seconds) || ns<INT64_MIN || ns>INT64_MAX)throw std::runtime_error("CSV_TIME_CAPACITY");return TimestampNs(std::llround(ns));}
-Eigen::Vector3d vector(const YAML::Node& n){if(n.size()!=3)throw std::runtime_error("MODEL_VECTOR_SIZE");return {n[0].as<double>(),n[1].as<double>(),n[2].as<double>()};}
+
 struct Batch {UwbBatch values;std::vector<CanonicalRangeEvent> events;};
 }
 int main(int argc,char** argv){try{
@@ -25,26 +24,15 @@ int main(int argc,char** argv){try{
  tbb::global_control serial(tbb::global_control::max_allowed_parallelism,1);
  const auto model=YAML::LoadFile(argv[1]);const std::string folder=argv[2],mode=argv[4];if(mode!="on" && mode!="off")throw std::invalid_argument("FDE_MODE");
  const size_t maximum=argc>5?std::stoull(argv[5]):0,enable_after=argc>6?std::stoull(argv[6]):0;
- if(model["status"].as<std::string>()!="DECLARED_EMPIRICAL")throw std::invalid_argument("DATASET_REQUIRES_DECLARED_EMPIRICAL_MODEL");
- auto law=researchLaw("config/sc7.yaml");auto cfg=IntegrityConfigLoader::load(law["imu_base_config"].as<std::string>());cfg.anchors.clear();
- const auto policy=resolveRollingPolicy(law,cfg);const Eigen::Vector3d lever(.1,-.025,0);
- JointRawLaw rawlaw;rawlaw.gravity=model["gravity_mps2"].as<double>();rawlaw.accel_adc=model["accel_adc_sigma"].as<double>();rawlaw.gyro_adc=model["gyro_adc_sigma"].as<double>();rawlaw.accel_rw=model["accel_rw_sigma"].as<double>();rawlaw.gyro_rw=model["gyro_rw_sigma"].as<double>();
- Sc6MotionDomain domain;domain.id=model["model_id"].as<std::string>();domain.acceleration=model["motion"]["acceleration"].as<double>();domain.rate=model["motion"]["rate"].as<double>();domain.jerk=model["motion"]["jerk"].as<double>();domain.alpha=model["motion"]["alpha"].as<double>();
- rawlaw.acceleration=domain.acceleration;rawlaw.rate=domain.rate;rawlaw.jerk=domain.jerk;
- cfg.imu.gravity_mps2=rawlaw.gravity;cfg.imu.accelerometer_sigma=rawlaw.accel_adc;cfg.imu.gyroscope_sigma=rawlaw.gyro_adc;
- cfg.imu.accelerometer_bias_rw_sigma=rawlaw.accel_rw;cfg.imu.gyroscope_bias_rw_sigma=rawlaw.gyro_rw;cfg.imu.max_gap_s=.05;
- cfg.bridge.generic.acceleration_bound_mps2=domain.acceleration;cfg.bridge.generic.angular_rate_bound_radps=domain.rate;cfg.bridge.generic.angular_acceleration_bound_radps2=domain.alpha;cfg.bridge.generic.calibration_id=domain.id;
- Eigen::Matrix3d world;for(int j=0;j<3;++j)for(int k=0;k<3;++k)world(j,k)=model["R_model_from_anchor_world"][j][k].as<double>();
- if((world.transpose()*world-Eigen::Matrix3d::Identity()).norm()>1e-10 || world.determinant()<.999999)throw std::invalid_argument("MODEL_WORLD_ROTATION");
- const double clock_offset=model["range_to_imu_time_s"].as<double>();
+ const auto setup=empiricalSetup(model);const auto& world=setup.world;const auto& domain=setup.domain;
+ const double clock_offset=setup.range_clock_offset;
  std::vector<ImuMeasurement> imu;for(const auto& row:csv(folder+"/imu.csv")){ImuMeasurement m;m.id=MeasurementId(imu.size()+1);m.timestamp=stamp(number(row,"t"));
   m.specific_force_mps2={number(row,"ax"),number(row,"ay"),number(row,"az")};m.angular_velocity_radps={number(row,"gx"),number(row,"gy"),number(row,"gz")};
   if(!imu.empty() && !(imu.back().timestamp<m.timestamp))throw std::invalid_argument("CSV_IMU_ORDER");imu.push_back(m);}
  if(imu.empty())throw std::invalid_argument("CSV_IMU_EMPTY");
- GeneralizedCoreInitialization initialization;initialization.raw_law=rawlaw;
- initialization.sources=std::make_unique<GeneralizedSourceLedger>(policy.budget,rawlaw,ModelEvidenceStatus::DeclaredEmpirical);
+ AnchorRegistry anchors;
  std::map<uint64_t,Batch> grouped;
- for(const auto& row:csv(folder+"/anchors.csv")){AnchorRecord anchor;anchor.id=AnchorId(integer(row,"anchor_id"));anchor.position_world_m=world*Eigen::Vector3d(number(row,"x"),number(row,"y"),number(row,"z"));anchor.covariance_m2.setZero();anchor.frame="world";anchor.map_version=domain.id;initialization.anchors.declare(anchor,1);}
+ for(const auto& row:csv(folder+"/anchors.csv")){AnchorRecord anchor;anchor.id=AnchorId(integer(row,"anchor_id"));anchor.position_world_m=world*Eigen::Vector3d(number(row,"x"),number(row,"y"),number(row,"z"));anchor.covariance_m2.setZero();anchor.frame="world";anchor.map_version=domain.id;anchors.declare(anchor,1);}
  for(const auto& row:csv(folder+"/uwb.csv")){const auto message=integer(row,"source_message"),member=integer(row,"source_range");
   if(message>=(uint64_t(1)<<46) || member>65535)throw std::invalid_argument("CSV_SOURCE_ID_CAPACITY");
   UwbMeasurement m;m.id=MeasurementId((uint64_t(1)<<62)+(message<<16)+member);m.factor_id=FactorId(m.id.value());m.anchor_id=AnchorId(integer(row,"anchor_id"));m.tag_id=TagId(integer(row,"tag_id"));m.sequence=message;
@@ -60,20 +48,10 @@ int main(int argc,char** argv){try{
  if(startup==batches.size())throw std::invalid_argument("CAUSAL_STARTUP_UNAVAILABLE");
  auto first=std::lower_bound(imu.begin(),imu.end(),batches[startup].values.timestamp,[](const auto& m,TimestampNs time){return m.timestamp<time;});
  if(first==imu.end())throw std::invalid_argument("CAUSAL_STARTUP_IMU_MISSING");const size_t first_index=first-imu.begin();
- Eigen::Vector3d mean_force=Eigen::Vector3d::Zero();for(size_t i=0;i<=first_index;++i){initialization.sources->append(imu[i]);mean_force+=imu[i].specific_force_mps2;}mean_force/=first_index+1;
- for(size_t k=0;k<=startup;++k)for(const auto& event:batches[k].events)initialization.sources->registerPotentialRange(event);
- UwbBatch initial_ranges=batches[startup].values;initial_ranges.timestamp=first->timestamp;
- RollingRawState physical;const double speed=model["initial_velocity_radius"].as<double>();
- NavigationState numerical;numerical.timestamp=first->timestamp;numerical.accel_bias_mps2=vector(model["accel_bias_mps2"]);numerical.gyro_bias_radps=vector(model["gyro_bias_radps"]);
- for(int j=0;j<3;++j){physical.p[j]=RollingInterval(0);physical.v[j]=RollingInterval(-speed,speed);for(int k=0;k<3;++k)physical.rotation[j][k]=RollingInterval(-1,1);}
- for(int j=0;j<6;++j){const double center=j<3?numerical.accel_bias_mps2[j]:numerical.gyro_bias_radps[j-3],radius=model["initial_bias_radius"][j].as<double>();physical.bias[j]=RollingInterval(center)+RollingInterval(-radius,radius);}
- initialization.initial_set=measurementInitial(*initialization.sources,initial_ranges,physical,lever,domain.acceleration,domain.rate,ModelEvidenceStatus::DeclaredEmpirical,domain.id);
- const Eigen::Vector3d specific=mean_force-numerical.accel_bias_mps2;if(specific.norm()>1e-6)numerical.q_world_body=Eigen::Quaterniond::FromTwoVectors(specific,Eigen::Vector3d::UnitZ());
- auto seed=numericalUwbCandidate(initial_ranges,-1).functional.tag;
- if(!seed.allFinite()){seed.setZero();for(const auto& m:initial_ranges.measurements)seed+=m.anchor_position_m;seed/=initial_ranges.measurements.size();}
- numerical.position_world_m=seed-numerical.q_world_body*lever;
- UnifiedRollingIntegrityCore core(law,cfg,numerical,lever,domain,*first,std::move(initialization));
- core.enableSemanticAudit();
+ std::vector<CanonicalRangeEvent> startup_ranges;for(size_t k=0;k<=startup;++k)startup_ranges.insert(startup_ranges.end(),batches[k].events.begin(),batches[k].events.end());
+ auto bootstrap=empiricalBootstrap(setup,std::move(anchors),std::vector<ImuMeasurement>(imu.begin(),first+1),startup_ranges,batches[startup].values);
+ auto& core=*bootstrap.core;const auto& numerical=bootstrap.numerical;
+ std::cerr<<"bootstrap_source_digest="<<bootstrap.source_digest<<'\n';
  size_t cursor=first_index+1,epoch=0;const size_t planned=batches.size()-startup-1;
  std::cerr<<"core="<<core.implementationId()<<" model="<<domain.id<<" startup_raw="<<first->id.value()<<" startup_ns="<<first->timestamp.value()<<" planned_after_startup="<<planned<<" mode="<<mode<<"\n";
  std::ofstream out(argv[3]);if(!out)throw std::runtime_error("OUTPUT_OPEN");out<<std::setprecision(17);
@@ -82,7 +60,7 @@ int main(int argc,char** argv){try{
   Sc6Envelope input;input.epoch=++epoch;input.uwb=batches[k].values;input.range_events=batches[k].events;input.ready=input.uwb.timestamp;
   while(cursor<imu.size() && !(input.uwb.timestamp<imu[cursor].timestamp))input.imu.push_back(imu[cursor++]);
   const auto started=std::chrono::steady_clock::now();Sc6Result r;
-  try{r=core.step(input,mode=="on" && epoch>enable_after);}catch(const std::exception& error){std::cerr<<"FAILED epoch="<<epoch<<" source_batch="<<input.uwb.id.value()<<" stamp="<<input.uwb.timestamp.value()<<" reason="<<error.what()<<'\n';throw;}
+  try{r=core.step(input,mode=="on" && epoch>enable_after);}catch(const std::exception& error){std::cerr<<"FAILED epoch="<<epoch<<" source_batch="<<input.uwb.id.value()<<" stamp="<<input.uwb.timestamp.value()<<" backend_updates_total="<<core.updateCount()<<" reason="<<error.what()<<'\n';throw;}
   const double elapsed=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
   const auto route=runtimeRouteAuditV1();
   if(route.old_pipeline_constructions || route.old_engine_calls || route.old_fde_calls || route.incremental_backend_constructions!=1)
