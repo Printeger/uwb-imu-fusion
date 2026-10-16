@@ -1,0 +1,240 @@
+schema: WalkReferenceContractV1
+entry_head: 00b8486c4f45024daa046b2f4ec20a0eec98afb3
+source_converter_sha256: 945bc367118dfc8838057b1f57df6a5164cdf2605b6d30675815071ec632189d
+inventory:
+- sequence: ISAS-Walk1
+  split: CAL
+  source_sha256: ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944
+  files:
+    imu.csv:
+      rows: 4839
+      sha256: 64e0cf52190e3c1b810ed508a4721a7c736f3e21362adbafa13721f3f9204d89
+    uwb.csv:
+      rows: 4850
+      sha256: 56d75728fb31fa9019c47f4d0198859ef75fabede4a4b70b3f695ed4942e3a91
+    anchors.csv:
+      rows: 5
+      sha256: 2ed105d802ad985a0bef02b8312b7e8a4f632abfb8546da0246f10781fcc87c5
+    gt.csv:
+      rows: 3168
+      sha256: 2c6ec19b2c5bcff5b14e62e7206ffcc39398c6fb20a7321adc11867b24ce7a6b
+  topics:
+    /vive/transform/tracker_1_ref:
+      type: geometry_msgs/msg/TransformStamped
+      count: 3168
+    /waveshare_sense_hat_b:
+      type: sensor_msgs/msg/Imu
+      count: 4839
+    /rtls_flares:
+      type: fraunhofer_rtls_flare/msg/RTLSStick
+      count: 970
+    /rtls_pose:
+      type: geometry_msgs/msg/PoseStamped
+      count: 970
+    /anchor_list:
+      type: fraunhofer_rtls_flare/msg/Anchorlist
+      count: 970
+  imu_hz: 81.89600702919067
+  imu_max_gap_s: 0.021364450454711914
+  imu_duration_s: 59.1154465675354
+  initial_accel_norm_median: 9.9782356966099
+  gt_max_gap_s: 0.020532608032219457
+  raw_batches: 970
+  invalid_ranges: 584
+  valid_batches: 913
+  anchor_ids:
+  - 7475
+  - 9524
+  - 10548
+  - 15155
+  - 20276
+  tag_ids:
+  - 27956
+  max_range_offset_error: 1.5265566588595902e-15
+- sequence: ISAS-Walk2
+  split: TEST
+  source_sha256: dea07fd11d5776226be6b390574c4b3789c48cfdce6a1731996981f3f91c453c
+  files:
+    imu.csv:
+      rows: 6229
+      sha256: b2c7a2baff2b546559cdc4c9bb8cf12899b4bb072c5db13b5d682e27953ef349
+    uwb.csv:
+      rows: 6205
+      sha256: 0b0ad442db969437710f7776955b43c16900ef59bed3b20e949e0a3498fe23c6
+    anchors.csv:
+      rows: 5
+      sha256: 2ed105d802ad985a0bef02b8312b7e8a4f632abfb8546da0246f10781fcc87c5
+    gt.csv:
+      rows: 3969
+      sha256: 48b36e56d5f6df6f59ce882af3948e365c97c9d9c989ad3304d0ec8b493f5526
+  topics:
+    /vive/transform/tracker_1_ref:
+      type: geometry_msgs/msg/TransformStamped
+      count: 3969
+    /rtls_flares:
+      type: fraunhofer_rtls_flare/msg/RTLSStick
+      count: 1241
+    /rtls_pose:
+      type: geometry_msgs/msg/PoseStamped
+      count: 1241
+    /anchor_list:
+      type: fraunhofer_rtls_flare/msg/Anchorlist
+      count: 1241
+    /waveshare_sense_hat_b:
+      type: sensor_msgs/msg/Imu
+      count: 6229
+  imu_hz: 81.89280902825234
+  imu_max_gap_s: 0.012806892395019531
+  imu_duration_s: 76.09374403953552
+  initial_accel_norm_median: 9.964960778415236
+  gt_max_gap_s: 0.021072387695319605
+  raw_batches: 1241
+  invalid_ranges: 661
+  valid_batches: 1172
+  anchor_ids:
+  - 7475
+  - 9524
+  - 10548
+  - 15155
+  - 20276
+  tag_ids:
+  - 27956
+  max_range_offset_error: 1.0547118733938987e-15
+- sequence: ISAS-Walk3
+  split: TEST
+  source_sha256: 45df7ffe69b9d8c8be7784414ffcdc6e0f4674d0d7b8db3541e567e757bae0a0
+  files:
+    imu.csv:
+      rows: 6684
+      sha256: b20c33ef07e068643c6e14919b2b6ca392e82982e15f5bccaef918be46df3d51
+    uwb.csv:
+      rows: 6695
+      sha256: 0b4d410e936f6993e27c2604683f0fe54e3d385cf7a93843330d103fc5874050
+    anchors.csv:
+      rows: 5
+      sha256: 2ed105d802ad985a0bef02b8312b7e8a4f632abfb8546da0246f10781fcc87c5
+    gt.csv:
+      rows: 4263
+      sha256: a0387321f2869fd91cb921f7ce67dd1fc0ba5e364f66597ad6be6f8c4d7505a4
+  topics:
+    /vive/transform/tracker_1_ref:
+      type: geometry_msgs/msg/TransformStamped
+      count: 4263
+    /waveshare_sense_hat_b:
+      type: sensor_msgs/msg/Imu
+      count: 6684
+    /rtls_flares:
+      type: fraunhofer_rtls_flare/msg/RTLSStick
+      count: 1339
+    /rtls_pose:
+      type: geometry_msgs/msg/PoseStamped
+      count: 1339
+    /anchor_list:
+      type: fraunhofer_rtls_flare/msg/Anchorlist
+      count: 1339
+  imu_hz: 81.89121012144167
+  imu_max_gap_s: 0.013338804244995117
+  imu_duration_s: 81.65936231613159
+  initial_accel_norm_median: 9.973389358306907
+  gt_max_gap_s: 0.02038264274597168
+  raw_batches: 1339
+  invalid_ranges: 764
+  valid_batches: 1253
+  anchor_ids:
+  - 7475
+  - 9524
+  - 10548
+  - 15155
+  - 20276
+  tag_ids:
+  - 27956
+  max_range_offset_error: 1.0547118733938987e-15
+reference_qualification: REFERENCE_OPEN
+raw_qualified: false
+hardware_protection: false
+convention: T_AB maps B to A; T_WI=T_WT*T_TI; p_Wtag=p_WI+R_WI*l_Itag
+known_imu_tag_offset_m:
+- 0.1
+- -0.025
+- 0.0
+known_offset_evidence: SFUISE pinned official config; no independent uncertainty
+missing:
+- T_TI translation and independently verified rotation
+- tracker-to-tag measurement definition
+- clock offset/drift and uncertainty
+- gravity/world rotation uncertainty
+cal_diagnostic:
+  scope: Walk1 CAL only; diagnostic, never applied to estimator or TEST GT
+  training_end_s: 39.04348359107971
+  time_gt_minus_imu_s: -0.03833473389681467
+  search_interval_s:
+  - -0.1
+  - 0.1
+  R_tracker_from_imu:
+  - - -0.9998835131479282
+    - -0.004773040665850425
+    - -0.014497524538998384
+  - - -0.004452929785290287
+    - 0.9997473278262435
+    - -0.022032973485491887
+  - - 0.01459902569639515
+    - -0.021965850474935707
+    - -0.9996521244221052
+  tracker_gyro_offset_radps:
+  - -0.01173041889234552
+  - 0.0049643725957472
+  - -0.004428169780280312
+  fit_rmse_radps: 0.06028263418780318
+  heldout_rmse_radps: 0.04872057976223617
+  identity_rmse_radps: 0.4857618501767544
+  excitation_singular_values:
+  - 6.767586256433873
+  - 3.501109754210444
+  - 3.3274180395902206
+  determinant: 0.9999999999999993
+  orthogonality_error: 1.1458412983153716e-15
+  translation_identification: 'NOT_CLOSED: gyro alone has zero translation Jacobian;
+    no independent tracker-to-tag dimensions or time synchronization uncertainty'
+  qualification: REFERENCE_OPEN
+diagnostics:
+  walk2_prefix_batches:
+  - 1
+  - 120
+  walk2_later_batches:
+  - 200
+  - 240
+  selection: source order, no GT selection
+limits:
+  run_wall_s: 1200
+  rss_bytes: 7516192768
+injection_registration:
+  type: research stress fault, not empirical probability law
+  weak:
+    range_m: 0.3
+    accel_mps2: 2.0
+    gyro_radps: 0.1
+  strong:
+    range_m: 2.25
+    accel_mps2: 20.0
+    gyro_radps: 1.0
+  weak_start_s: 20.0
+  strong_start_s: 40.0
+  imu_duration_s: 0.5
+  uwb_batches_weak: 1
+  uwb_batches_strong: 3
+  anchor_id: 7475
+  imu_axis: original_sensor_x
+  joint_uwb_offset_s: -0.18
+  walk2:
+  - U
+  - A
+  - G
+  - J
+  walk3:
+  - J
+  joint_imu: gyro
+identity:
+  binaries:
+    /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/nominal_dataset_runner: 350997f75ac41087873760b8552fc9b9b2a74784c75a91e43fc198a9c39b6d0c
+    /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so: 5faa46cc2d41492a55c65e9972a7bbe1f2a1b1773d791034ebdf119ec5954189
+  sfuise_pin: 75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d
