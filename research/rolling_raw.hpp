@@ -16,12 +16,17 @@ struct RollingRawState {
 RollingRawState rollingInitial(const NavigationState&,const Eigen::Matrix<double,15,1>&,double q,double roundoff);
 RollingRawState rollingPropagate(const RollingRawState&,double acceleration,double angular_rate,
  double accel_rw,double gyro_rw,double q);
+struct RawTimeStep;
+RollingRawState rollingPropagate(const RollingRawState&,double acceleration,double angular_rate,
+ const RawTimeStep&);
 RollingVector rollingTag(const RollingRawState&,const Eigen::Vector3d& lever);
 // Necessary inverse of tag=p+Rl; contraction never assigns tag directly to p.
 bool rollingContractTag(RollingRawState&,const RollingVector&,const Eigen::Vector3d&);
 // Necessary bidirectional continuous bounded-acceleration relation.
-bool rollingContractDynamics(RollingRawState& previous,RollingRawState& next,double acceleration);
-bool rollingContractCoupledDynamics(RollingRawState&,RollingRawState&,double acceleration);
+bool rollingContractDynamics(RollingRawState& previous,RollingRawState& next,double acceleration,
+ RollingInterval duration=RollingInterval(1)/20.);
+bool rollingContractCoupledDynamics(RollingRawState&,RollingRawState&,double acceleration,
+ RollingInterval duration=RollingInterval(1)/20.);
 RollingVector rollingTagSphere(const RollingRawState&,const Eigen::Vector3d&);
 bool rollingContractTagSphere(RollingRawState&,const RollingVector&,const Eigen::Vector3d&);
 RollingRawState rollingProject(const RollingRawState&);

@@ -75,18 +75,66 @@ def legacy(freeze):
 
 def check():
     CACHE.mkdir(parents=True, exist_ok=True)
-    for name in ['sc9_input_checks', 'sc9_event_checks']:
+    for name in ['sc9_input_checks', 'sc9_event_checks', 'sc9_time_checks']:
         with (CACHE / (name + '.log')).open('w') as log:
             subprocess.run([str(BIN / name)], cwd=ROOT, env=environment(),
                            stdout=log, stderr=subprocess.STDOUT, check=True)
         print((CACHE / (name + '.log')).read_text(), end='')
 
 
+def prepare():
+    # Reuse the frozen raw decoder and measured-tracker export. The old
+    # contract is read-only; all newly generated material stays in SC9 cache.
+    import contextlib
+    import sc8_walk_followup as walk
+    walk.CACHE = CACHE
+    assert walk.CONTRACT.exists(), 'expected existing frozen Walk source contract'
+    CACHE.mkdir(parents=True, exist_ok=True)
+    with (CACHE / 'prepare.log').open('w') as log, contextlib.redirect_stdout(log):
+        walk.prepare()
+    import pandas as pd
+    registration = {}
+    for sequence in ['ISAS-Walk2', 'ISAS-Walk3']:
+        data = CACHE / 'data' / sequence
+        ranges = pd.read_csv(data / 'uwb.csv', float_precision='round_trip')
+        imu = pd.read_csv(data / 'imu.csv', float_precision='round_trip')
+        candidates = []
+        # Pre-result rule uses only time, valid, and source IDs. Require three
+        # consecutive observations of one source to be valid, after20s.
+        for anchor, group in ranges.groupby('anchor_id', sort=True):
+            records = group.sort_values(['t', 'source_message']).to_dict('records')
+            for i in range(len(records) - 2):
+                window = records[i:i+3]
+                if window[0]['t'] >= 20 and all(r['valid'] for r in window):
+                    candidates.append((window[0]['t'], int(anchor), window))
+                    break
+        assert candidates, sequence + ': no valid source-only injection window'
+        t, anchor, window = min(candidates, key=lambda x: (x[0], x[1]))
+        begin = t + .18
+        active = imu[(imu.t >= begin) & (imu.t < begin + .5)]
+        assert len(active) >= 2 and imu.t.max() > begin + 1.0
+        registration[sequence] = dict(
+            selection='earliest>=20s three consecutive valid records of a physical anchor; tie by anchor ID; no GT/residual/detection',
+            sensor_hash=walk.sensor_hash(data), anchor_id=anchor,
+            range_source=[{k: int(r[k]) for k in ['source_message', 'source_range']} for r in window],
+            range_times_s=[r['t'] for r in window], imu_begin_s=begin, imu_end_s=begin+.5,
+            imu_samples=len(active), range_add_m=2.25, accel_add_mps2=20., gyro_add_radps=1.,
+            axis='original_sensor_x', cases=['U','A','G','J'] if sequence.endswith('2') else ['J'])
+    target = CACHE / 'injection-registration.json'
+    if target.exists():
+        assert json.loads(target.read_text()) == registration, 'frozen injection selection changed'
+    else:
+        target.write_text(json.dumps(registration, indent=2) + '\n')
+    print(json.dumps(registration, indent=2))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument('command', choices=['legacy-freeze', 'legacy-parity', 'check'])
+    parser.add_argument('command', choices=['legacy-freeze', 'legacy-parity', 'check', 'prepare'])
     args = parser.parse_args()
     if args.command == 'check':
         check()
+    elif args.command == 'prepare':
+        prepare()
     else:
         legacy(args.command == 'legacy-freeze')

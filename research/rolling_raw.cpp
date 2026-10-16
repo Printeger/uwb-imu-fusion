@@ -1,4 +1,5 @@
 #include "rolling_raw.hpp"
+#include "physical_time.hpp"
 #include <cmath>
 namespace uwb_imu_pl::research {
 namespace {
@@ -26,13 +27,22 @@ RollingRawState rollingInitial(const NavigationState& s,const Eigen::Matrix<doub
 }
 RollingRawState rollingPropagate(const RollingRawState& old,double acceleration,double angular_rate,double ba,double bg,double q){
  if(!std::isfinite(acceleration+angular_rate+ba+bg+q) || acceleration<0 || angular_rate<0 || ba<0 || bg<0 || q<=0)throw std::invalid_argument("RAW_PROPAGATION_DOMAIN_REFUSED");
- RollingRawState a=old;++a.epoch;I dt=I(1)/20.,rp=I(acceleration)*square(dt)/2.,rv=I(acceleration)*dt,rr=I(angular_rate)*dt;
+ RawTimeStep step;step.duration=I(1)/20.;
+ for(int j=0;j<6;++j)step.bias_radius[j]=10.*I(q)*I(j<3?ba:bg)*sqrt(I(1)/200.)+I(2e-10);
+ return rollingPropagate(old,acceleration,angular_rate,step);
+}
+RollingRawState rollingPropagate(const RollingRawState& old,double acceleration,double angular_rate,const RawTimeStep& step){
+ if(!std::isfinite(acceleration) || !std::isfinite(angular_rate) || acceleration<0 || angular_rate<0 ||
+    !std::isfinite(step.duration.lower()) || !std::isfinite(step.duration.upper()) || step.duration.lower()<=0 ||
+    old.epoch==std::numeric_limits<size_t>::max())throw std::invalid_argument("RAW_TIME_PROPAGATION_DOMAIN");
+ for(auto r:step.bias_radius)if(!std::isfinite(r.lower()) || !std::isfinite(r.upper()) || r.lower()<0)
+  throw std::invalid_argument("RAW_RW_SUPPORT_INVALID");
+ RollingRawState a=old;++a.epoch;I dt=step.duration,rp=I(acceleration)*square(dt)/2.,rv=I(acceleration)*dt,rr=I(angular_rate)*dt;
  for(int j=0;j<3;++j){a.p[j]=old.p[j]+dt*old.v[j]+symmetric(rp);a.v[j]=old.v[j]+symmetric(rv);
   for(int k=0;k<3;++k){a.rotation[j][k]=old.rotation[j][k]+symmetric(rr);intersect(a.rotation[j][k],I(-1,1));}}
- // Ten distinct RW increments per interval. Their support is Minkowski sum,
- // never a new independent posterior draw. Endpoint ADC is projected, not
- // counted again: physics does not consume ADC in this fault-independent reach.
- for(int j=0;j<6;++j)a.bias[j]=old.bias[j]+symmetric(10.*I(q)*I(j<3?ba:bg)*sqrt(I(1)/200.)+I(2e-10));
+ // Supplied support is the Minkowski sum of ORIGINAL RW births. A held or
+ // interpolated endpoint does not mint another independent posterior draw.
+ for(int j=0;j<6;++j)a.bias[j]=old.bias[j]+symmetric(step.bias_radius[j]);
  if(old.has_tag_relation){I lever_norm=sqrt(square(I(old.tag_lever.x()))+square(I(old.tag_lever.y()))+square(I(old.tag_lever.z())));for(int j=0;j<3;++j)a.tag_relation[j]=old.tag_relation[j]+dt*old.v[j]+symmetric(rp+lever_norm*I(angular_rate)*dt);}
  return rollingProject(a);
 }
@@ -47,18 +57,20 @@ bool rollingContractTag(RollingRawState& s,const RollingVector& tag,const Eigen:
   for(int k=0;k<3;++k)if(l(k)!=0){I rhs=tag[j]-s.p[j];for(int h=0;h<3;++h)if(h!=k)rhs-=s.rotation[j][h]*I(l(h));if(!intersect(s.rotation[j][k],rhs/I(l(k))))return false;}
  }return true;
 }
-bool rollingContractDynamics(RollingRawState& old,RollingRawState& next,double acceleration){
- if(next.epoch!=old.epoch+1 || !std::isfinite(acceleration) || acceleration<0)throw std::invalid_argument("RAW_DYNAMICS_ORDER_REFUSED");
- I dt=I(1)/20.,rp=symmetric(I(acceleration)*square(dt)/2.),rv=symmetric(I(acceleration)*dt);
+bool rollingContractDynamics(RollingRawState& old,RollingRawState& next,double acceleration,I dt){
+ if(next.epoch!=old.epoch+1 || !std::isfinite(acceleration) || acceleration<0 ||
+    !std::isfinite(dt.lower()) || !std::isfinite(dt.upper()) || dt.lower()<=0)throw std::invalid_argument("RAW_DYNAMICS_ORDER_REFUSED");
+ I rp=symmetric(I(acceleration)*square(dt)/2.),rv=symmetric(I(acceleration)*dt);
  for(int j=0;j<3;++j){if(!intersect(old.v[j],(next.p[j]-old.p[j]-rp)/dt) ||
     !intersect(next.p[j],old.p[j]+dt*old.v[j]+rp) ||
     !intersect(old.p[j],next.p[j]-dt*old.v[j]-rp) ||
     !intersect(next.v[j],old.v[j]+rv) || !intersect(old.v[j],next.v[j]-rv))return false;}
  return true;
 }
-bool rollingContractCoupledDynamics(RollingRawState& old,RollingRawState& next,double acceleration){
- if(next.epoch!=old.epoch+1 || !std::isfinite(acceleration) || acceleration<0)throw std::invalid_argument("COUPLED_DYNAMICS_DOMAIN");
- I dt=I(1)/20.,half=dt/2.,remainder=symmetric(I(acceleration)*square(dt)/4.);
+bool rollingContractCoupledDynamics(RollingRawState& old,RollingRawState& next,double acceleration,I dt){
+ if(next.epoch!=old.epoch+1 || !std::isfinite(acceleration) || acceleration<0 ||
+    !std::isfinite(dt.lower()) || !std::isfinite(dt.upper()) || dt.lower()<=0)throw std::invalid_argument("COUPLED_DYNAMICS_DOMAIN");
+ I half=dt/2.,remainder=symmetric(I(acceleration)*square(dt)/4.);
  // p1-p0-dt*(v0+v1)/2 = integral (dt/2-s)*a(s) ds.
  // Norm <= A*dt^2/4; these are coordinate necessary projections.
  for(int j=0;j<3;++j)if(!intersect(next.p[j],old.p[j]+half*(old.v[j]+next.v[j])+remainder) ||
