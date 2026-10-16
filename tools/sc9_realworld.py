@@ -86,7 +86,7 @@ def legacy(freeze):
 
 def check():
     CACHE.mkdir(parents=True, exist_ok=True)
-    for name in ['sc9_input_checks', 'sc9_event_checks', 'sc9_time_checks', 'sc9_joint_checks', 'sc9_recovery_checks', 'sc9_boundary_checks', 'sc9_core_checks', 'sc9_bootstrap_checks']:
+    for name in ['sc9_input_checks', 'sc9_event_checks', 'sc9_time_checks', 'sc9_joint_checks', 'sc9_recovery_checks', 'sc9_boundary_checks', 'sc9_core_checks', 'sc9_bootstrap_checks', 'sc9_time_factor_checks', 'sc9_topology_checks']:
         with (CACHE / (name + '.log')).open('w') as log:
             subprocess.run([str(BIN / name)], cwd=ROOT, env=environment(),
                            stdout=log, stderr=subprocess.STDOUT, check=True)
@@ -259,14 +259,173 @@ def calibrate():
     print(json.dumps(output,indent=2))
 
 
+def inject_registered():
+    import shutil
+    import numpy as np
+    import pandas as pd
+    registration = json.loads((CACHE/'injection-registration.json').read_text())
+    for sequence, rule in registration.items():
+        base = CACHE/'data'/sequence
+        for name, digest in rule['sensor_hash'].items():
+            assert sha(base/name) == digest
+        for case in rule['cases']:
+            target = CACHE/'injected'/(sequence+'-'+case)
+            if (target/'injection.json').exists():
+                old = json.loads((target/'injection.json').read_text())
+                assert old['registration_sha'] == sha(CACHE/'injection-registration.json')
+                assert all(sha(target/name) == digest for name,digest in old['injected_sha'].items())
+                continue
+            target.mkdir(parents=True,exist_ok=True)
+            imu = pd.read_csv(base/'imu.csv',float_precision='round_trip')
+            ranges = pd.read_csv(base/'uwb.csv',float_precision='round_trip')
+            original_imu, original_ranges = imu.copy(), ranges.copy()
+            range_rows, imu_rows = [], []
+            if case in ('U','J'):
+                for identity in rule['range_source']:
+                    selection = (ranges.source_message == identity['source_message']) & (ranges.source_range == identity['source_range'])
+                    assert selection.sum() == 1 and bool(ranges.loc[selection,'valid'].iloc[0])
+                    assert int(ranges.loc[selection,'anchor_id'].iloc[0]) == rule['anchor_id']
+                    range_rows.extend(np.flatnonzero(selection).tolist())
+                    ranges.loc[selection,['range','range_raw']] += rule['range_add_m']
+            field = None
+            if case in ('A','G','J'):
+                # J retains the earlier Walk convention: UWB plus gyro-x.
+                field = 'ax' if case == 'A' else 'gx'
+                amplitude = rule['accel_add_mps2'] if case == 'A' else rule['gyro_add_radps']
+                selection = (imu.t >= rule['imu_begin_s']) & (imu.t < rule['imu_end_s'])
+                assert int(selection.sum()) == rule['imu_samples']
+                imu_rows = np.flatnonzero(selection).tolist()
+                imu.loc[selection,field] += amplitude
+            imu.to_csv(target/'imu.csv',index=False,float_format='%.17g')
+            ranges.to_csv(target/'uwb.csv',index=False,float_format='%.17g')
+            for name in ['anchors.csv','manifest.json']:
+                shutil.copy2(base/name,target/name)
+            # GT and injection labels are not input requirements of the adapter.
+            read_i = pd.read_csv(target/'imu.csv',float_precision='round_trip',dtype=imu.dtypes.to_dict())
+            read_r = pd.read_csv(target/'uwb.csv',float_precision='round_trip',dtype=ranges.dtypes.to_dict())
+            np.testing.assert_array_equal(imu.to_numpy(),read_i.to_numpy())
+            np.testing.assert_array_equal(ranges.to_numpy(),read_r.to_numpy())
+            for name in original_ranges.columns.difference(['range','range_raw']):
+                pd.testing.assert_series_equal(original_ranges[name],read_r[name],check_exact=True)
+            for name in original_imu.columns:
+                if name != field: pd.testing.assert_series_equal(original_imu[name],read_i[name],check_exact=True)
+            metadata = dict(sequence=sequence,case=case,registration_sha=sha(CACHE/'injection-registration.json'),
+                base_sha=rule['sensor_hash'],injected_sha={name:sha(target/name) for name in rule['sensor_hash']},
+                range_rows=range_rows,imu_rows=imu_rows,imu_field=field,
+                range_source=rule['range_source'] if range_rows else [],
+                scope='SC9 source-only registered strong overlay; scorer labels only; no validity/time/identity changes')
+            (target/'injection.json').write_text(json.dumps(metadata,indent=2)+'\n')
+            print(sequence,case,'valid range rows',len(range_rows),'IMU rows',len(imu_rows),'field',field)
+
+
+def empirical_model():
+    """Declare CAL-only model parameters before any SC9 TEST trajectory run."""
+    import numpy as np
+    import pandas as pd
+    from scipy.interpolate import CubicSpline
+    from scipy.signal import savgol_filter
+    from scipy.spatial.transform import Rotation, Slerp
+    diagnostic = json.loads((CACHE/'calibration-diagnostic.json').read_text())
+    gyro_cal = json.loads((CACHE/'w0.json').read_text())['cal_diagnostic']
+    path = CACHE/'data/ISAS-Walk1'
+    for name, expected in diagnostic['source_sha'].items():
+        assert sha(path/name) == expected
+    imu = pd.read_csv(path/'imu.csv', float_precision='round_trip')
+    gt = pd.read_csv(path/'gt.csv', float_precision='round_trip').drop_duplicates('t')
+    reference = diagnostic['reference']
+    rotation_ti = np.asarray(reference['R_tracker_from_imu'])
+    mounting = np.asarray(reference['tracker_to_imu_m'])
+    attitude = Slerp(gt.t, Rotation.from_quat(gt[['qx','qy','qz','qw']]))
+    position = CubicSpline(gt.t, gt[['px','py','pz']])
+    # Shortest of the already declared differentiation supports. This is a
+    # modeling choice after CAL diagnostics, not untouched held-out validation.
+    force_cal = diagnostic['acceleration_crosscheck'][0]
+    gravity_anchor = np.asarray(force_cal['gravity_anchor_world_mps2'])
+    gravity = float(np.linalg.norm(gravity_anchor))
+    direction = gravity_anchor/gravity
+    target = np.array([0.,0.,-1.])
+    axis = np.cross(direction,target)
+    length = np.linalg.norm(axis)
+    cosine = float(direction@target)
+    if length > 1e-12:
+        rotate_world = Rotation.from_rotvec(axis/length*np.arctan2(length,cosine))
+    elif cosine > 0:
+        rotate_world = Rotation.identity()
+    else:
+        candidate = np.eye(3)[np.argmin(np.abs(direction))]
+        axis = np.cross(direction,candidate);axis /= np.linalg.norm(axis)
+        rotate_world = Rotation.from_rotvec(np.pi*axis)
+    assert np.linalg.norm(rotate_world.apply(gravity_anchor)-gravity*target) < 1e-10
+    acceleration_bias = rotation_ti.T @ np.asarray(force_cal['bias_tracker_mps2'])
+    gyro_bias = -rotation_ti.T @ np.asarray(gyro_cal['tracker_gyro_offset_radps'])
+    time = np.arange(max(gt.t.min(), imu.t.min())+.6,
+                     min(gt.t.max(), imu.t.max())-.6, .02)
+    rot = attitude(time)
+    body_position = position(time)+rot.apply(mounting)
+    omega_tracker = (attitude(time-.01).inv()*attitude(time+.01)).as_rotvec()/.02
+    omega_body = omega_tracker @ rotation_ti
+    cut = diagnostic['training_end_s']
+    train = time < cut-.5
+    hold = time > cut+.5
+    domains = []
+    for width in [21,31,41]:
+        derivatives = [savgol_filter(body_position,width,4,deriv=d,delta=.02,axis=0) for d in [1,2,3]]
+        angular = savgol_filter(omega_body,width,3,deriv=1,delta=.02,axis=0)
+        norms = dict(zip(['speed','acceleration','jerk','rate','alpha'],
+                         [np.linalg.norm(x,axis=1) for x in derivatives+[omega_body,angular]]))
+        domains.append(dict(smoothing_samples=width,
+                            train_max={k:float(v[train].max()) for k,v in norms.items()},
+                            hold_max={k:float(v[hold].max()) for k,v in norms.items()}))
+    # Fixed 1.5 margin on CAL training maxima, with all three supports retained.
+    # This is an empirical domain declaration, not a bound on unseen motion.
+    domain = {k:1.5*max(d['train_max'][k] for d in domains) for k in domains[0]['train_max']}
+    raw_train = imu[imu.t < cut-.5]
+    high_pass = np.diff(raw_train[['ax','ay','az','gx','gy','gz']].to_numpy(),n=2,axis=0)
+    centered = high_pass-np.median(high_pass,axis=0)
+    scale = 1.4826*np.median(np.abs(centered),axis=0)/np.sqrt(6.)
+    adc = 1.5*scale
+    # Bias domains include model/time/reference discrepancies. They are not
+    # ADC tails and are not interpreted as independent startup observations.
+    gyro_observed = CubicSpline(imu.t, imu[['gx','gy','gz']])(time-reference['imu_to_tracker_time_s'])
+    gyro_residual = gyro_observed-omega_body-gyro_bias
+    force_observed = CubicSpline(imu.t, imu[['ax','ay','az']])(time-reference['imu_to_tracker_time_s'])
+    body_acceleration = savgol_filter(body_position,21,4,deriv=2,delta=.02,axis=0)
+    g_tracker = np.asarray(force_cal['gravity_tracker_world_mps2'])
+    force_expected = rot.inv().apply(body_acceleration-g_tracker) @ rotation_ti + acceleration_bias
+    force_residual = force_observed-force_expected
+    bias_radius = np.r_[1.5*np.max(np.abs(force_residual[train]),axis=0),
+                        1.5*np.max(np.abs(gyro_residual[train]),axis=0)]
+    output = dict(model_id='sc9-walk1-cal-empirical-v1',status='DECLARED_EMPIRICAL',
+        statistical_qualified=False,publication_protected=False,
+        source_sha=diagnostic['source_sha'],calibration_sha=sha(CACHE/'calibration-diagnostic.json'),
+        R_model_from_anchor_world=rotate_world.as_matrix().tolist(),gravity_mps2=gravity,
+        reference=reference,range_to_imu_time_s=reference['range_to_tracker_time_s']-reference['imu_to_tracker_time_s'],
+        accel_bias_mps2=acceleration_bias.tolist(),gyro_bias_radps=gyro_bias.tolist(),
+        initial_bias_radius=bias_radius.tolist(),initial_velocity_radius=domain['speed'],
+        initial_rotation_domain='FULL_SO3_OUTER_BOX; numeric tilt/yaw is not a healthy prior',
+        motion=domain,range_sigma_m=.15,accel_adc_sigma=float(max(adc[:3])),gyro_adc_sigma=float(max(adc[3:])),
+        accel_rw_sigma=.001,gyro_rw_sigma=.0001,
+        adc_diagnostic=dict(method='1.5*MAD(second difference)/sqrt(6), CAL training only; irregular time/motion and correlated noise remain empirical',axis_scales=adc.tolist()),
+        motion_diagnostic=domains,
+        caveats=['No hardware marginal-tail qualification','CAL reference/time/mounting uncertainty is material',
+                 'Full rotation and declared velocity/bias domains; no independent bootstrap covariance',
+                 'Domain/ADC margins are declared before SC9 TEST runs; hold metrics are descriptive CAL checks'])
+    (CACHE/'empirical-model.json').write_text(json.dumps(output,indent=2)+'\n')
+    print(json.dumps({k:output[k] for k in ['model_id','gravity_mps2','range_to_imu_time_s','accel_adc_sigma','gyro_adc_sigma','initial_bias_radius','motion']},indent=2))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument('command', choices=['legacy-freeze', 'legacy-parity', 'check', 'prepare', 'calibrate'])
+    parser.add_argument('command', choices=['legacy-freeze', 'legacy-parity', 'check', 'prepare', 'calibrate', 'empirical-model', 'inject'])
     args = parser.parse_args()
     if args.command == 'check':
         check()
     elif args.command == 'prepare':
         prepare()
+    elif args.command == 'inject':
+        inject_registered()
+    elif args.command == 'empirical-model':
+        empirical_model()
     elif args.command == 'calibrate':
         calibrate()
     else:

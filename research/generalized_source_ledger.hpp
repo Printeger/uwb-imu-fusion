@@ -44,7 +44,7 @@ class GeneralizedSourceLedger {
  void append(const ImuMeasurement& m){
   const auto old=raw_.find(m.id);
   if(old!=raw_.end()){
-   if(old->second.timestamp!=m.timestamp || old->second.specific_force_mps2!=m.specific_force_mps2 ||
+   if(old->second.quality_flags!=m.quality_flags || old->second.timestamp!=m.timestamp || old->second.specific_force_mps2!=m.specific_force_mps2 ||
       old->second.angular_velocity_radps!=m.angular_velocity_radps)throw std::invalid_argument("ORIGINAL_IMU_MUTATED");
    return;
   }
@@ -67,7 +67,7 @@ class GeneralizedSourceLedger {
   const auto old=ranges_.find(m.id);
   if(old!=ranges_.end()){
    const auto& a=old->second;
-   if(a.timestamp!=m.timestamp || a.anchor_id!=m.anchor_id || a.range_m!=m.range_m || a.sigma_m!=m.sigma_m ||
+   if(a.tag_id!=m.tag_id || a.sequence!=m.sequence || a.quality_flags!=m.quality_flags || a.timestamp!=m.timestamp || a.anchor_id!=m.anchor_id || a.range_m!=m.range_m || a.sigma_m!=m.sigma_m ||
       a.anchor_position_m!=m.anchor_position_m || a.factor_id!=m.factor_id || a.lever_arm_body_m!=m.lever_arm_body_m)
     throw std::invalid_argument("ORIGINAL_RANGE_MUTATED");
    return;
@@ -111,6 +111,7 @@ class GeneralizedSourceLedger {
    if(original.timestamp!=m.timestamp || original.anchor_id!=m.anchor_id || original.range_m!=m.range_m || original.sigma_m!=m.sigma_m ||
       original.anchor_position_m!=m.anchor_position_m || original.factor_id!=m.factor_id)
     throw std::invalid_argument("NATIVE_RANGE_ORIGINAL_MISMATCH");
+   auto potential=potential_ranges_.find(m.id);out->range_calibration_versions.push_back(potential==potential_ranges_.end()?0:std::get<3>(potential->second));
    const double q=event_.birth({SourceKind::Range,m.anchor_id.value(),m.id.value(),0}).q;
    out->range_noise_radius.push_back((I(q)*I(m.sigma_m)).upper());out->max_coordinate_radius=std::max(out->max_coordinate_radius,q);
   }

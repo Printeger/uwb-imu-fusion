@@ -12,7 +12,7 @@ bool sameState(const RollingRawState& a,const RollingRawState& b){
 }
 bool sameCertificate(const RollingBoundaryCertificateV1& a,const RollingBoundaryCertificateV1& b){
  if(!sameState(a.separator,b.separator) || a.generation!=b.generation || a.parent!=b.parent || a.version!=b.version || a.source_prefix!=b.source_prefix || a.covered_through!=b.covered_through || a.shared_adc_index!=b.shared_adc_index || a.committed_time!=b.committed_time || a.source_risk!=b.source_risk || a.fault_counts_complete!=b.fault_counts_complete || a.event_id!=b.event_id || a.state_method!=b.state_method || a.fault_not_started!=b.fault_not_started || a.fault_active!=b.fault_active || a.fault_ended_residual!=b.fault_ended_residual || a.fault_excluded!=b.fault_excluded || a.anchor_ids!=b.anchor_ids)return false;
- if(a.dynamic_anchors.size()!=b.dynamic_anchors.size())return false;
+ if(a.anchor_versions!=b.anchor_versions || a.dynamic_anchors.size()!=b.dynamic_anchors.size())return false;
  for(const auto& item:a.dynamic_anchors){auto found=b.dynamic_anchors.find(item.first);if(found==b.dynamic_anchors.end() || found->second!=item.second)return false;}
  for(int j=0;j<8;++j)if(a.anchor_positions[j]!=b.anchor_positions[j])return false;return true;
 }
@@ -85,7 +85,7 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
  if(generalized){const auto& e=*generalized;const I duration=durationSeconds(tx.begin,tx.end);
   if(!joint_ || tx.begin!=certificate_.committed_time || e.begin!=tx.begin || e.end!=tx.end || e.event_id!=event_id || e.status!=generalized_->status ||
      e.source_prefix<certificate_.source_prefix || !std::isfinite(e.risk_upper) || e.risk_upper<certificate_.source_risk || e.risk_upper>policy_.budget ||
-     !std::isfinite(e.max_coordinate_radius) || e.max_coordinate_radius<=0 || e.evolution.duration.lower()!=duration.lower() || e.evolution.duration.upper()!=duration.upper() || e.joint_samples.size()+1!=tx.raw_imu_slice.size())throw std::invalid_argument("RAW_GENERALIZED_EVIDENCE_MISMATCH");
+     !std::isfinite(e.max_coordinate_radius) || e.max_coordinate_radius<=0 || e.evolution.duration.lower()!=duration.lower() || e.evolution.duration.upper()!=duration.upper() || e.joint_samples.size()+1!=tx.raw_imu_slice.size() || e.range_calibration_versions.size()!=tx.uwb_batch.measurements.size())throw std::invalid_argument("RAW_GENERALIZED_EVIDENCE_MISMATCH");
   for(size_t i=0;i<e.joint_samples.size();++i){const auto& parent=e.joint_samples[i];const auto& used=tx.raw_imu_slice[i+1];
    if(parent.integration_end!=used.timestamp || parent.raw.id!=used.id || used.specific_force_mps2!=parent.raw.specific_force_mps2 || used.angular_velocity_radps!=parent.raw.angular_velocity_radps)
     throw std::invalid_argument("RAW_GENERALIZED_NATIVE_PARENT_MISMATCH");
@@ -130,10 +130,10 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
  const size_t offset=out.material.cutoff-certificate_.separator.epoch;
  if(offset>=states.size())throw std::invalid_argument("SEPARATOR_PROJECTION_MISSING");
  snapshot("before_projection",states.back());out.current=rollingProject(states.back());snapshot("after_projection",out.current);if(!generalized_)snapshot("next_propagation",rollingPropagate(out.current,acceleration_,rate_,accel_rw_,gyro_rw_,event_.radius(tx.proposed_epoch+1)));out.certificate=certificate_;
- if(generalized_){for(const auto& m:tx.uwb_batch.measurements){
+ if(generalized_){for(size_t i=0;i<tx.uwb_batch.measurements.size();++i){const auto& m=tx.uwb_batch.measurements[i];const auto version=generalized->range_calibration_versions[i];
   auto found=out.certificate.dynamic_anchors.find(m.anchor_id);
-  if(found!=out.certificate.dynamic_anchors.end() && found->second!=m.anchor_position_m)throw std::invalid_argument("RAW_ANCHOR_CALIBRATION_CHANGED_WITHOUT_REVISION");
-  out.certificate.dynamic_anchors[m.anchor_id]=m.anchor_position_m;
+  if(found!=out.certificate.dynamic_anchors.end() && (version<out.certificate.anchor_versions.at(m.anchor_id) || (version==out.certificate.anchor_versions.at(m.anchor_id) && found->second!=m.anchor_position_m)))throw std::invalid_argument("RAW_ANCHOR_CALIBRATION_CHANGED_WITHOUT_REVISION");
+  out.certificate.dynamic_anchors[m.anchor_id]=m.anchor_position_m;out.certificate.anchor_versions[m.anchor_id]=version;
  }}else for(size_t j=0;j<8;++j){
   const auto& m=tx.uwb_batch.measurements[j];
   if(certificate_.covered_through && (certificate_.anchor_ids[j]!=m.anchor_id || certificate_.anchor_positions[j]!=m.anchor_position_m))throw std::invalid_argument("TASK_ANCHOR_SOURCE_IDENTITY_CHANGED");

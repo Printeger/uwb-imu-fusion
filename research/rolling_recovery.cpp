@@ -111,7 +111,7 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
  const auto masks=rawRangeFaultMasks(tx.uwb_batch);
  std::vector<std::optional<EpochRaim>> cached(tx.uwb_batch.measurements.size()+1);
  if(tx.uwb_batch.measurements.size()<4){
-  if(assessment.alarm || isolated_)throw std::runtime_error("INSUFFICIENT_UWB_ROWS_DURING_RECOVERY");
+  if((assessment.alarm || isolated_) && !actual_time_)throw std::runtime_error("INSUFFICIENT_UWB_ROWS_DURING_RECOVERY");
   result.status="INSUFFICIENT_UWB_ROWS_FOR_FUNCTIONAL_POST";result.recovery="FUNCTIONAL_ACTION_UNAVAILABLE";return result;
  }
  Eigen::MatrixXd anchor_design(tx.uwb_batch.measurements.size()-1,3);for(int i=1;i<int(tx.uwb_batch.measurements.size());++i)anchor_design.row(i-1)=(tx.uwb_batch.measurements[i].anchor_position_m-tx.uwb_batch.measurements[0].anchor_position_m).transpose();auto singular=Eigen::JacobiSVD<Eigen::MatrixXd>(anchor_design).singularValues();
@@ -119,6 +119,7 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
  auto evaluate=[&](int mask){
   size_t retained=0;for(const auto& m:tx.uwb_batch.measurements)
    if(mask<0 || m.anchor_id!=tx.uwb_batch.measurements[mask].anchor_id)++retained;
+  if(monitor.has_range_time_model)return numericalUwbCandidate(tx.uwb_batch,mask,1e-6,&monitor.range_transport).functional;
   return difficult || (numerical_ && retained<5)?numericalUwbCandidate(tx.uwb_batch,mask).functional:uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);
  };
  auto candidate=[&](int mask){if(!optimized_)return evaluate(mask);auto& item=cached[mask+1];if(!item)item=evaluate(mask);return *item;};
@@ -174,7 +175,10 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
   size_t card=(mask>=0)+imu;
   if(std::make_pair(card,post.gaussian.statistic)<std::make_pair(best_card,best_stat)){best_card=card;best_stat=post.gaussian.statistic;selected=mask;}
  }
- if(selected==-2)throw std::runtime_error("NO_COMPLETE_POST_PASSED_ROLLING_ACTION");
+ if(selected==-2){
+  if(!actual_time_)throw std::runtime_error("NO_COMPLETE_POST_PASSED_ROLLING_ACTION");
+  result.status="NO_FUNCTIONAL_POST_PASSED";result.recovery="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE";return result;
+ }
  result.excluded=selected;result.current_bridge=bridge;
  if(selected>=0){result.excluded_source=tx.uwb_batch.measurements.at(selected).anchor_id;omitRange(tx,result.plan,*result.excluded_source);held_anchor_=result.excluded_source;if(uwb_alarm){held_until_=tx.proposed_epoch+2;if(actual_time_)held_remaining_=2;}}
  else if(historical_range){result.excluded_source=observed_anchor_;omitRange(tx,result.plan,*observed_anchor_);}

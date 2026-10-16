@@ -29,5 +29,6 @@ struct GeneralizedRawEvidence {
  RawTimeStep evolution;
  std::vector<JointTimedSample> joint_samples;
  std::vector<double> range_noise_radius;
+ std::vector<uint64_t> range_calibration_versions;
 };
 }

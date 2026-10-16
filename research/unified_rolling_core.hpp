@@ -12,6 +12,8 @@ struct Sc6Result {
  std::chrono::steady_clock::time_point imu_alarm_time;
  uint64_t version=0,generation=0,parent=0,source_prefix=0;
  size_t active_states=0,proof_explicit=0;
+ RangeCounts input_counts;
+ size_t time_factor_groups=0,time_committed_factors=0;double max_range_transport=0;
  size_t boundary=0,alerts=0,slots=0,live=0,ledger=0,replay=0,capsules=0,rss=0;
  std::array<double,6> reference_bias_width{};
  bool x0=false;double bias_width=0,q=0,shared_q=0;
@@ -30,12 +32,13 @@ struct GeneralizedCoreInitialization {
  JointRawLaw raw_law;
 };
 class UnifiedRollingIntegrityCore {
- IntegrityConfig config_;Eigen::Vector3d lever_;ResolvedRollingPolicyV1 policy_;bool optimized_,failed_=false;
+ IntegrityConfig config_;Eigen::Vector3d lever_;Sc6MotionDomain domain_;ResolvedRollingPolicyV1 policy_;bool optimized_,failed_=false;
  TimeUniformEvent event_;RollingIntegrity proof_;std::unique_ptr<OpenFaultPool> faults_;RollingRecovery recovery_;
  std::unique_ptr<GeneralizedSourceLedger> sources_;
  std::unique_ptr<GeneralizedFaultMonitor> generalized_monitor_;
  AnchorRegistry anchors_;
  std::deque<MeasurementId> replay_parents_;
+ std::map<size_t,std::map<MeasurementId,double>> range_time_history_;
  std::unique_ptr<Sc6TemporalMonitor> temporal_;uint64_t combined_alert_generation_=0;
  std::unique_ptr<RollingIntegrity> shadow_;
  IncrementalUwbImuEstimator backend_;

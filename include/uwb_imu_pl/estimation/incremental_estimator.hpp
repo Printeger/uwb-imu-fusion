@@ -174,6 +174,9 @@ class IncrementalUwbImuEstimator {
   EpochTransaction prepareEpoch(const UwbBatch& batch);
   EpochTransaction prepareEpoch(const UwbBatch& batch,
                                 const EpochPreparationOptions& options);
+  // Explicit research epoch with no range observations; no synthetic factor.
+  EpochTransaction prepareEmptyEpochResearchV1(const UwbBatch& empty_batch);
+  void enableGeneralizedGroupIdentityResearchV2();
   LinearizedIntegrityWindow buildIntegrityWindow(
       const EpochTransaction& transaction,
       const IntegrityWindowRequest& request) const;

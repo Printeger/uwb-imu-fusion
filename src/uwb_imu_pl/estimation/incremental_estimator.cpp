@@ -129,12 +129,25 @@ struct EstimationRuntimeV1 {
   double physical_time_s = 0.0;
   const gtsam::VectorValues* accepted_delta = nullptr;
   std::uint64_t accepted_delta_version = 0;
+  bool generalized_group_identity = false;
+  std::uint64_t next_generalized_group = 0;
 };
 std::mutex estimation_runtime_mutex;
 std::map<const IncrementalUwbImuEstimator*, EstimationRuntimeV1> estimation_runtime;
 EstimationRuntimeV1 readEstimationRuntime(const IncrementalUwbImuEstimator* estimator) {
   std::lock_guard<std::mutex> lock(estimation_runtime_mutex);
   return estimation_runtime.at(estimator);
+}
+
+// Unique low-56-bit group namespace survives FactorLedger's <<8 encoding.
+// It replaces the fixed 100/1000 strides only in the explicit new mode.
+FactorGroupId groupIdentity(const IncrementalUwbImuEstimator* estimator,std::uint64_t legacy) {
+  std::lock_guard<std::mutex> lock(estimation_runtime_mutex);
+  auto& runtime=estimation_runtime.at(estimator);
+  if(!runtime.generalized_group_identity)return FactorGroupId(legacy);
+  if(runtime.next_generalized_group>=(std::uint64_t(1)<<52))
+    throw std::length_error("generalized factor group identity capacity");
+  return FactorGroupId(0x00c0000000000000ULL+runtime.next_generalized_group++);
 }
 
 struct P005EstimatorRuntime {
@@ -1182,6 +1195,8 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
   const gtsam::NavState predicted = proposed.predict(
       gtsam::NavState(previous_pose, previous_velocity), previous_bias);
   last_imu_preintegration_ms_ = elapsedMs(preintegration_start);
+  if(epoch_==std::numeric_limits<std::size_t>::max() || next_transaction_id_>=std::numeric_limits<std::uint64_t>::max()/1000000ULL)
+    throw std::length_error("epoch/transaction identity capacity");
   const std::size_t next_epoch = epoch_ + 1;
   EpochTransaction tx;
   tx.preparation = options;
@@ -1221,7 +1236,7 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
   tx.imu_cursor.consume_count = consume_count;
   previous_measurement.timestamp = timestamp;
   tx.imu_cursor.new_boundary = previous_measurement;
-  tx.imu_group.id = FactorGroupId(tx.id.value() * 1000 + 1);
+  tx.imu_group.id = groupIdentity(this,tx.id.value() * 1000 + 1);
   tx.imu_group.kind = FactorKind::CombinedImu;
   tx.imu_group.sensor = SensorType::Imu;
   tx.imu_group.keys = {poseKey(epoch_),     velocityKey(epoch_),
@@ -1233,8 +1248,8 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
       poseKey(epoch_), velocityKey(epoch_), poseKey(next_epoch),
       velocityKey(next_epoch), biasKey(epoch_), biasKey(next_epoch), proposed));
   if (options.build_imu_recovery_material) {
-    tx.generic_bridge_group.id = FactorGroupId(tx.id.value() * 1000 + 3);
-    tx.generic_bias_continuity_group.id = FactorGroupId(tx.id.value() * 1000 + 4);
+    tx.generic_bridge_group.id = groupIdentity(this,tx.id.value() * 1000 + 3);
+    tx.generic_bias_continuity_group.id = groupIdentity(this,tx.id.value() * 1000 + 4);
     tx.generic_bridge_group =
         BridgeFactory().makeGeneric(tx, config_.bridge.generic);
     tx.generic_bias_continuity_group =
@@ -1381,7 +1396,7 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
       retained.covariance_model_id = committed.uwb_batch.covariance_model_id +
                                      ":recovery_principal_covariance";
       PendingFactorGroup replacement;
-      replacement.id = FactorGroupId(history_base + 10 + replacement_index++);
+      replacement.id = groupIdentity(this,history_base + 10 + replacement_index++);
       replacement.kind = FactorKind::UwbBatch;
       replacement.sensor = SensorType::Uwb;
       replacement.keys = {poseKey(committed.proposed_epoch)};
@@ -1406,13 +1421,13 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
     }
     if (committed_imu_selected && options.build_imu_recovery_material) {
       PendingFactorGroup historical_bridge = committed.generic_bridge_group;
-      historical_bridge.id = FactorGroupId(history_base + 80);
+      historical_bridge.id = groupIdentity(this,history_base + 80);
       historical_bridge.replaces_group = committed.imu_group.id;
       historical_bridge.recovery_epoch = next_epoch;
       context.groups.push_back(std::move(historical_bridge));
       PendingFactorGroup historical_bias =
           committed.generic_bias_continuity_group;
-      historical_bias.id = FactorGroupId(history_base + 81);
+      historical_bias.id = groupIdentity(this,history_base + 81);
       historical_bias.replaces_group = committed.imu_group.id;
       historical_bias.recovery_epoch = next_epoch;
       context.groups.push_back(std::move(historical_bias));
@@ -1449,7 +1464,7 @@ void IncrementalUwbImuEstimator::attachUwbGroups(EpochTransaction* tx,
     throw std::logic_error("UWB group already attached");
   tx->uwb_batch = batch;
   PendingFactorGroup group;
-  group.id = FactorGroupId(tx->id.value() * 1000 + 2);
+  group.id = groupIdentity(this,tx->id.value() * 1000 + 2);
   group.kind = FactorKind::UwbBatch;
   group.sensor = SensorType::Uwb;
   group.keys = {poseKey(tx->proposed_epoch)};
@@ -1513,7 +1528,7 @@ void IncrementalUwbImuEstimator::attachUwbGroups(EpochTransaction* tx,
             : batch.covariance_model_id + ":retained_principal_covariance";
     PendingFactorGroup replacement;
     replacement.id =
-        FactorGroupId(tx->id.value() * 1000 + 10 + candidate_index++);
+        groupIdentity(this,tx->id.value() * 1000 + 10 + candidate_index++);
     replacement.kind = FactorKind::UwbBatch;
     replacement.sensor = SensorType::Uwb;
     replacement.keys = {poseKey(tx->proposed_epoch)};
@@ -1546,6 +1561,22 @@ EpochTransaction IncrementalUwbImuEstimator::prepareEpoch(
     const UwbBatch& batch, const EpochPreparationOptions& options) {
   validateUwbBatch(batch);
   return prepareTransaction(batch.timestamp, &batch, options);
+}
+
+void IncrementalUwbImuEstimator::enableGeneralizedGroupIdentityResearchV2() {
+  if(!initialized_ || epoch_!=0 || pending_epoch_)
+    throw std::logic_error("generalized group identity must be enabled immediately after initialization");
+  std::lock_guard<std::mutex> lock(estimation_runtime_mutex);
+  estimation_runtime.at(this).generalized_group_identity=true;
+}
+
+EpochTransaction IncrementalUwbImuEstimator::prepareEmptyEpochResearchV1(const UwbBatch& empty_batch) {
+  if (!empty_batch.measurements.empty() || empty_batch.covariance_m2.size()!=0)
+    throw std::invalid_argument("research empty epoch contains range observations");
+  auto tx=prepareTransaction(empty_batch.timestamp,nullptr,EpochPreparationOptions{});
+  tx.uwb_batch=empty_batch;
+  pending_batch_id_=empty_batch.id;
+  return tx;
 }
 
 void IncrementalUwbImuEstimator::predictTo(TimestampNs timestamp) {
@@ -2375,7 +2406,7 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindowWithRe
       field_is_perp.push_back(1);
     }
     LinearizedFactorBlock boundary;
-    boundary.group_id = FactorGroupId(tx.id.value() * 1000);
+    boundary.group_id = groupIdentity(this,tx.id.value() * 1000);
     boundary.kind = FactorKind::BoundaryPrior;
     boundary.sensor = SensorType::Prior;
     boundary.role = RowRole::TrustedPrior;

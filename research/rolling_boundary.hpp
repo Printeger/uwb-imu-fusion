@@ -27,6 +27,7 @@ struct RollingBoundaryCertificateV1 {
  std::array<AnchorId,8> anchor_ids;
  std::array<Eigen::Vector3d,8> anchor_positions=[] {std::array<Eigen::Vector3d,8> a;for(auto& p:a)p.setZero();return a;}();
  std::map<AnchorId,Eigen::Vector3d> dynamic_anchors;
+ std::map<AnchorId,uint64_t> anchor_versions;
 };
 struct RollingBoundaryProposalV1 {
  BoundaryMaterialViewV1 material;

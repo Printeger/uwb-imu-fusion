@@ -1,7 +1,7 @@
 #include "numerical_candidate.hpp"
 #include <Eigen/Eigenvalues>
 namespace uwb_imu_pl::research {
-NumericalCandidateResult numericalUwbCandidate(const UwbBatch& batch,int excluded,double alpha){
+NumericalCandidateResult numericalUwbCandidate(const UwbBatch& batch,int excluded,double alpha,const RangeTimeRadii* transport){
  NumericalCandidateResult out;auto& r=out.functional;r.excluded=excluded;
  auto b=retainRanges(batch,excluded);const int n=b.measurements.size();
  // Four actual rows permit rank3 with one residual degree of freedom. Rank
@@ -16,15 +16,16 @@ NumericalCandidateResult numericalUwbCandidate(const UwbBatch& batch,int exclude
  out.design_singular=Eigen::JacobiSVD<Eigen::MatrixXd>(design).singularValues();out.squared_seed=design.colPivHouseholderQr().solve(rhs);
  Eigen::LLT<Eigen::MatrixXd> chol(validatedUwbCovariance(b));if(chol.info()!=Eigen::Success){r.status="NUMERICAL_COVARIANCE_REFUSED";return out;}
  Eigen::MatrixXd w=chol.matrixL().solve(Eigen::MatrixXd::Identity(n,n));
+ std::optional<RangeTimeWhitening> time_model;if(transport)time_model.emplace(b,transport);
  Eigen::JacobiSVD<Eigen::MatrixXd> plane(centered,Eigen::ComputeFullV);Eigen::Vector3d normal=plane.matrixV().col(2);int axis;normal.cwiseAbs().maxCoeff(&axis);if(normal(axis)<0)normal=-normal;
  // Bounded, deterministic initial pool. Clipping is numerical initialization
  // only; it never prunes a physical root or modifies a raw set.
  Eigen::Vector3d ls=(out.squared_seed-origin)/scale;for(int j=0;j<3;++j)ls(j)=std::clamp(ls(j),-2.,2.);
  std::vector<Eigen::Vector3d> seeds{ls,.25*normal,-.25*normal,normal,-normal,Eigen::Vector3d::Zero()};
- auto evaluate=[&](const Eigen::Vector3d& x,Eigen::MatrixXd* jac){Eigen::VectorXd residual(n);Eigen::Vector3d p=origin+scale*x;if(jac)jac->resize(n,3);for(int i=0;i<n;++i){Eigen::Vector3d delta=p-b.measurements[i].anchor_position_m;double length=delta.norm();if(!std::isfinite(length) || length<1e-8){residual.setConstant(INFINITY);return residual;}residual(i)=b.measurements[i].range_m-length;if(jac)jac->row(i)=scale*delta.transpose()/length;}return Eigen::VectorXd(w*residual);};
+ auto evaluate=[&](const Eigen::Vector3d& x,Eigen::MatrixXd* jac,Eigen::VectorXd* active=nullptr){Eigen::VectorXd residual(n);Eigen::Vector3d p=origin+scale*x;if(jac)jac->resize(n,3);for(int i=0;i<n;++i){Eigen::Vector3d delta=p-b.measurements[i].anchor_position_m;double length=delta.norm();if(!std::isfinite(length) || length<1e-8){residual.setConstant(INFINITY);return residual;}residual(i)=b.measurements[i].range_m-length;if(jac)jac->row(i)=scale*delta.transpose()/length;}if(time_model)return time_model->profile(Eigen::VectorXd(w*residual),active);return Eigen::VectorXd(w*residual);};
  double best=INFINITY;Eigen::Vector3d chosen=Eigen::Vector3d::Constant(NAN);
  for(const auto& seed:seeds){++out.attempted;Eigen::Vector3d x=seed;double lambda=1e-3,trust=1.;bool converged=false;
-  for(int it=0;it<80;++it){Eigen::MatrixXd j;Eigen::VectorXd z=evaluate(x,&j);if(!z.allFinite())break;Eigen::MatrixXd h=w*j;Eigen::Matrix3d a=h.transpose()*h;Eigen::Vector3d gradient=h.transpose()*z;
+  for(int it=0;it<80;++it){Eigen::MatrixXd j;Eigen::VectorXd active;Eigen::VectorXd z=evaluate(x,&j,&active);if(!z.allFinite())break;Eigen::MatrixXd h=w*j;if(time_model && time_model->bounded)h=active.asDiagonal()*h;Eigen::Matrix3d a=h.transpose()*h;Eigen::Vector3d gradient=h.transpose()*z;
    // Retain exact residual curvature. Near an almost planar minimizer the
    // tiny GN z curvature otherwise forces damping that stalls well-observed
    // x/y directions. A positive shift handles nonconvex seeds safely.
@@ -48,6 +49,7 @@ NumericalCandidateResult numericalUwbCandidate(const UwbBatch& batch,int exclude
  out.jacobian_singular=Eigen::JacobiSVD<Eigen::MatrixXd>(final_j).singularValues();
  Eigen::VectorXd final_raw(n);for(int i=0;i<n;++i)final_raw(i)=b.measurements[i].range_m-(chosen-b.measurements[i].anchor_position_m).norm();
  r.gaussian=gaussianReference(final_j,final_raw,validatedUwbCovariance(b),Eigen::Matrix3d::Identity(),{},alpha,1e-9);
+ if(time_model && time_model->bounded)r.gaussian.statistic=final_z.squaredNorm();
  // Covariance/Jacobian are local diagnostics. Suppress PL and old qualification.
  out.functional_post_test=r.gaussian.dof>0 && std::isfinite(r.gaussian.statistic) && r.gaussian.statistic<=r.gaussian.threshold;
  r.gaussian.pl.setConstant(INFINITY);r.gaussian.status="MULTIROOT_LOCAL_DIAGNOSTIC_NO_ALPHA_QUALIFICATION";

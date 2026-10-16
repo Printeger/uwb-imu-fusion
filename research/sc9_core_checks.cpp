@@ -42,7 +42,7 @@ int main(){try{
     input.uwb.measurements.push_back(m);input.range_events.push_back({m,end,1,true});
    }
    const bool fde=scenario!="J-held" || k>=73;
-   Sc6Result r;try{r=core.step(input,fde);}catch(const std::exception& e){std::cerr<<scenario<<" epoch="<<k<<" ";throw;}require(r.bound.valid && r.source_prefix>0,"missing common-core bound");
+   Sc6Result r;try{r=core.step(input,fde);}catch(const std::exception& e){std::cerr<<scenario<<" epoch="<<k<<" ";throw;}if(!(r.max_range_transport>0 && r.time_factor_groups>0 && r.time_committed_factors>0)){std::cerr<<scenario<<" k="<<k<<" radius="<<r.max_range_transport<<" groups="<<r.time_factor_groups<<" committed="<<r.time_committed_factors<<"\n";throw std::runtime_error("actual time factor missing from native ledger");}require(r.bound.valid && r.source_prefix>0,"missing common-core bound");
    require(r.state.timestamp==end && r.generation==k && core.updateCount()==k+1,"common-core commit/source mismatch");
    for(int j=0;j<3;++j)require(r.bound.low[j]<=truth[j] && truth[j]<=r.bound.high[j],"fault union lost truth");
    alarms+=r.imu_alarm || r.action.uwb_alarm;exclusions+=r.action.excluded>=0;bridges+=r.action.current_bridge;repairs+=r.action.boundary_repair;polluted+=r.action.history_marginalized;rejoins+=r.action.rejoined;
