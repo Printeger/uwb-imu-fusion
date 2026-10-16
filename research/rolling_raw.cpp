@@ -10,7 +10,7 @@ bool intersect(I& a,I b){double l=std::max(a.lower(),b.lower()),u=std::min(a.upp
 void check(I a){if(!std::isfinite(a.lower()) || !std::isfinite(a.upper()))throw std::runtime_error("RAW_SET_NONFINITE");}
 }
 RollingRawState rollingInitial(const NavigationState& s,const Eigen::Matrix<double,15,1>& sigma,double q,double rho){
- if(!sigma.allFinite() || (sigma.array()<=0).any() || !std::isfinite(q+rho) || q<=0 || rho<0 || s.timestamp.value()!=0 || !s.position_world_m.allFinite() || !s.velocity_world_mps.allFinite() || !s.q_world_body.coeffs().allFinite() || !s.accel_bias_mps2.allFinite() || !s.gyro_bias_radps.allFinite())throw std::invalid_argument("RAW_INITIAL_REFUSED");
+ if(!sigma.allFinite() || (sigma.array()<=0).any() || !std::isfinite(q+rho) || q<=0 || rho<0 || !s.position_world_m.allFinite() || !s.velocity_world_mps.allFinite() || !s.q_world_body.coeffs().allFinite() || !s.accel_bias_mps2.allFinite() || !s.gyro_bias_radps.allFinite())throw std::invalid_argument("RAW_INITIAL_REFUSED");
  I witness=I(1)+I(std::ldexp(1.,-53));if(witness.lower()>1 || witness.upper()<std::nextafter(1.,INFINITY))throw std::runtime_error("DIRECTED_ARITHMETIC_UNAVAILABLE");
  RollingVector phi,rho_vec;for(int j=0;j<3;++j){phi[j]=I(q)*I(sigma(j));rho_vec[j]=I(q)*I(sigma(j+3));}
  I pe=norm(rho_vec)+I(rho),angle=norm(phi)+I(rho);

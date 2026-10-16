@@ -61,11 +61,14 @@ struct BoundaryMaterialViewV1 {
  size_t raw_first=0,raw_last=0;
 };
 inline BoundaryMaterialViewV1 captureBeforeUpdate(const EpochTransaction& tx,
- const EpochCommitPlan& plan,const ResolvedRollingPolicyV1& p){
- if(!tx.frozen_values || tx.raw_imu_slice.size()!=11 ||
+ const EpochCommitPlan& plan,const ResolvedRollingPolicyV1& p,bool actual_time=false){
+ if(!tx.frozen_values || (actual_time?tx.raw_imu_slice.size()<2:tx.raw_imu_slice.size()!=11) ||
     tx.raw_imu_slice.front().timestamp!=tx.begin ||
     tx.raw_imu_slice.back().timestamp!=tx.end || tx.previous_epoch+1!=tx.proposed_epoch)
   throw std::invalid_argument("BOUNDARY_RAW_MATERIAL_MISSING");
+ if(actual_time)for(size_t i=1;i<tx.raw_imu_slice.size();++i)
+  if(!(tx.raw_imu_slice[i-1].timestamp<tx.raw_imu_slice[i].timestamp))
+   throw std::invalid_argument("BOUNDARY_RAW_TIME_ORDER");
  BoundaryMaterialViewV1 v;v.transaction=tx.id;v.version=tx.base_graph_version;
  v.epoch=tx.proposed_epoch;v.cutoff=v.epoch+1>size_t(p.integrity)?v.epoch+1-p.integrity:0;
  v.begin=tx.begin;v.end=tx.end;v.selected=plan.groups_to_add;

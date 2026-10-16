@@ -609,3 +609,7 @@ add_executable(sc9_recovery_checks EXCLUDE_FROM_ALL research/sc9_recovery_checks
 target_link_libraries(sc9_recovery_checks fde_research tbb)
 set_source_files_properties(research/sc9_recovery_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
 set_source_files_properties(research/sc7_support_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+
+add_executable(sc9_boundary_checks EXCLUDE_FROM_ALL research/sc9_boundary_checks.cpp)
+target_link_libraries(sc9_boundary_checks fde_research tbb)
+set_source_files_properties(research/sc9_boundary_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
