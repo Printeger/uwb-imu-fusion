@@ -111,6 +111,13 @@ struct PipelineTestDependencySeamsEntry {
 std::unordered_map<const RealtimeIntegrityPipeline*,
                    PipelineTestDependencySeamsEntry> g_pipeline_test_seams;
 
+// Object-owned research option in a sidecar: public object ABI is unchanged.
+std::set<const RealtimeIntegrityPipeline*> g_research_eligibility_pruning;
+bool researchEligibilityPruning(const RealtimeIntegrityPipeline* pipeline) {
+  std::lock_guard<std::mutex> lock(g_pipeline_test_seams_mutex);
+  return g_research_eligibility_pruning.count(pipeline)!=0;
+}
+
 using ActionProofKey = std::pair<std::uint64_t, std::uint64_t>;
 using ImmutableActionProofSnapshot =
     std::shared_ptr<const ActionHypothesisProofSnapshotV1>;
@@ -301,6 +308,7 @@ std::shared_ptr<const PipelineTestDependencySeamsV2> pipelineTestSeamsV2(
 void clearPipelineTestSeams(const RealtimeIntegrityPipeline* pipeline) {
   std::lock_guard<std::mutex> lock(g_pipeline_test_seams_mutex);
   g_pipeline_test_seams.erase(pipeline);
+  g_research_eligibility_pruning.erase(pipeline);
 }
 
 double chiSquareThreshold(int dof, double p_fa) {
@@ -1864,7 +1872,7 @@ void refreshActionSearchAudit(IntegrityOutput* output) {
   std::uint64_t candidate_actual = 0;
   std::uint64_t post_actual = 0;
   std::uint64_t pl_actual = 0;
-  std::uint64_t omitted = 0;
+  std::uint64_t omitted = 0, research_skipped = 0;
   for (auto& record : output->candidate_audit) {
     if (!isActionSearchOccurrenceAudit(record)) continue;
     if (record.model_error_record.rfind("PLANNED_EVALUATION;", 0) == 0) {
@@ -1872,6 +1880,7 @@ void refreshActionSearchAudit(IntegrityOutput* output) {
     }
     else ++omitted;
     const std::string& state = record.diagnostics.skip_reason;
+    if(state=="SKIPPED_INELIGIBLE") ++research_skipped;
     if (state == "CANDIDATE_COMPLETE" || state == "POST_COMPLETE" ||
         state == "PL_COMPLETE" || state == "POST_EXCEPTION" ||
         state == "PL_EXCEPTION") ++candidate_actual;
@@ -1907,6 +1916,7 @@ void refreshActionSearchAudit(IntegrityOutput* output) {
   if (prefix == "ACTION_SEARCH_CERTIFICATE_V3:") {
     *reason += ";terminal_actions=" + std::to_string(candidate_actual);
   }
+  if(research_skipped) *reason += ";research_selection_ineligible_not_solved="+std::to_string(research_skipped);
   *reason += ";omitted=" + std::to_string(omitted) + static_certificate;
 }
 
@@ -2188,6 +2198,12 @@ void RealtimeIntegrityPipeline::setTestDependencySeamsV2(
   } else {
     g_pipeline_test_seams.erase(this);
   }
+}
+
+void RealtimeIntegrityPipeline::setResearchEligibilityPruning(bool enabled) {
+  std::lock_guard<std::mutex> lock(g_pipeline_test_seams_mutex);
+  if(enabled) g_research_eligibility_pruning.insert(this);
+  else g_research_eligibility_pruning.erase(this);
 }
 
 void RealtimeIntegrityPipeline::ingestImu(const ImuMeasurement& measurement) {
@@ -2489,6 +2505,11 @@ processUwbBatchWithFinishElapsedOverride(
           std::to_string(finish_elapsed_ms) + " ms" +
           (prior_reason.empty() ? std::string() : "; upstream=" + prior_reason);
       output.reason_codes.push_back("FINISH_DEADLINE_MISSED");
+    }
+    if(researchEligibilityPruning(this)) {
+      output.protection_level.formal_eligible=false;
+      output.protection_level.availability=Availability::Unavailable;
+      output.reason_codes.push_back("RESEARCH_ELIGIBILITY_PRUNING_UNQUALIFIED");
     }
     applyPublicationGate(&output, batch, proof_arena);
     if (finish_deadline_missed) {
@@ -3498,7 +3519,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         // Eligibility remains a selection property checked by FDE; it must not
         // silently turn generated actions into unexecuted placeholders, and it
         // must not be alterable through process environment.
-        const bool exhaustive_candidates = true;
+        const bool exhaustive_candidates = !researchEligibilityPruning(this);
         const std::vector<HypothesisId> frozen_plausible =
             (!all_in.passed || hardware_barrier)
                 ? completePlausibleHypotheses(models.hypotheses, evidence)
@@ -3768,6 +3789,21 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           // dominant block).  The gate itself is untouched: this only explains
           // an existing rejection.
           CandidateEvaluation& candidate = evaluated.candidate;
+          const auto ineligible=action_ineligibility.find(action.id.value());
+          // The FDE manager requires covers_all and Recoverable BEFORE a
+          // candidate can enter the eligible risk union. These predicates use
+          // only frozen action/hypothesis/health IDs, never numerical results.
+          // Keep the full census identity; explicitly record unexecuted work.
+          if(!exhaustive_candidates && ineligible!=action_ineligibility.end() &&
+             (ineligible->second=="does not cover complete frozen plausible set" ||
+              ineligible->second=="does not satisfy mandatory health exclusion" ||
+              ineligible->second=="history replacement is not recoverable")) {
+            candidate.action=action;
+            candidate.reason="SKIPPED_INELIGIBLE: "+ineligible->second;
+            candidate.diagnostics.skip_reason="SKIPPED_INELIGIBLE";
+            markActionSearchTerminal(&output,action,"SKIPPED_INELIGIBLE");
+            return;
+          }
           // P0-06: the router proves the action/window/changed-row numerical
           // precondition before it is permitted to invoke the optimized rank
           // kernel.  Unknown or boundary cases execute the exact dense/SVD
@@ -3824,6 +3860,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           const ExclusionAction& action = actions[work_index];
           EvaluatedAction& evaluated = batch->at(work_index);
           CandidateEvaluation& candidate = evaluated.candidate;
+          if(candidate.diagnostics.skip_reason=="SKIPPED_INELIGIBLE") return;
           auto part_start = std::chrono::steady_clock::now();
           auto part_ms = [&]() {
             auto now = std::chrono::steady_clock::now();

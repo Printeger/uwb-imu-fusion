@@ -130,7 +130,7 @@ def prepare():
     print(json.dumps(dict(inventory=inventory,cal=registry['cal_diagnostic']),indent=2))
 
 
-def run_native(sequence, method, source=None, label=None, paced=True, audit=False, best_effort=False):
+def run_native(sequence, method, source=None, label=None, paced=True, audit=False, best_effort=False, pruning=False):
     import sc8_experiments as old
     source=source or CACHE/'data'/sequence
     run=CACHE/'runs'/(label or (sequence+'-'+method))
@@ -148,20 +148,32 @@ def run_native(sequence, method, source=None, label=None, paced=True, audit=Fals
     if paced:args+=['--paced']
     if audit:args+=['--engineering-audit']
     if best_effort:args+=['--research-best-effort']
+    if pruning:args+=['--research-eligibility-pruning']
+    identity_before=dict(binary_sha256=common.sha256(BIN/'nominal_dataset_runner'),dso_sha256=common.sha256(BIN.parent/'libuwb_imu_pl.so'))
     begin=time.monotonic();before=resource.getrusage(resource.RUSAGE_CHILDREN)
     with (run/'process.log').open('w') as log:
         proc=subprocess.Popen(args,env=dict(environment(),UWB_IMU_PL_CANDIDATE_WORKERS='1'),stdout=log,stderr=subprocess.STDOUT)
-        try:code=proc.wait(timeout=1200);status='FINISHED'
-        except subprocess.TimeoutExpired:
-            proc.terminate()
-            try:proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:proc.kill();proc.wait()
-            code=proc.returncode;status='RESOURCE_LIMIT'
+        sampled_rss_kib=0;status='FINISHED'
+        while proc.poll() is None:
+            try:
+                lines=Path('/proc')/str(proc.pid)/'status'
+                rss=next(int(x.split()[1]) for x in lines.read_text().splitlines() if x.startswith('VmRSS:'))
+                sampled_rss_kib=max(sampled_rss_kib,rss)
+            except (OSError,StopIteration):pass
+            if time.monotonic()-begin>1200 or sampled_rss_kib*1024>7*1024**3:
+                status='RESOURCE_LIMIT';proc.terminate()
+                try:proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:proc.kill();proc.wait()
+                break
+            time.sleep(.2)
+        code=proc.returncode
+        if code and status=='FINISHED':status='FAIL'
     after=resource.getrusage(resource.RUSAGE_CHILDREN)
     result=dict(command=args,returncode=code,status=status,wall_s=time.monotonic()-begin,
         cpu_s=after.ru_utime+after.ru_stime-before.ru_utime-before.ru_stime,
         sensor_hash=sensor_hash(source),binary_sha256=common.sha256(BIN/'nominal_dataset_runner'),
-        dso_sha256=common.sha256(BIN.parent/'libuwb_imu_pl.so'))
+        dso_sha256=common.sha256(BIN.parent/'libuwb_imu_pl.so'),sampled_rss_kib=sampled_rss_kib,identity_before=identity_before)
+    assert result['binary_sha256']==identity_before['binary_sha256'] and result['dso_sha256']==identity_before['dso_sha256']
     save(run/'execution.json',result)
     print(sequence,method,status,code,flush=True)
     return result
@@ -219,6 +231,7 @@ def summarize_native(run, sequence):
         x=np.asarray(x);x=x[np.isfinite(x)]
         return dict(zip(['p50','p95','p99','max'],map(float,np.sort(x)[np.maximum(0,np.ceil(np.array([.5,.95,.99,1])*len(x)).astype(int)-1)]))) if len(x) else None
     status=json.loads((run/'run_status.json').read_text()) if (run/'run_status.json').exists() else {}
+    execution=json.loads((run/'execution.json').read_text())
     return dict(raw_planned=int(u.source_message.nunique()),planned_valid=len(planned),eligible_planned=len(ready),
         startup=int((planned<=boot['timestamp_s']).sum()),after_imu_end=int((planned>imu.t.max()).sum()),
         wholly_invalid=int(u.source_message.nunique()-len(planned)),attempted=len(a),committed=len(c),
@@ -228,7 +241,9 @@ def summarize_native(run, sequence):
         statuses={str(k):int(v) for k,v in a.fde_status.value_counts().items()},
         core_ms=stats(a.core_ms),sink_ms=stats(a.measurement_to_sink_ms),
         queue_ms=stats(np.maximum(0,a.measurement_to_sink_ms-a.core_ms)),
-        cpu_s=status.get('cpu_ms',0)/1000,peak_rss_kib=status.get('peak_rss_kib'),
+        cpu_s=status['cpu_ms']/1000 if 'cpu_ms' in status else execution['cpu_s'],peak_rss_kib=status.get('peak_rss_kib',execution.get('sampled_rss_kib')),
+        rss_scope='native process peak' if 'peak_rss_kib' in status else 'sampled RSS lower bound',
+        source_complete=len(a)==len(ready),status=execution['status'],
         service_RTF=float(a.core_ms.sum()/1000/(imu.t.max()-imu.t.min())),
         physical_APE=None,physical_ARE=None,physical_RPE=None,reference='REFERENCE_OPEN',raw_qualified=False)
 
@@ -374,8 +389,195 @@ def sfuise_summary():
     print(json.dumps(results,indent=2))
 
 
+def local():
+    source=CACHE/'profile-input'
+    run_native('ISAS-Walk2','FDE',source,'profile-pruned',paced=False,audit=True,pruning=True)
+    left=CACHE/'runs/profile-original';right=CACHE/'runs/profile-pruned'
+    a=pd.read_csv(left/'attempts.csv');b=pd.read_csv(right/'attempts.csv')
+    fields=['batch','t','committed','backend_updates','transaction_id','action_id','action','fde_status',
+            'detector_valid','detector_passed','detector_statistic','detector_threshold','detector_dof',
+            'base_graph_version','history_removed_groups','history_added_groups','bridge_active','bridge_epochs','reinit_required','internal_protected_output']
+    pd.testing.assert_frame_equal(a[fields],b[fields],check_exact=True)
+    pd.testing.assert_frame_equal(pd.read_csv(left/'states.csv'),pd.read_csv(right/'states.csv'),check_exact=True)
+    for name in ('factor_ledger.csv','transactions.csv','health.csv','bridge.csv'):
+        x=pd.read_csv(left/'native_audit'/name);y=pd.read_csv(right/'native_audit'/name)
+        # Counters/time metadata may differ, ledger source IDs and all native receipts cannot.
+        pd.testing.assert_frame_equal(x,y,check_exact=True)
+    x=pd.read_csv(left/'native_audit/candidates.csv');y=pd.read_csv(right/'native_audit/candidates.csv')
+    identity=['timestamp_ns','window_id','action_id','action_type','physical_source_ids','removed_group_ids','added_group_ids','bridge_mode','cardinality','selected']
+    pd.testing.assert_frame_equal(x[identity],y[identity],check_exact=True)
+    d=pd.read_csv(right/'native_audit/diagnostic_candidates.csv')
+    skip=d.skip_reason.eq('SKIPPED_INELIGIBLE')
+    assert skip.any() and not d.loc[skip,'kernel_evaluated'].any()
+    numeric=['valid','post_detector_passed','rank','dof','hpl_m','vpl_m','risk_allocation','information_logdet']
+    pd.testing.assert_frame_equal(x.loc[~skip,numeric],y.loc[~skip,numeric],check_exact=True)
+    save(CACHE/'pruning_equivalence.json',dict(status='PASS',attempts=len(a),native_commits=int(a.committed.sum()),
+        actions=len(x),not_solved=int(skip.sum()),exact=fields+identity+['states15D','ledger','transactions','health','bridge'],
+        core_before_ms=float(a.core_ms.sum()),core_after_ms=float(b.core_ms.sum())))
+    run_native('ISAS-Walk2','FDE',source,'profile-best-effort',paced=False,audit=True,pruning=True,best_effort=True)
+    c=pd.read_csv(CACHE/'runs/profile-best-effort/attempts.csv')
+    fallback=c.estimation_outcome.eq('UNPROTECTED_BEST_EFFORT')
+    assert (c.backend_updates==1).all() and c.transaction_id.is_unique and c.t.is_unique
+    assert not c.internal_protected_output.any()
+    assert (c.loc[c.fde_transaction_id!=c.transaction_id,'fde_backend_updates']==0).all()
+    save(CACHE/'best_effort_local.json',dict(status='PASS',attempts=len(c),commits=int(c.committed.sum()),
+        outcomes=c.estimation_outcome.value_counts().astype(int).to_dict(),fde_status=c.fde_status.value_counts().astype(int).to_dict()))
+
+
+def continuous():
+    for seq in ('ISAS-Walk2','ISAS-Walk3'):
+        run_native(seq,'FDE',label=seq+'-FDE-RESEARCH',audit=True,pruning=True,best_effort=True)
+
+
+def paired():
+    for seq,cases in [('ISAS-Walk2',['U','A','G','J']),('ISAS-Walk3',['J'])]:
+        for case in cases:
+            source=CACHE/'injected'/(seq+'-'+case)
+            for method in ('NOFDE','FDE'):
+                run_native(seq,method,source,seq+'-'+case+'-'+method,audit=method=='FDE',pruning=method=='FDE',best_effort=method=='FDE')
+
+
+def extended_summary(run, sequence):
+    from collections import Counter
+    result=summarize_native(run,sequence)
+    a=pd.read_csv(run/'attempts.csv')
+    if 'estimation_outcome' in a:
+        result['outcomes']={str(k):int(v) for k,v in a.estimation_outcome.value_counts().items()}
+        result['actual_fde_recovery']=int(a.estimation_outcome.eq('ACTUAL_FDE_RECOVERY').sum())
+        result['fde_rejected_nominal_continued']=int(((a.fde_backend_updates==0)&(a.committed==1)).sum())
+    else:result['actual_fde_recovery']=0
+    result['alarm_count']=int(((a.detector_valid==1)&(a.detector_passed==0)).sum())
+    result['input_identity']=json.loads((run/'execution.json').read_text())
+    result['first_state']=pd.read_csv(run/'states.csv').iloc[0].to_dict()
+    result['last_state']=pd.read_csv(run/'states.csv').iloc[-1].to_dict()
+    audit=run/'native_audit'
+    if audit.exists():
+        d=pd.read_csv(audit/'diagnostic_attempts.csv')
+        result['census']={k:int(d[k].sum()) for k in ['generated_actions','kernel_evaluated_actions','pl_evaluated_actions','selected_actions',
+            'base_svd','base_llt','candidate_reference_svd','candidate_inner_llt','imu_oracle_reintegrations']}
+        result['hypotheses_max']=int(d.hypothesis_count.max())
+        result['risk_reasons']=dict(Counter(d.risk_ledger_terms.fillna('NA')))
+        result['primary_failures']=dict(Counter(d.primary_failure.fillna('NONE')))
+        s=pd.read_csv(audit/'diagnostic_stages.csv')
+        exclusive=s[~s.stage.str.startswith(('window_','candidate_batch_'))&s.stage.ne('core_total')]
+        costs=exclusive.groupby('stage').wall_ms.sum()
+        costs['wrapper_logging_fallback_and_unassigned']=float(a.core_ms.sum()-costs.sum())
+        assert costs['wrapper_logging_fallback_and_unassigned']>=0
+        result['exclusive_mean_ms']={str(k):float(v/len(a)) for k,v in costs.items()}
+        causes=Counter();selected=0;skipped=0;candidate_ids=0;rank=Counter();dofs=Counter()
+        for c in pd.read_csv(audit/'diagnostic_candidates.csv',chunksize=10000):
+            causes.update(c.skip_reason.fillna('NONE'));skipped+=int(c.skip_reason.eq('SKIPPED_INELIGIBLE').sum())
+        for c in pd.read_csv(audit/'candidates.csv',usecols=['selected','rank','dof','valid','post_detector_passed'],chunksize=10000):
+            candidate_ids+=len(c);selected+=int(c.selected.sum());rank.update(c['rank']);dofs.update(c.dof)
+        result['candidate_results']=dict(records=candidate_ids,selected=selected,not_solved=skipped,
+            terminal_counts=dict(causes),rank_counts={str(k):int(v) for k,v in rank.items()},dof_counts={str(k):int(v) for k,v in dofs.items()})
+    # Sparse plot samples retain first/last and every eighth actual receipt.
+    result['timeline']=[dict(t=float(row.t),commit=int(row.committed),alarm=int(row.detector_valid==1 and row.detector_passed==0),
+        core_ms=float(row.core_ms),queue_ms=float(max(0,row.measurement_to_sink_ms-row.core_ms)),status=row.fde_status)
+        for row in a.iloc[sorted(set([0,len(a)-1]+list(range(0,len(a),8))))].itertuples()]
+    return result
+
+
+def evaluate():
+    results={}
+    for seq in ('ISAS-Walk2','ISAS-Walk3'):
+        for method in ('NOM','NOFDE','FDE-RESEARCH'):
+            run=CACHE/'runs'/(seq+'-'+method)
+            if (run/'execution.json').exists():results[run.name]=extended_summary(run,seq)
+    for seq,cases in [('ISAS-Walk2',['U','A','G','J']),('ISAS-Walk3',['J'])]:
+        for case in cases:
+            pair={}
+            for method in ('NOFDE','FDE'):
+                run=CACHE/'runs'/(seq+'-'+case+'-'+method)
+                if not (run/'execution.json').exists():continue
+                result=extended_summary(run,seq)
+                injection=json.loads((CACHE/'injected'/(seq+'-'+case)/'injection.json').read_text())
+                result['injection']=injection
+                a=pd.read_csv(run/'attempts.csv');episodes=[]
+                for e in injection['episodes']:
+                    ep=dict(e);active=a[(a.t>=e['begin_s'])&(a.t<=e['end_s']+.1)]
+                    after=a[a.t>e['end_s']+.1]
+                    ep.update(observed=bool(len(a) and a.max_sensor_stamp_used.max()>=e['end_s']),
+                        activity_attempts=len(active),activity_commits=int(active.committed.sum()),
+                        alarm_attempts=int(((active.detector_valid==1)&(active.detector_passed==0)).sum()),
+                        actual_recovery_commits=int(active.estimation_outcome.eq('ACTUAL_FDE_RECOVERY').sum()) if 'estimation_outcome' in active else 0,
+                        bridge_commits=int(((active.bridge_active==1)&(active.committed==1)).sum()),
+                        post_commits=int(after.committed.sum()),physical_phase_APE=None,physical_phase_ARE=None,physical_phase_RPE=None)
+                    # A detector alarm is not support-correct isolation. A nonzero
+                    # action requires manual native source-ledger verification.
+                    ep['correct_exclusion']='OPEN_NEEDS_NATIVE_SUPPORT_REVIEW' if ep['actual_recovery_commits'] else False
+                    ep['rejoin']='OPEN_NO_LEGAL_ISOLATION_RECEIPT' if not ep['bridge_commits'] else 'REVIEW_NATIVE_BRIDGE'
+                    episodes.append(ep)
+                result['episodes']=episodes;results[run.name]=result;pair[method]=result
+            if len(pair)==2:
+                assert pair['FDE']['input_identity']['sensor_hash']==pair['NOFDE']['input_identity']['sensor_hash']
+                left=pd.read_csv(CACHE/'runs'/(seq+'-'+case+'-NOFDE')/'states.csv')
+                right=pd.read_csv(CACHE/'runs'/(seq+'-'+case+'-FDE')/'states.csv')
+                common=left.merge(right,on='t',suffixes=('_off','_on'))
+                maxdiff=max(float(np.max(np.abs(common[k+'_off']-common[k+'_on']))) for k in left.columns if k!='t') if len(common) else None
+                results[seq+'-'+case+'-FDE']['paired_state_diagnostic']=dict(n=len(common),maximum_component_difference=maxdiff,
+                    label='state difference only, not physical accuracy or FDE recovery')
+    save(CACHE/'evaluation.json',results)
+    print('evaluated',len(results),'actual runs; absent runs remain unexecuted')
+
+
+def figures(results):
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({'font.size':9,'svg.fonttype':'none'})
+    out=REPORT.parent
+    colors={'NOM':'#56B4E9','NOFDE':'#777777','FDE-RESEARCH':'#0072B2'}
+    fig,axs=plt.subplots(1,2,figsize=(10,4.5),layout='constrained')
+    for ax,seq in zip(axs,('ISAS-Walk2','ISAS-Walk3')):
+        methods=['NOM','NOFDE','FDE-RESEARCH'];data=[results[seq+'-'+m] for m in methods]
+        bars=ax.bar(methods,[100*x['coverage_all_valid'] for x in data],color=[colors[m] for m in methods])
+        for bar,x in zip(bars,data):ax.text(bar.get_x()+bar.get_width()/2,bar.get_height()+1,f"{x['committed']}/{x['planned_valid']}",ha='center')
+        ax.axhline(95,color='black',ls='--',lw=.8);ax.set_ylim(0,115);ax.set_title(seq)
+        ax.set_ylabel('Native commits / all valid planned batches (%)')
+        ax.text(.5,.47,'Physical APE / ARE / RPE: NA\nTracker–IMU/tag reference OPEN',transform=ax.transAxes,ha='center',bbox=dict(facecolor='white',edgecolor='.7'))
+        sf=json.loads((CACHE/'sfuise_summary.json').read_text())[seq]
+        ax.text(.5,.20,f"SFUISE: online {sf['online_n']}, history {sf['final_n']} states\nDifferent output rate / initialization; no count ranking",transform=ax.transAxes,ha='center')
+    fig.suptitle('Walk full-recording output coverage — ordinary estimates are not FDE recovery')
+    fig.savefig(out/'walk_coverage.svg');plt.close(fig)
+
+    cases=[('ISAS-Walk2',c) for c in ['U','A','G','J']]+[('ISAS-Walk3','J')]
+    fig,axs=plt.subplots(len(cases),1,figsize=(10,7.5),sharex=True,layout='constrained')
+    for ax,(seq,case) in zip(axs,cases):
+        key=seq+'-'+case+'-FDE';r=results[key];a=pd.read_csv(CACHE/'runs'/key/'attempts.csv')
+        ax.scatter(a.t,np.full(len(a),.25),c=np.where(a.committed==1,'#56B4E9','#999999'),s=2,label='ordinary commit / refusal')
+        alarm=a[(a.detector_valid==1)&(a.detector_passed==0)]
+        ax.scatter(alarm.t,np.full(len(alarm),.65),s=3,color='#CC79A7',label='alarm')
+        recovery=a[a.estimation_outcome=='ACTUAL_FDE_RECOVERY']
+        if len(recovery):ax.scatter(recovery.t,np.full(len(recovery),1),s=15,marker='x',color='#009E73',label='actual action')
+        for ep in r['episodes']:
+            end=ep['end_s'] if ep['end_s']>ep['begin_s'] else ep['begin_s']+.06
+            ax.axvspan(ep['begin_s'],end,alpha=.3,color='#D55E00' if ep['sensor']=='UWB' else '#E69F00')
+        ax.set_ylim(0,1.2);ax.set_yticks([.25,.65,1],['commit','alarm','isolation']);ax.set_ylabel(seq[-1]+': '+case)
+        ax.text(.99,.78,f"recovery commits={r['actual_fde_recovery']}; physical errors NA",ha='right',transform=ax.transAxes)
+    axs[-1].set_xlabel('Source time (s); orange=IMU injection, red=UWB injection')
+    fig.suptitle('Registered added faults and native outcomes — no inferred recovery from best-effort')
+    fig.savefig(out/'walk_fault_timeline.svg');plt.close(fig)
+
+    fig,axs=plt.subplots(1,3,figsize=(13,4.4),layout='constrained')
+    for n,seq in enumerate(('ISAS-Walk2','ISAS-Walk3')):
+        r=results[seq+'-FDE-RESEARCH'];cost=r['exclusive_mean_ms'];bottom=0
+        groups={'window/prepare':sum(v for k,v in cost.items() if k in ['integrity_window','prepare']),
+            'hypothesis/model':sum(v for k,v in cost.items() if k in ['hypothesis_evidence','model_generation','current_sensitivity','historical_sensitivity']),
+            'action census':cost.get('health_actions',0),'candidate':cost.get('candidate_evaluation',0),
+            'other':sum(cost.values())-sum(v for k,v in cost.items() if k in ['integrity_window','prepare','hypothesis_evidence','model_generation','current_sensitivity','historical_sensitivity','health_actions','candidate_evaluation'])}
+        for label,value in groups.items():axs[0].bar(seq[-1],value,bottom=bottom,label=label if n==0 else None);bottom+=value
+        timeline=r['timeline'];axs[1].plot([x['t'] for x in timeline],[x['queue_ms']/1000 for x in timeline],label=seq)
+        for j,(status,count) in enumerate(r['statuses'].items()):
+            axs[2].barh(seq[-1]+' '+status,count)
+    axs[0].set(title='Exclusive mean service costs',ylabel='ms / attempted batch',xlabel='Walk');axs[0].legend(fontsize=7)
+    axs[1].set(title='Measured queue delay (sparse actual receipts)',xlabel='Source time (s)',ylabel='s');axs[1].legend()
+    axs[2].set(title='Native FDE status (all attempts)',xlabel='Count')
+    fig.suptitle('Engineering FDE runtime — raw PL / HMI probability: UNQUALIFIED')
+    fig.savefig(out/'walk_runtime.svg');plt.close(fig)
+
 def main():
-    p=argparse.ArgumentParser();p.add_argument('command',choices=['prepare','noninterference','baseline','sfuise','summarize','inject','cal-accel','profile','sfuise-summary']);args=p.parse_args()
-    {'prepare':prepare,'noninterference':noninterference,'baseline':baseline,'sfuise':sfuise_baseline,'summarize':summarize_baseline,'inject':inject,'cal-accel':cal_accel,'profile':profile,'sfuise-summary':sfuise_summary}[args.command]()
+    p=argparse.ArgumentParser();p.add_argument('command',choices=['prepare','noninterference','baseline','sfuise','summarize','inject','cal-accel','profile','sfuise-summary','local','continuous','paired','evaluate']);args=p.parse_args()
+    {'prepare':prepare,'noninterference':noninterference,'baseline':baseline,'sfuise':sfuise_baseline,'summarize':summarize_baseline,'inject':inject,'cal-accel':cal_accel,'profile':profile,'sfuise-summary':sfuise_summary,'local':local,'continuous':continuous,'paired':paired,'evaluate':evaluate}[args.command]()
 
 if __name__=='__main__':main()

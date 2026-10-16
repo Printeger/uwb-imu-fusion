@@ -60,3 +60,18 @@ SFUISE两条完整进程SUCCESS，官方剔除开启，GT topic=0；生成ROS ba
 S-FINAL按原样条支撑拒绝起始2点，未按误差筛选；历史依赖截止为整个最终导出的上界，不能解释为每点精确截止，也不参加在线延迟排名。SFUISE采用官方传感器初始化和在线重力/世界标定；ours采用相同原始观测的2秒因果初始化，两者初始化信息/时刻不同。所有物理APE/ARE/RPE仍NA。首条SF运行启动时audit-only runner编译尾部短暂重叠，运行性能需披露此环境扰动；不隐去慢值。
 
 W1源码/输入与名义结果已保存，继续W2。
+
+## W2：局部工程证据与实现（全录制验收进行中）
+
+原始 Walk2 源 batch 1–120（包含启动段）实际84次尝试，提交83：57次NO_VALID_CANDIDATE、26次RISK_BUDGET_INVALID、1次AMBIGUOUS_UNAVAILABLE。前83次本来就是KEEP_ALL_BEST_EFFORT，不是真正成功隔离。首次报警source batch120、t=9.853092670s，411个假设全部保留为plausible，生成412动作；原生coverage为210个COVERAGE_GAP、202个UNRECOVERABLE。不是“5 anchor必然无秩”或“所有拒绝都是测量故障”：原生联合窗口秩/自由度、旋转步长门限、覆盖和risk资格需分别看。
+
+该报警批原始core约12620.85ms。前缀candidate kernel总计16245ms、完整candidate阶段17383ms（后者包含前者，不能相加），core总计27599ms；原窗口构造也有实际成本。候选需要保持完整可疑集合覆盖，而当前集合不允许一个有限动作合法排除所有仍可能的故障；没有因此缩减故障集合或改概率。
+
+实现两项独立、默认关闭的研究开关，生产ROS默认路径不变：
+
+- `--research-eligibility-pruning`：完整生成动作ID、物理源和census。仅对冻结集合覆盖失败、mandatory health覆盖失败、history recoverability失败的动作跳过数值核与post/PL，记`SKIPPED_INELIGIBLE`，不伪记已求解。FdeManager的eligible集合要求这三项均成立，因此无论这些动作的数值、排名、tie或PL是多少，都不能进入winner排序或风险union；保留全部可能eligible动作的原始计算与严格fallback。不实现排序剪枝，不改变rank/tie阈值。研究开关强制关闭保护资格。外置object sidecar保持原pipeline对象ABI。
+- `--research-best-effort`：仅在FDE原事务已安全discard、backend更新为0、无pending/poison/reinitialization、无活动bridge、无quarantined/failed/recovery-test源，且拒绝为三种允许状态时，重新prepare同一原始batch并通过普通nominalPlan提交一次。检查backend总增量=1、源时间等于该batch。discard保留ADC队列，因此不补旧状态或改时间戳。原FDE事务和候选审计单独保留，新的普通receipt标`UNPROTECTED_BEST_EFFORT`，不称prior已修复或FDE已成功；异常、源缺口和必须隔离条件不被吞掉。
+
+9个确定性组合（不覆盖/mandatory/recoverability × favourable/tied/hostile数值）通过FdeManager对照小oracle。真实前缀剪枝与原始版：84次attempt、83次commit、495个动作身份及15D状态、保留候选数值、实际行动/拒绝、prior/bridge/ledger/health/事务逐值一致；412个动作明确未求解。core总计27.599→16.253s。这是局部调度结果，不推广成全流实时性。
+
+加best-effort的同一片段84/84提交，**84个全部未保护，实际FDE恢复0**。普通连续输出的验证不能抵扣WF12强UWB正确排除与IMU bridge/rejoin正例。完整Walk2/3及冻结额外故障继续执行；当前尚未授予W2完成等级。

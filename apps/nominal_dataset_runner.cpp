@@ -4,6 +4,7 @@
 #include "uwb_imu_pl/estimation/causal_initializer.hpp"
 #include "uwb_imu_pl/factors/realtime_factors.hpp"
 #include "uwb_imu_pl/integrity/integrity_monitor.hpp"
+#include "uwb_imu_pl/io/run_logger.hpp"
 #include <atomic>
 #include <thread>
 #include <memory>
@@ -401,7 +402,7 @@ int run(const boost::filesystem::path& config_path,
         const boost::filesystem::path& output,
         const std::string& tag_policy, bool export_historical,
         const std::string& oracle_times,
-        const std::string& pipeline_mode, bool paced, bool causal_bootstrap) {
+        const std::string& pipeline_mode, bool paced, bool causal_bootstrap, bool engineering_audit, bool research_best_effort, bool research_pruning) {
   const auto wall_start = Clock::now();
   const std::clock_t cpu_start = std::clock();
   boost::filesystem::create_directories(output);
@@ -415,6 +416,8 @@ int run(const boost::filesystem::path& config_path,
     auto config = uwb_imu_pl::IntegrityConfigLoader::load(config_path.string());
     if(pipeline_mode!="none" && ((pipeline_mode=="off") != (config.resolved_scope.profile==uwb_imu_pl::FdeProfile::Off)))
       throw std::invalid_argument("PIPELINE_REQUESTED_EFFECTIVE_PROFILE_MISMATCH");
+    if((research_best_effort || research_pruning) && pipeline_mode!="on")
+      throw std::invalid_argument("research-best-effort requires engineering FDE on");
     const YAML::Node manifest = YAML::LoadFile((input / "manifest.json").string());
     const std::uint64_t primary_tag = manifest["primary_tag"].as<std::uint64_t>();
     const bool prefer_below_anchors = manifest["bootstrap_prefer_below_anchors"]
@@ -432,6 +435,8 @@ int run(const boost::filesystem::path& config_path,
     NavigationState initial;
     Eigen::Matrix<double,15,1> initial_priors=config.realtime.prior_sigmas;
     const bool supplied_observation=bool(manifest["initial_observation"]);
+    if((research_best_effort || research_pruning) && supplied_observation)
+      throw std::invalid_argument("research-best-effort is only for unqualified real dataset input");
     const double source_begin=std::min(imu.front().timestamp.seconds(),ranges.front().time_s);
     sensor_duration_s=std::max(imu.back().timestamp.seconds(),ranges.back().time_s)-source_begin;
     const auto source_release_origin=Clock::now();
@@ -516,12 +521,15 @@ int run(const boost::filesystem::path& config_path,
       uwb_imu_pl::IntegrityMonitor monitor(config.risk,config.snapshot.rank_tolerance,
                                            config.snapshot.max_condition_number);
       pipeline=std::make_unique<uwb_imu_pl::RealtimeIntegrityPipeline>(&estimator,monitor);
+      pipeline->setResearchEligibilityPruning(research_pruning);
       pipeline_constructed=true;
     }
     // SC8 exports only empirical estimator states from this general pipeline.
     // Its Gaussian diagnostics never acquire SC7 raw-source qualification.
+    std::unique_ptr<uwb_imu_pl::RunLogger> audit_logger;
+    if(engineering_audit) audit_logger=std::make_unique<uwb_imu_pl::RunLogger>((output/"native_audit").string(),false,true);
     std::ofstream attempts((output/"attempts.csv").string());
-    attempts<<std::setprecision(17)<<"batch,t,committed,backend_updates,transaction_id,action_id,action,fde_status,core_ms,measurement_to_sink_ms,state_age_ms,max_sensor_stamp_used,published_wall_time,revision_index,scope,statistical_qualification,detector_valid,detector_passed,detector_statistic,detector_threshold,detector_dof,base_graph_version,history_removed_groups,history_added_groups,bridge_active,bridge_epochs,reinit_required,internal_protected_output\n";
+    attempts<<std::setprecision(17)<<"batch,t,committed,backend_updates,transaction_id,action_id,action,fde_status,core_ms,measurement_to_sink_ms,state_age_ms,max_sensor_stamp_used,published_wall_time,revision_index,scope,statistical_qualification,detector_valid,detector_passed,detector_statistic,detector_threshold,detector_dof,base_graph_version,history_removed_groups,history_added_groups,bridge_active,bridge_epochs,reinit_required,internal_protected_output,estimation_outcome,fde_transaction_id,fde_backend_updates\n";
     const auto release_origin=source_release_origin;
     const double sensor_origin=source_begin;
     // Independent publisher: immutable source availability advances on absolute
@@ -597,8 +605,46 @@ int run(const boost::filesystem::path& config_path,
       double prepare_wall=0,commit_wall=0;
       NavigationState predicted;
       uwb_imu_pl::IntegrityOutput pipeline_result;
+      const auto updates_before=estimator.backendUpdateCount();
+      std::uint64_t fde_transaction_id=0;
+      std::uint32_t fde_backend_updates=0;
+      bool research_fallback=false;
       if(pipeline) {
         pipeline_result=pipeline->processUwbBatch(batch);
+        fde_transaction_id=pipeline_result.transaction_id;
+        fde_backend_updates=pipeline_result.backend_updates;
+        // Preserve the rejected FDE transaction and its complete native census.
+        if(audit_logger){audit_logger->writeIntegrity(pipeline_result);audit_logger->flush();}
+        const auto health=pipeline->debugHealthSnapshot();
+        const bool health_allows_nominal=std::all_of(health.begin(),health.end(),[](const auto& h){
+          return h.state==uwb_imu_pl::HealthState::Healthy || h.state==uwb_imu_pl::HealthState::Suspect;
+        });
+        const bool recoverable_rejection=pipeline_result.fde_status=="RISK_BUDGET_INVALID" ||
+          pipeline_result.fde_status=="NO_VALID_CANDIDATE" || pipeline_result.fde_status=="AMBIGUOUS_UNAVAILABLE";
+        if(research_best_effort && !pipeline_result.batch_committed && recoverable_rejection &&
+           pipeline_result.backend_updates==0 && estimator.backendUpdateCount()==updates_before &&
+           !estimator.hasPendingEpoch() && !estimator.backendPoisoned() &&
+           !pipeline_result.controlled_reinitialization_required &&
+           pipeline->debugConsecutiveBridgeEpochs()==0 && health_allows_nominal) {
+          // Discard leaves ADC queue/boundary untouched. A fresh nominal
+          // transaction consumes that SAME batch once, with no protection or
+          // prior repair claim. Exceptions and mandatory exclusions never fall back.
+          auto tx=estimator.prepareEpoch(batch,EpochPreparationOptions::nominalOnly());
+          auto plan=EpochCommitPlan::nominalPlan(tx);
+          plan.best_effort_integrity_unavailable=true;
+          const auto receipt=estimator.commitEpoch(std::move(tx),plan);
+          if(receipt.backend_updates!=1 || estimator.backendUpdateCount()!=updates_before+1 ||
+             receipt.state_timestamp!=batch.timestamp)
+            throw std::logic_error("research fallback single-commit/source-time invariant failed");
+          pipeline_result.batch_committed=true;
+          pipeline_result.backend_updates=receipt.backend_updates;
+          pipeline_result.transaction_id=receipt.transaction_id.value();
+          pipeline_result.selected_action_id=0;
+          pipeline_result.selected_action_type="KEEP_ALL_BEST_EFFORT";
+          pipeline_result.publication.protected_output=false;
+          pipeline_result.protection_level.formal_eligible=false;
+          research_fallback=true;
+        }
       } else {
         const auto prepare_start = Clock::now();
         auto transaction = estimator.prepareEpoch(batch, EpochPreparationOptions::nominalOnly());
@@ -638,7 +684,13 @@ int run(const boost::filesystem::path& config_path,
       write_ids(pipeline_result.historical_groups_removed);attempts<<',';write_ids(pipeline_result.historical_groups_added);
       attempts<<','<<(pipeline_result.bridge_audit ? pipeline_result.bridge_audit->active : false)<<','
         <<(pipeline_result.bridge_audit ? pipeline_result.bridge_audit->consecutive_epochs : 0)<<','
-        <<pipeline_result.controlled_reinitialization_required<<','<<pipeline_result.publication.protected_output<<'\n';
+        <<pipeline_result.controlled_reinitialization_required<<','<<pipeline_result.publication.protected_output<<','
+        <<(research_fallback || pipeline_result.selected_action_type=="KEEP_ALL_BEST_EFFORT" ? "UNPROTECTED_BEST_EFFORT" :
+           !pipeline_result.batch_committed ? "FDE_REJECTED" :
+           pipeline_result.fde_status=="FDE_DISABLED" ? "FDE_DISABLED" :
+           pipeline_result.fde_status=="NOMINAL_ONLY" ? "NOMINAL_ONLY" :
+           pipeline_result.fde_status.find("SUCCESS_")==0 && pipeline_result.selected_action_type!="KEEP_ALL" ? "ACTUAL_FDE_RECOVERY" : "FDE_NO_TRIGGER")
+        <<','<<fde_transaction_id<<','<<fde_backend_updates<<'\n';
       attempts.flush();
       if(!pipeline_result.batch_committed)continue;
       const double epoch_total=elapsedMs(epoch_start);
@@ -742,10 +794,14 @@ int main(int argc, char** argv) {
   po::options_description options("nominal_dataset_runner");
   std::string config, input, output, tag_policy;
   std::string oracle_times,pipeline_mode;
+  bool engineering_audit=false,research_best_effort=false,research_pruning=false;
   bool paced=false,causal_bootstrap=false;
   bool export_historical=false;
   options.add_options()
       ("help,h", "show help")
+      ("research-eligibility-pruning", po::bool_switch(&research_pruning), "research only: skip numerics for proven selection-ineligible actions")
+      ("research-best-effort", po::bool_switch(&research_best_effort), "research only: unprotected nominal commit after safe FDE rejection")
+      ("engineering-audit", po::bool_switch(&engineering_audit), "export native candidate/stage/ledger diagnostics; observer only")
       ("pipeline-mode", po::value<std::string>(&pipeline_mode)->default_value("none"), "SC8 empirical general pipeline on/off; config profile must agree")
       ("paced",po::bool_switch(&paced),"independent absolute sensor-time release")
       ("causal-bootstrap",po::bool_switch(&causal_bootstrap),"same sensor-only initializer for all SC8 general pipeline profiles")
@@ -765,7 +821,7 @@ int main(int argc, char** argv) {
       throw std::invalid_argument("tag-policy must be primary or all");
     if(pipeline_mode!="none" && pipeline_mode!="on" && pipeline_mode!="off")
       throw std::invalid_argument("pipeline-mode must be none/on/off");
-    return run(config, input, output, tag_policy, export_historical, oracle_times,pipeline_mode,paced,causal_bootstrap);
+    return run(config, input, output, tag_policy, export_historical, oracle_times,pipeline_mode,paced,causal_bootstrap,engineering_audit,research_best_effort,research_pruning);
   } catch (const std::exception& error) {
     std::cerr << error.what() << "\n" << options << '\n';
     return 2;

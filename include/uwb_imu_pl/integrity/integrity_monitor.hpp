@@ -127,6 +127,9 @@ class RealtimeIntegrityPipeline {
                             PublicationLimits publication_limits =
                                 PublicationLimits{});
   ~RealtimeIntegrityPipeline();
+  // Explicit research-only scheduling. Does not change action generation,
+  // eligibility, selection or risk; forces publication unqualified. Default off.
+  void setResearchEligibilityPruning(bool enabled);
   void ingestImu(const ImuMeasurement& measurement);
   IntegrityOutput processUwbBatch(const UwbBatch& batch);
   IntegrityOutput processUwbBatch(const UwbBatch& batch,

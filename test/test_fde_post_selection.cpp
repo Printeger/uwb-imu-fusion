@@ -287,3 +287,46 @@ TEST(FdePostSelection, Fde05SharedReferenceGroupsAndDistinctReferences) {
 }
 
 }  // namespace
+
+// Walk research scheduling oracle: numerical values of an action that cannot
+// cover frozen required support cannot affect the legal winner or risk union.
+// Exercise favourable/hostile/tied values, mandatory support and recovery gates.
+#include "uwb_imu_pl/integrity/fde_manager.hpp"
+TEST(WalkResearchEligibility, IneligibleNumericsCannotChangeDecision) {
+  using namespace uwb_imu_pl;
+  DetectorResultV2 detector; detector.numerically_valid=true; detector.passed=false;
+  FaultHypothesisV2 h; h.id=HypothesisId(1); h.modes={FaultModeId(11)};
+  FaultModeEvidence e; e.hypothesis=h.id; e.plausible=true;
+  e.profile_valid=true; e.profile_j=1.; e.parameter_dimension=1;
+  e.unit_kind=FaultUnitKind::UwbRangeMeters;
+  for(int gate=0;gate<3;++gate) for(double score:{0.,1.,1e6}) {
+    CandidateEvaluation good,bad;
+    good.action.id=ExclusionActionId(1);good.action.covered_modes=h.modes;
+    good.action.groups_to_remove={FactorGroupId(21)};
+    good.valid=good.post_detector_passed=true;good.hpl_m=good.vpl_m=1.;
+    bad=good;bad.action.id=ExclusionActionId(2);bad.hpl_m=bad.vpl_m=score;
+    if(gate==0)bad.action.covered_modes.clear();
+    if(gate==1)bad.action.groups_to_remove.clear();
+    if(gate==2)bad.action.recoverability=HistoryRecoverability::MissingProvenance;
+    std::vector<CandidateEvaluation> full{good,bad},skip=full;
+    skip[1].valid=false;skip[1].post_detector_passed=false;
+    skip[1].hpl_m=skip[1].vpl_m=std::numeric_limits<double>::infinity();
+    const std::vector<FactorGroupId> mandatory{FactorGroupId(21)};
+    FdeRiskDecisionV1 risk_a,risk_b;FdeDecisionContextV1 ctx_a,ctx_b;
+    ctx_a.risk_result=&risk_a;ctx_b.risk_result=&risk_b;
+    const auto a=FdeManager().decide(detector,{h},{e},&full,mandatory,RiskBudgetV2{},&ctx_a);
+    const auto b=FdeManager().decide(detector,{h},{e},&skip,mandatory,RiskBudgetV2{},&ctx_b);
+    EXPECT_EQ(a.status,b.status);EXPECT_EQ(a.reason,b.reason);
+    EXPECT_EQ(a.commit_allowed,b.commit_allowed);
+    EXPECT_EQ(a.selected_action.has_value(),b.selected_action.has_value());
+    if(a.selected_action && b.selected_action) {
+      EXPECT_EQ(a.selected_action->id,b.selected_action->id);
+    }
+    EXPECT_EQ(a.plausible_hypotheses.size(),1u);
+    EXPECT_TRUE(full[0].covers_plausible_set);
+    EXPECT_EQ(a.plausible_hypotheses,b.plausible_hypotheses);
+    EXPECT_EQ(risk_a.terms,risk_b.terms);
+    EXPECT_EQ(risk_a.complete_bound_closes,risk_b.complete_bound_closes);
+    EXPECT_FALSE(full[1].selected);EXPECT_FALSE(skip[1].selected);
+  }
+}
