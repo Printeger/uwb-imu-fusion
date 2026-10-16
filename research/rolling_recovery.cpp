@@ -79,13 +79,31 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
  RollingFdeAssessment result;result.plan=EpochCommitPlan::nominalPlan(tx);
  if(monitor.open!=policy_.open)throw std::invalid_argument("RECOVERY_CERTIFICATE_MODE_MIX");
  auto assessment=monitor.state;
+ if(actual_time_!=bool(monitor.original_time))throw std::invalid_argument("RECOVERY_TIME_MODEL_MIX");
+ if(actual_time_){
+  EpochSources sources;sources.epoch=tx.proposed_epoch;sources.begin=tx.begin;sources.end=tx.end;
+  for(const auto& sample:tx.raw_imu_slice){const auto time=monitor.original_time(sample.id);
+   if(sample.timestamp<time)throw std::invalid_argument("RECOVERY_PARENT_FUTURE");
+   if(sources.parents.empty() || sources.parents.back().first!=sample.id)sources.parents.emplace_back(sample.id,time);
+  }
+  if(sources.parents.empty() || (!timeline_.empty() && (timeline_.back().epoch+1!=sources.epoch || timeline_.back().end!=sources.begin)))
+   throw std::invalid_argument("RECOVERY_EPOCH_SOURCE_GAP");
+  pending_sources_=std::move(sources);
+ }
+ auto dependency=[&]()->size_t{
+  if(!actual_time_)return size_t((quarantine_begin_.value()-5000000)/50000000+1);
+  if(!timeline_.empty() && timeline_.front().epoch>1 && quarantine_begin_<timeline_.front().parents.front().second)return 0;
+  auto touches=[&](const EpochSources& source){return std::any_of(source.parents.begin(),source.parents.end(),[&](const auto& p){return !(p.second<quarantine_begin_) && p.second<quarantine_end_;});};
+  for(const auto& source:timeline_)if(touches(source))return source.epoch;
+  return tx.proposed_epoch;
+ };
  if(policy_.open && fde && monitor.alert_generation && monitor.alert_generation!=alert_generation_){
   // Re-arm only numerical recovery for this new observed support. The
   // source event, automaton histories, raw p/v/R/bias and prior repair records
   // stay on their original global clock; this is not a healthy new task.
   alert_generation_=monitor.alert_generation;isolated_=false;
   quarantine_begin_=TimestampNs(0);quarantine_end_=TimestampNs(0);
-  observed_anchor_.reset();observed_uwb_onset_=0;held_anchor_.reset();held_until_=0;
+  if(!actual_time_){observed_anchor_.reset();observed_uwb_onset_=0;held_anchor_.reset();held_until_=0;}
   open_pending_=true;
  }
  if(policy_.open && open_pending_)assessment.alarm=true;
@@ -109,27 +127,34 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
  auto all=candidate(-1);bool uwb_alarm=all.gaussian.statistic>all.gaussian.threshold;result.uwb_alarm=uwb_alarm;if(uwb_alarm)result.uwb_alarm_time=Clock::now();
  int detected=-1;
  if(uwb_alarm){double best=INFINITY;for(int mask:masks){if(mask<0)continue;auto c=candidate(mask);if(c.gaussian.statistic<=c.gaussian.threshold && c.gaussian.statistic<best){best=c.gaussian.statistic;detected=mask;}}}
- if(detected>=0){observed_anchor_=tx.uwb_batch.measurements.at(detected).anchor_id;if(!observed_uwb_onset_)observed_uwb_onset_=tx.proposed_epoch;}
+ if(detected>=0){if(actual_time_ && observed_uwb_repaired_)observed_uwb_onset_=0;observed_uwb_repaired_=false;observed_anchor_=tx.uwb_batch.measurements.at(detected).anchor_id;if(!observed_uwb_onset_)observed_uwb_onset_=tx.proposed_epoch;}
  if(!fde){result.status=assessment.alarm || uwb_alarm?"DETECTION_HELD":"KEEP";result.recovery="FDE_DISABLED";return result;}
  if(policy_.open && history_unavailable_){result.status="RECOVERY_OUT_OF_BUFFER";result.recovery="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE";return result;}
  auto rowFor=[&](const std::optional<AnchorId>& anchor){if(anchor)for(int mask:masks)if(mask>=0 && tx.uwb_batch.measurements[mask].anchor_id==*anchor)return mask;return -1;};
  const int held_row=rowFor(held_anchor_),observed_row=rowFor(observed_anchor_);
- bool held=held_anchor_.has_value() && tx.proposed_epoch<=held_until_;
+ result.held_source_present=held_row>=0;
+ bool held=held_anchor_.has_value() && (actual_time_?held_remaining_>0:tx.proposed_epoch<=held_until_);
  // A retired alarm does not make the previous shared PIM endpoint healthy.
  // Keep the inferred support until no physical sample of this PIM overlaps.
- auto touches_quarantine=[&]{return std::any_of(tx.raw_imu_slice.begin(),tx.raw_imu_slice.end(),[&](const auto& m){return !(m.timestamp<quarantine_begin_) && m.timestamp<quarantine_end_;});};
+ auto touches_quarantine=[&]{return std::any_of(tx.raw_imu_slice.begin(),tx.raw_imu_slice.end(),[&](const auto& m){const auto time=actual_time_?monitor.original_time(m.id):m.timestamp;return !(time<quarantine_begin_) && time<quarantine_end_;});};
  bool bridge=(assessment.alarm && !isolated_) || (isolated_ && touches_quarantine());
  if(assessment.alarm){
   if(quarantine_begin_.value()==0 || assessment.union_begin<quarantine_begin_)quarantine_begin_=assessment.union_begin;
   if(quarantine_end_<assessment.union_end)quarantine_end_=assessment.union_end;
-  bridge=!isolated_ || std::any_of(tx.raw_imu_slice.begin(),tx.raw_imu_slice.end(),[&](const auto& m){return !(m.timestamp<quarantine_begin_) && m.timestamp<quarantine_end_;});
-  result.first_dependency=size_t((quarantine_begin_.value()-5000000)/50000000+1);
+  bridge=!isolated_ || std::any_of(tx.raw_imu_slice.begin(),tx.raw_imu_slice.end(),[&](const auto& m){const auto time=actual_time_?monitor.original_time(m.id):m.timestamp;return !(time<quarantine_begin_) && time<quarantine_end_;});
+  result.first_dependency=dependency();
  }
- if(bridge && !result.first_dependency)result.first_dependency=size_t((quarantine_begin_.value()-5000000)/50000000+1);
- const bool historical_range=observed_anchor_.has_value() && !isolated_ && observed_uwb_onset_<tx.proposed_epoch;
+ if(bridge && !result.first_dependency)result.first_dependency=dependency();
+ const bool historical_range=observed_anchor_.has_value() && (!actual_time_ || !observed_uwb_repaired_) && !isolated_ && observed_uwb_onset_<tx.proposed_epoch;
  if(bridge && !isolated_){
   auto first=result.first_dependency;if(historical_range)first=std::min(first,observed_uwb_onset_);
-  if(replay.empty() || replay.front().timestamp.value()>int64_t(first-1)*50000000LL || replay.back().timestamp!=tx.end){
+  bool replay_complete=false;
+  if(actual_time_ && first){
+   const EpochSources* required=&*pending_sources_;for(const auto& source:timeline_)if(source.epoch==first)required=&source;
+   auto has=[&](MeasurementId id){return std::any_of(replay.begin(),replay.end(),[&](const auto& raw){return raw.id==id;});};
+   replay_complete=has(required->parents.front().first) && has(pending_sources_->parents.back().first);
+  }else if(!actual_time_)replay_complete=!replay.empty() && replay.front().timestamp.value()<=int64_t(first-1)*50000000LL && replay.back().timestamp==tx.end;
+  if(!replay_complete){
    if(policy_.open)history_unavailable_=true;
    result.status="RECOVERY_OUT_OF_BUFFER";result.recovery="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE";return result;
   }
@@ -151,7 +176,7 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
  }
  if(selected==-2)throw std::runtime_error("NO_COMPLETE_POST_PASSED_ROLLING_ACTION");
  result.excluded=selected;result.current_bridge=bridge;
- if(selected>=0){result.excluded_source=tx.uwb_batch.measurements.at(selected).anchor_id;omitRange(tx,result.plan,*result.excluded_source);held_anchor_=result.excluded_source;if(uwb_alarm)held_until_=tx.proposed_epoch+2;}
+ if(selected>=0){result.excluded_source=tx.uwb_batch.measurements.at(selected).anchor_id;omitRange(tx,result.plan,*result.excluded_source);held_anchor_=result.excluded_source;if(uwb_alarm){held_until_=tx.proposed_epoch+2;if(actual_time_)held_remaining_=2;}}
  else if(historical_range){result.excluded_source=observed_anchor_;omitRange(tx,result.plan,*observed_anchor_);}
  if(isolated_ && !bridge){reintegrate(tx.imu_group,tx.raw_imu_slice,tx.preintegration,bias_observation_,tx.previous_epoch,tx.proposed_epoch);result.rejoined=true;result.status="IMU_REJOINED_ORIGINAL_BIAS_REINTEGRATION";result.recovery="FDE_SUCCESS_REJOINED";return result;}
  if(bridge){
@@ -176,7 +201,10 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
    if(result.removed_boundary.empty())throw std::runtime_error("ACTUAL_NUMERICAL_BOUNDARY_MISSING");
    auto regularizer=metric(*capsule,config,tx,replaces,stable_rotation_);result.metric_group=regularizer.id;result.plan.groups_to_add.push_back(regularizer.id);
    for(auto prior:ids)result.plan.replacement_relations[prior]=regularizer.id.value();
-   HistoricalEpochContext provenance;provenance.previous_epoch=boundary;provenance.proposed_epoch=boundary;provenance.begin=provenance.end=TimestampNs(boundary*50000000LL);provenance.groups.push_back(std::move(regularizer));tx.recoverable_history.push_back(std::move(provenance));
+   TimestampNs boundary_time(boundary*50000000LL);
+   if(actual_time_){bool found=false;for(const auto& source:timeline_)if(source.epoch==boundary){boundary_time=source.end;found=true;break;}
+    if(!found)throw std::runtime_error("ACTUAL_BOUNDARY_TIME_MISSING");}
+   HistoricalEpochContext provenance;provenance.previous_epoch=boundary;provenance.proposed_epoch=boundary;provenance.begin=provenance.end=boundary_time;provenance.groups.push_back(std::move(regularizer));tx.recoverable_history.push_back(std::move(provenance));
    result.boundary_repair=true;result.history_marginalized=result.first_dependency<=boundary;
   }
  }
@@ -210,5 +238,13 @@ void RollingRecovery::committed(const RollingFdeAssessment& a,const EpochTransac
   for(const auto& e:ledger.entries())if(e.lifecycle==FactorLifecycle::Active)for(const auto& f:a.removed_boundary)if(e.factor.get()==f.get())throw std::runtime_error("POLLUTED_PRIOR_STILL_ACTIVE");
  }
  if(a.current_bridge){isolated_=true;open_pending_=false;}
+ if(actual_time_){
+  if(a.excluded_source)observed_uwb_repaired_=true;
+  if(a.held_source_present && !a.uwb_alarm && held_remaining_ && a.recovery!="FDE_DISABLED")--held_remaining_;
+  if(a.rejoined)isolated_=false;
+  if(!pending_sources_ || pending_sources_->epoch!=r.committed_epoch || pending_sources_->end!=r.state_timestamp)throw std::runtime_error("RECOVERY_SOURCE_RECEIPT_MISMATCH");
+  timeline_.push_back(std::move(*pending_sources_));pending_sources_.reset();
+  while(timeline_.size()>size_t(policy_.replay+1))timeline_.pop_front();
+ }
 }
 }

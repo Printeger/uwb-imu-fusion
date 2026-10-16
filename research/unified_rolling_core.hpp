@@ -3,6 +3,7 @@
 #include "rolling_recovery.hpp"
 #include "sensor_envelope.hpp"
 #include "sc6_temporal_monitor.hpp"
+#include "generalized_fault_monitor.hpp"
 namespace uwb_imu_pl::research {
 struct Sc6Result {
  size_t epoch=0;NavigationState state;Eigen::Vector3d tag;RawRangeResult bound;RollingFdeAssessment action;
@@ -22,9 +23,19 @@ struct Sc6Result {
  // Observation-only exclusive subdivisions of the existing inclusive spans.
  double imu_fd_ms=0,graph_prepare_ms=0,state_receipt_ms=0,finalize_ms=0,maintenance_ms=0;
 };
+struct GeneralizedCoreInitialization {
+ std::unique_ptr<GeneralizedSourceLedger> sources;
+ InitialSetEvidence initial_set;
+ AnchorRegistry anchors;
+ JointRawLaw raw_law;
+};
 class UnifiedRollingIntegrityCore {
- IntegrityConfig config_;Eigen::Vector3d lever_;ResolvedRollingPolicyV1 policy_;bool optimized_;
- TimeUniformEvent event_;RollingIntegrity proof_;OpenFaultPool faults_;RollingRecovery recovery_;
+ IntegrityConfig config_;Eigen::Vector3d lever_;ResolvedRollingPolicyV1 policy_;bool optimized_,failed_=false;
+ TimeUniformEvent event_;RollingIntegrity proof_;std::unique_ptr<OpenFaultPool> faults_;RollingRecovery recovery_;
+ std::unique_ptr<GeneralizedSourceLedger> sources_;
+ std::unique_ptr<GeneralizedFaultMonitor> generalized_monitor_;
+ AnchorRegistry anchors_;
+ std::deque<MeasurementId> replay_parents_;
  std::unique_ptr<Sc6TemporalMonitor> temporal_;uint64_t combined_alert_generation_=0;
  std::unique_ptr<RollingIntegrity> shadow_;
  IncrementalUwbImuEstimator backend_;
@@ -33,6 +44,10 @@ class UnifiedRollingIntegrityCore {
  public:
  UnifiedRollingIntegrityCore(const YAML::Node&,const IntegrityConfig&,const NavigationState&,
  const Eigen::Vector3d&,const Sc6MotionDomain&,const ImuMeasurement&,bool tight=false,bool shadow=false,bool optimized=false);
+ UnifiedRollingIntegrityCore(const YAML::Node&,const IntegrityConfig&,const NavigationState&,
+ const Eigen::Vector3d&,const Sc6MotionDomain&,const ImuMeasurement&,GeneralizedCoreInitialization);
+ void declareAnchor(const AnchorRecord& anchor,uint64_t version){anchors_.declare(anchor,version);}
+ void anchorOnline(AnchorId anchor,bool online){anchors_.online(anchor,online);}
  static constexpr const char* implementationId(){return "unified-sc6-sc7-rolling-v1";}
  uint64_t updateCount()const{return backend_.backendUpdateCount();}
  Sc6Result step(const Sc6Envelope&,bool fde);

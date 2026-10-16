@@ -5,6 +5,7 @@ namespace uwb_imu_pl::research {
 struct RollingFdeAssessment {
  EpochCommitPlan plan;std::chrono::steady_clock::time_point uwb_alarm_time;bool uwb_alarm=false;
  bool current_bridge=false,rejoined=false,boundary_repair=false,history_marginalized=false;
+ bool held_source_present=false;
  int excluded=-1,rebuilds=0;
  std::optional<AnchorId> excluded_source;
  size_t actions=1,numeric_evaluated=0,reintegrations=0,first_dependency=0;
@@ -20,10 +21,14 @@ class RollingRecovery {
  bool isolated_=false,stable_rotation_=false,optimized_=false,numerical_=false;
  TimestampNs quarantine_begin_,quarantine_end_;
  std::optional<AnchorId> held_anchor_,observed_anchor_;
- size_t held_until_=0;
+ size_t held_until_=0,held_remaining_=0;
+ bool observed_uwb_repaired_=false;
  size_t observed_uwb_onset_=0;
  uint64_t alert_generation_=0;
- bool open_pending_=false,history_unavailable_=false;
+ bool open_pending_=false,history_unavailable_=false,actual_time_=false;
+ struct EpochSources {size_t epoch=0;TimestampNs begin,end;std::vector<std::pair<MeasurementId,TimestampNs>> parents;};
+ std::deque<EpochSources> timeline_;
+ std::optional<EpochSources> pending_sources_;
  public:
  RollingRecovery(const NavigationState&,const ResolvedRollingPolicyV1&,bool stable_rotation=false,bool optimized=false);
  RollingFdeAssessment prepare(EpochTransaction&,const Sc2ImuMonitor&,
@@ -33,6 +38,7 @@ class RollingRecovery {
    const std::deque<ImuMeasurement>&,const std::deque<RollingRawState>&,
    const IntegrityConfig&,bool fde);
  void enableNumericalRecovery(bool enabled){numerical_=enabled;}
+ void enableActualTime(){actual_time_=true;}
  void committed(const RollingFdeAssessment&,const EpochTransaction&,const CommitReceipt&,
    const FactorLedger&);
 };

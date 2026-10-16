@@ -1,5 +1,6 @@
 #pragma once
 #include "rolling_evidence.hpp"
+#include "anchor_registry.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 
 namespace uwb_imu_pl::research {
@@ -13,6 +14,7 @@ class GeneralizedSourceLedger {
  ModelEvidenceStatus status_;
  std::map<MeasurementId,ImuMeasurement> raw_;
  std::map<MeasurementId,UwbMeasurement> ranges_;
+ std::map<MeasurementId,std::tuple<AnchorId,FactorId,TimestampNs,uint64_t,bool>> potential_ranges_;
  std::optional<TimestampNs> latest_raw_;
  uint64_t sensor_;
  public:
@@ -25,6 +27,10 @@ class GeneralizedSourceLedger {
    throw std::invalid_argument("SOURCE_MODEL_MISSING");
  }
  const SourceLayoutEvent& event()const{return event_;}
+ ModelEvidenceStatus status()const{return status_;}
+ uint64_t sensor()const{return sensor_;}
+ const JointRawLaw& law()const{return law_;}
+ TimestampNs originalTime(MeasurementId id)const{return raw_.at(id).timestamp;}
  InitialSetEvidence independentInitial(const NavigationState& center,
     const Eigen::Matrix<double,15,1>& sigmas,const std::string& model){
   if(event_.coordinates() || model.empty())throw std::invalid_argument("INITIAL_BIRTH_ORDER");
@@ -49,6 +55,14 @@ class GeneralizedSourceLedger {
    if(latest_raw_)layout.push_back({SourceKind::BiasIncrement,sensor_,m.id.value(),axis});}
   event_.append(layout);raw_.emplace(m.id,m);latest_raw_=m.timestamp;
  }
+ void registerPotentialRange(const CanonicalRangeEvent& e){
+  const auto& m=e.measurement;const auto identity=std::make_tuple(m.anchor_id,m.factor_id,m.timestamp,e.calibration_version,e.valid);
+  auto found=potential_ranges_.find(m.id);
+  if(found!=potential_ranges_.end() && found->second!=identity)throw std::invalid_argument("POTENTIAL_RANGE_IDENTITY_CHANGED");
+  event_.append({{SourceKind::Range,m.anchor_id.value(),m.id.value(),0}});
+  potential_ranges_.emplace(m.id,identity);
+  if(e.valid)append(m);
+ }
  void append(const UwbMeasurement& m){
   const auto old=ranges_.find(m.id);
   if(old!=ranges_.end()){
@@ -69,6 +83,7 @@ class GeneralizedSourceLedger {
   out->begin=tx.begin;out->end=tx.end;out->event_id=event_.id();out->status=status_;
   out->source_prefix=event_.coordinates();out->risk_upper=event_.prefixUpper();
   const auto& first=raw_.at(tx.raw_imu_slice.front().id);
+  if(tx.raw_imu_slice.front().specific_force_mps2!=first.specific_force_mps2 || tx.raw_imu_slice.front().angular_velocity_radps!=first.angular_velocity_radps)throw std::invalid_argument("NATIVE_FIRST_PARENT_MISMATCH");
   if(tx.begin<first.timestamp)throw std::invalid_argument("ORIGINAL_IMU_PARENT_FUTURE");
   std::vector<TimestampNs> times;std::vector<std::array<double,6>> qs;
   MeasurementId previous=first.id;
