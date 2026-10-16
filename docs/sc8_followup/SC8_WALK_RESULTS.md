@@ -84,7 +84,7 @@ Walk2 完整研究运行：1140/1172 有效计划提交（97.270%），全1140�
 
 测试目标重新构建后，`test_integrity_v2`选定29项、`test_realtime_incremental`的gap/未来IMU非干扰2项、`test_fde_post_selection`4项（包含9组合的研究剪枝oracle）全部通过；另补齐容量fallback、假设维数超限拒绝、deadline后真实commit降级3项，共38项通过。之前旧test_integrity_v2 ELF存在未解析旧proof符号，属于陈旧构建，已重建消除；不隐去首次预检失败。小oracle核对的是合法集合与安全拒绝不变，不是实测FDE恢复正例。
 
-实际runner缺口负例：原输入截至6秒，删除5.2–5.3秒ADC。首次fixture沿用旧dataset_config，门限随最大输入gap被自动放大为0.108979秒，进程24次全部提交，故“应该拒绝”的测试断言失败。修正fixture为冻结原始20ms门限，未改算法；第二次进程按预期exit=1，原因`causal IMU hold exceeds imu.max_gap_s`，56原始/有效批次、32启动前、12提交、12未处理后缀，最后收据5.183996916秒。无保护输出，不将失败后缀静默补齐。普通原录制及幅值注入时间戳未变，门限均未因注入增大。
+实际runner缺口负例：原输入截至6秒，删除5.2–5.3秒ADC。首次fixture沿用旧dataset_config，门限随最大输入gap被自动放大为0.108979秒，进程24次全部提交，故“应该拒绝”的测试断言失败。修正fixture为冻结原始20ms门限，未改算法；第二次进程按预期exit=1，原因`causal IMU hold exceeds imu.max_gap_s`，56原始/有效批次、32启动前、12完整attempt收据/提交、随后1次prepare缺口异常（无完整CSV收据）＋11批尚未尝试，最后收据5.183996916秒。无保护输出，不将失败后缀静默补齐。普通原录制及幅值注入时间戳未变，门限均未因注入增大。
 
 测试构建与短回归同Walk3原录制中段重叠，影响共享主机负载；独立记录开始/结束时间，核验estimator ELF/DSO前后完全相同。Walk3耗时保留实测，不作为严格独占CPU速度对照。
 
@@ -100,3 +100,31 @@ Walk2全流历史摘要1140次均present/valid/capacity_ok，但完整故障历�
 |ISAS-Walk3|FINISHED/True|1222/1253|1222/0|1137.777/1285.377|993735.706/1053675.457|1132.949/1058148|
 
 W2全流证据已保存，继续W3；不授予真正FDE恢复、物理GT或实时性通过。
+
+## 与旧SC8的版本化对照
+
+旧报告冻结SHA为`61907ab417450d317e443e4ff10f2cce062deabe`，本轮从`00b8486c4f45024daa046b2f4ec20a0eec98afb3`开发；旧结果保持原文，不当作同ELF的严格性能对照。旧R1实际attempt265/1172、commit83、拒绝182、未attempt有效计划907（含32启动前）；旧R2为341/1253、commit101、拒绝240、未attempt912（含31启动前）。二者在1200秒wall上限截断，旧core P95约12917.8/12799.3ms，不能仅把83/101之后全部缺失都解释为测量故障。
+
+本轮完整源分别1140/1222次attempt并全提交，未attempt仅32/31个启动前有效批次，无录制后缀丢失；但全部是未保护普通状态。严格调度等价的速度证据仅来自本轮Walk2的84次局部对照；全流轨迹和拒绝后状态推进机制已变化，不能把旧→新的总耗时差全归功于剪枝。
+
+注入采用base＋overlay证据：复制的在线manifest保留原bag来源元数据（其中files是base描述），派生输入的权威内容哈希由scorer-only `injection.json.injected_hash`与每次`execution.sensor_hash`记录并逐对核验；不把base files哈希冒充注入后的哈希。runner只读tag、批次窗口和初始化元数据，不读取注入标签，真正ADC/range来自派生CSV。
+
+研究开关准入的两个实际runner负例也通过：在FDE-OFF下启用研究开关，和输入携带supplied initial observation，均在0个epoch时明确exit=1拒绝；未进入普通提交或受保护发布。加上冻结门限的source-gap负例，共3个期望拒绝进程，不混入16条正式原始/注入方法运行的成功率。
+
+第二个事前登记诊断段Walk2源batch200–240在完整trace中实际含38次有效attempt（14.734724045–17.113354683秒）：38次报警/38个未保护commit、38次AMBIGUOUS_UNAVAILABLE；joint detector dof99–102，假设414–423，完整动作15932、候选数值核0。core均值966.788ms、最大1154.729ms。没有为了取得这一快照额外回放或按TEST误差挑片段。
+
+## 本轮 Walk ROS/direct 数值接口核验
+
+使用截至6秒的Walk2前缀，不使用GT，20倍离线回放＋worker队列屏障，只测普通OFF路径数值语义。原审计脚本已修正valid标志处理和ROS master订阅索引错误。LinktrackNode2的id为uint8、dis为float32：首次原始ID尝试因7475等越界拒绝。显式双射7475→0、9524→1、10548→2、15155→3、20276→4后，canonical float64 direct与ROS均24状态，位置最大差2.250639e-7m，姿态1.081027e-4度，严格1e-5度容差**FAIL**，没有调宽。
+
+单独的同线值控制把两侧range都取同一float32值（最大输入量化1.464843749e-07m），24/24状态数值比较**PASS**：位置最大差7.099247e-10m、姿态1.707547e-6度。实际订阅仅`/imu/data`、`/nlink_linktrack_nodeframe3`，GT发布0/订阅0；56原始/有效批次，28条invalid range未入有效消息。量化控制未替换正式原始/注入矩阵的float64 CSV；只证明相同线值的普通OFF数值路径，不能宣称原生大ID/float64 ROS无损、FDE源证书等价或20倍回放实时。SFUISE本轮使用另一个float64 lossless transport，不受这个Linktrack限制。
+
+ROS审计节点构建和短前缀与UWB注入ON尾段重叠；后者时效保留该共享主机负载，不隐去慢帧。
+
+## W3 冻结注入合同
+
+弱/强起点分别为canonical源时间20/40秒；UWB固定anchor7475，弱+0.3m持续1个原始batch、强+2.25m持续3个原始batch。accel固定原始sensor ax，弱+2m/s²、强+20m/s²，持续0.5秒；gyro固定gx，弱+0.1rad/s、强+1rad/s，持续0.5秒。J为gyro＋UWB，UWB相对IMU提前0.18秒。Walk2执行U/A/G/J，Walk3只重复同一J确认；不选新seed或按TEST修改幅值。每个IMU episode实际41个ADC样本，全部为research stress fault，未声称真实故障分布或可认证检出概率。
+
+已完成U类全流：ON/OFF各1140提交，状态CSV逐字节相同。弱注入0条有效输入；强注入的2条有效range在原生ledger中为measurement1002724/1002729，活动窗3次attempt/commit/alarm、之后589次普通commit，但0正确排除/恢复。报警在强注入之前已经持续存在。
+
+W3进度检查点：U/A/G的ON/OFF六条运行均已完成，每条1140个普通commit，三对states.csv均逐字节相同。A/G各自weak与strong的41/41 ADC样本均跨8个实际PIM因子；每个episode注入前已经报警，真实恢复0。Walk2-J和Walk3-J仍继续，不把这一检查点作为W3或Goal结项。

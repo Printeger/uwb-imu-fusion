@@ -41,6 +41,13 @@ def stamp(seconds):
     return rospy.Time(ns//1000000000, ns%1000000000)
 
 
+def accepted_range(item):
+    # LinktrackNode2 has no validity flag. Match the direct CSV adapter's
+    # admission rule instead of turning an invalid calibrated range positive.
+    return (int(item.get('valid', '1')) != 0 and float(item['range']) > 0
+            and float(item.get('sigma', '1')) > 0)
+
+
 def terminate(process):
     if process and process.poll() is None:
         process.send_signal(signal.SIGINT)
@@ -60,11 +67,20 @@ def main():
     parser.add_argument("--playback-rate", type=float, default=20.0)
     parser.add_argument("--position-tolerance-m", type=float, default=1e-5)
     parser.add_argument("--rotation-tolerance-deg", type=float, default=1e-5)
+    parser.add_argument("--compact-anchor-ids", action="store_true",
+                        help="explicit bijection from dataset IDs to uint8 ROS wire IDs; off-path numeric audit only")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
 
     bootstrap = json.loads((args.direct / "bootstrap.json").read_text())
     config = yaml.safe_load((args.direct / "effective_nominal_config.yaml").read_text())
+    source_anchor_ids = sorted(int(item['id']) for item in config['anchors'])
+    anchor_id_map = {source: index if args.compact_anchor_ids else source
+                     for index, source in enumerate(source_anchor_ids)}
+    if len(set(anchor_id_map.values())) != len(source_anchor_ids) or any(not 0 <= value <= 255 for value in anchor_id_map.values()):
+        raise RuntimeError("dataset anchor IDs cannot fit uint8 LinktrackNode2; explicit --compact-anchor-ids is required")
+    for item in config['anchors']:
+        item['id'] = anchor_id_map[int(item['id'])]
     config["realtime"]["initial_position_m"] = bootstrap["position_world_m"]
     config["realtime"]["initial_velocity_mps"] = bootstrap["velocity_world_mps"]
     # The ROS adapter combines configured sensor and anchor uncertainty.  The
@@ -171,10 +187,13 @@ def main():
             else:
                 message = LinktrackNodeframe3(); message.header.stamp = stamp(event_t)
                 for item in payload:
-                    value = LinktrackNode2(); value.id = int(item["anchor_id"])
+                    if not accepted_range(item):
+                        continue
+                    value = LinktrackNode2(); value.id = anchor_id_map[int(item["anchor_id"])]
                     value.dis = float(item["range"]); message.nodes.append(value)
                 uwb_pub.publish(message)
-        expected = sum(round(float(group[0]["t"])*1e9) > round(bootstrap["timestamp_s"]*1e9)
+        expected = sum(any(accepted_range(item) for item in group) and
+                       round(float(group[0]["t"])*1e9) > round(bootstrap["timestamp_s"]*1e9)
                        for group in grouped.values())
         deadline = time.time() + 60
         while time.time() < deadline and len(received) < expected:
@@ -202,8 +221,8 @@ def main():
                                   rotation_max <= args.rotation_tolerance_deg) else "FAIL"
             reason = "" if status == "PASS" else f"numeric mismatch, max dt={time_error}"
         master = rosgraph.Master(rospy.get_name())
-        subscriptions = dict(master.getSystemState()[1]).get(
-            "/uwb_imu_pl_realtime_equivalence", [])
+        subscriptions = [topic for topic, nodes in master.getSystemState()[1]
+                         if "/uwb_imu_pl_realtime_equivalence" in nodes]
         forbidden = [topic for topic in subscriptions
                      if topic in ("/sim/odom", "/uwb_sim/fault_truth")]
         if forbidden:
@@ -217,6 +236,15 @@ def main():
                   "rotation_tolerance_deg": args.rotation_tolerance_deg,
                   "fde_profile": "off", "truth_topics_published": 0,
                   "forbidden_truth_subscriptions": forbidden,
+                  "actual_subscriptions": subscriptions,
+                  "raw_planned_batches": len(grouped),
+                  "valid_planned_batches": sum(any(accepted_range(item) for item in group) for group in grouped.values()),
+                  "invalid_ranges_not_published": sum(not accepted_range(item) for group in grouped.values() for item in group),
+                  "source_to_wire_anchor_id": anchor_id_map,
+                  "id_scope": "explicit bijection for off-path numeric audit; not FDE source-certificate equivalence",
+                  "range_transport": "FLOAT32_LINKTRACK_DIS",
+                  "maximum_wire_range_rounding_m": max(abs(float(np.float32(float(item['range'])))-float(item['range']))
+                      for group in grouped.values() for item in group if accepted_range(item)),
                   "playback_rate": args.playback_rate, "wall_s": elapsed}
         (args.output / "equivalence.json").write_text(json.dumps(result, indent=2)+"\n")
         print(json.dumps(result, indent=2))

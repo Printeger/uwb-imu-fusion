@@ -7,6 +7,7 @@ import subprocess
 import time
 import resource
 import shutil
+import shlex
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -31,6 +32,10 @@ def save(path, value):
 
 def sensor_hash(path):
     return {n: common.sha256(path/n) for n in ('imu.csv','uwb.csv','anchors.csv')}
+
+
+def exact_csv(path):
+    return pd.read_csv(path,float_precision='round_trip')
 
 
 def gyro_pairs(imu, gt, offset):
@@ -135,7 +140,12 @@ def run_native(sequence, method, source=None, label=None, paced=True, audit=Fals
     source=source or CACHE/'data'/sequence
     run=CACHE/'runs'/(label or (sequence+'-'+method))
     if (run/'execution.json').exists():
-        return json.loads((run/'execution.json').read_text())
+        recorded=json.loads((run/'execution.json').read_text())
+        assert recorded['sensor_hash']==sensor_hash(source),'cached execution source changed; preserve and version the run'
+        for flag,enabled in [('--engineering-audit',audit),('--research-best-effort',best_effort),('--research-eligibility-pruning',pruning)]:
+            assert (flag in recorded['command'])==enabled,'cached execution method changed'
+        # Return its recorded ELF/DSO identity, not a claim of a fresh run.
+        return recorded
     run.mkdir(parents=True,exist_ok=True)
     entry=dict(requested_method='O-FULL' if method=='FDE' else 'O-NOFDE',window=[30,30],stream=sequence)
     config=old.dataset_config(entry,source,run)
@@ -227,6 +237,8 @@ def summarize_native(run, sequence):
     ready=planned[(planned>boot['timestamp_s']) & (planned<=imu.t.max())]
     c=a[a.committed==1]
     assert (a.backend_updates<=1).all() and c.transaction_id.is_unique and c.t.is_unique
+    assert (a.internal_protected_output==0).all()
+    assert a.statistical_qualification.eq('UNQUALIFIED_REAL_SOURCE').all()
     assert (a.max_sensor_stamp_used>=a.t-1e-8).all()
     def stats(x):
         x=np.asarray(x);x=x[np.isfinite(x)]
@@ -238,6 +250,7 @@ def summarize_native(run, sequence):
         wholly_invalid=int(u.source_message.nunique()-len(planned)),attempted=len(a),committed=len(c),
         coverage_all_valid=len(c)/len(planned),coverage_eligible=len(c)/len(ready),
         rejected=len(a)-len(c),unattempted_eligible=len(ready)-len(a),
+        attempt_count_scope='completed native CSV receipts; an aborted process may have one unfinished attempt in the missing suffix',
         interval_s=[float(c.t.min()),float(c.t.max())],bootstrap=boot,
         statuses={str(k):int(v) for k,v in a.fde_status.value_counts().items()},
         core_ms=stats(a.core_ms),sink_ms=stats(a.measurement_to_sink_ms),
@@ -245,6 +258,8 @@ def summarize_native(run, sequence):
         cpu_s=status['cpu_ms']/1000 if 'cpu_ms' in status else execution['cpu_s'],peak_rss_kib=status.get('peak_rss_kib',execution.get('sampled_rss_kib')),
         rss_scope='native process peak' if 'peak_rss_kib' in status else 'sampled RSS lower bound',
         source_complete=len(a)==len(ready),status=execution['status'],
+        source_complete_scope='all eligible UWB batches attempted; IMU-only tail has no independent FGO state update',
+        raw_imu_samples_total=len(imu),imu_samples_after_last_attempt=int((imu.t>a.t.max()).sum()),
         service_RTF=float(a.core_ms.sum()/1000/(imu.t.max()-imu.t.min())),
         physical_APE=None,physical_ARE=None,physical_RPE=None,reference='REFERENCE_OPEN',raw_qualified=False)
 
@@ -255,8 +270,8 @@ def summarize_baseline():
         for method in ('NOM','NOFDE'):
             run=CACHE/'runs'/(seq+'-'+method)
             results[seq+'-'+method]=summarize_native(run,seq)
-        a=pd.read_csv(CACHE/'runs'/(seq+'-NOM')/'states.csv')
-        b=pd.read_csv(CACHE/'runs'/(seq+'-NOFDE')/'states.csv')
+        a=exact_csv(CACHE/'runs'/(seq+'-NOM')/'states.csv')
+        b=exact_csv(CACHE/'runs'/(seq+'-NOFDE')/'states.csv')
         pd.testing.assert_frame_equal(a,b,check_exact=True)
     save(CACHE/'baseline_summary.json',results)
     print(json.dumps(results,indent=2))
@@ -367,7 +382,7 @@ def sfuise_summary():
                     actual_i.append((m.header.stamp.sec*10**9+m.header.stamp.nanosec,
                         [m.linear_acceleration.x,m.linear_acceleration.y,m.linear_acceleration.z,m.angular_velocity.x,m.angular_velocity.y,m.angular_velocity.z]))
                 if connection.topic.endswith('/toa_ds64'):actual_u.append(list(m.data))
-        assert not any('gt' in x or 'truth' in x for x in topics)
+        assert topics=={'/EstimationInterface/'+x for x in ('anchor_list','imu_ds','toa_ds','toa_ds64')}
         assert len(actual_i)==len(expected_i) and len(actual_u)==len(groups)
         def ns(t):return 10**12+int(np.floor(float(t)*1e9+.5))
         for row,(stamp,v) in zip(expected_i,actual_i):
@@ -378,14 +393,34 @@ def sfuise_summary():
         online=analysis.trajectory(run/'trajectory.tum.online.tum')
         hist,validity=analysis.historical_support(run,analysis.trajectory(run/'trajectory.tum.history_final_calibration.tum'))
         obs=pd.read_csv(run/'observer.csv');final=json.loads((run/'observer.csv.final.json').read_text())
+        status=json.loads((run/'run_status.json').read_text())
+        cutoff=pd.read_csv(run/'trajectory.tum.online_cutoff.csv')
+        joined=cutoff.merge(obs,on='state_ns',suffixes=('_sink','_root'))
+        assert len(joined)==len(obs)
+        def quantiles(v):
+            v=np.sort(np.asarray(v,dtype=float));assert np.isfinite(v).all()
+            return dict(zip(['p50','p95','p99','max'],map(float,v[np.ceil(np.array([.5,.95,.99,1])*len(v)).astype(int)-1])))
+        delivery=(joined.source_clock_at_sink_ns-joined.max_sensor_stamp_used)*1e-6
+        duration=pd.read_csv(source/'imu.csv').t.agg(lambda x:x.max()-x.min())
+        runtime=dict(active_service_ms=quantiles(obs.core_ms),measurement_to_sink_ms=quantiles(delivery),
+            state_age_ms=quantiles((joined.source_clock_at_sink_ns-joined.state_ns)*1e-6),
+            root_cpu_s=final['process_cpu_ms']/1000,peak_rss_kib=final['peak_rss_kib'],
+            service_RTF=float(obs.core_ms.sum()/1000/duration),launcher_wall_s=status['wall_s'],
+            launcher_cpu_s=status['cpu_s'],source_clock_resolution_ms=1.,
+            queue_ms=None,queue_scope='not separately exported',core_scope='instrumented callback/run active work between outputs, including postpublication maintenance; idle excluded',
+            timely_50ms=int((delivery<=50).sum()))
         results[seq]=dict(status=json.loads((run/'run_status.json').read_text())['status'],
-            parity='PASS: all ADC/range/ID/timestamp doubles exact; no GT topics',
+            parity='PASS: all ADC/range/ID/timestamp doubles exact; no GT topics',actual_topics=sorted(topics),
             sensor_hash=sensor_hash(source),online_n=len(online[0]),final_n=len(hist[0]),
             first_online_s=float(online[0][0]),last_online_s=float(online[0][-1]),
+            first_native_export=dict(position_m=online[1][0].tolist(),quaternion_xyzw=online[2][0].tolist()),
+            last_native_export=dict(position_m=online[1][-1].tolist(),quaternion_xyzw=online[2][-1].tolist()),
             final_history_support=analysis.clean(validity),final_receipt=final,
             numeric_cutoff_last_s=float(obs.max_sensor_stamp_used.iloc[-1]*1e-9-1000),
             history_cutoff='whole final export input upper bound; not per-point exact dependency',
-            physical_APE=None,physical_ARE=None,physical_RPE=None,reference='REFERENCE_OPEN')
+            physical_APE=None,physical_ARE=None,physical_RPE=None,reference='REFERENCE_OPEN',runtime=runtime,
+            trace_sha256={name:common.sha256(run/name) for name in ['observer.csv','observer.csv.final.json',
+                'trajectory.tum.online_cutoff.csv','trajectory.tum.online.tum','trajectory.tum.history_final_calibration.tum','sfuise.yaml']})
     save(CACHE/'sfuise_summary.json',results)
     print(json.dumps(results,indent=2))
 
@@ -394,17 +429,17 @@ def local():
     source=CACHE/'profile-input'
     run_native('ISAS-Walk2','FDE',source,'profile-pruned',paced=False,audit=True,pruning=True)
     left=CACHE/'runs/profile-original';right=CACHE/'runs/profile-pruned'
-    a=pd.read_csv(left/'attempts.csv');b=pd.read_csv(right/'attempts.csv')
+    a=exact_csv(left/'attempts.csv');b=exact_csv(right/'attempts.csv')
     fields=['batch','t','committed','backend_updates','transaction_id','action_id','action','fde_status',
             'detector_valid','detector_passed','detector_statistic','detector_threshold','detector_dof',
             'base_graph_version','history_removed_groups','history_added_groups','bridge_active','bridge_epochs','reinit_required','internal_protected_output']
     pd.testing.assert_frame_equal(a[fields],b[fields],check_exact=True)
-    pd.testing.assert_frame_equal(pd.read_csv(left/'states.csv'),pd.read_csv(right/'states.csv'),check_exact=True)
+    pd.testing.assert_frame_equal(exact_csv(left/'states.csv'),exact_csv(right/'states.csv'),check_exact=True)
     for name in ('factor_ledger.csv','transactions.csv','health.csv','bridge.csv'):
-        x=pd.read_csv(left/'native_audit'/name);y=pd.read_csv(right/'native_audit'/name)
+        x=exact_csv(left/'native_audit'/name);y=exact_csv(right/'native_audit'/name)
         # Counters/time metadata may differ, ledger source IDs and all native receipts cannot.
         pd.testing.assert_frame_equal(x,y,check_exact=True)
-    x=pd.read_csv(left/'native_audit/candidates.csv');y=pd.read_csv(right/'native_audit/candidates.csv')
+    x=exact_csv(left/'native_audit/candidates.csv');y=exact_csv(right/'native_audit/candidates.csv')
     identity=['timestamp_ns','window_id','action_id','action_type','physical_source_ids','removed_group_ids','added_group_ids','bridge_mode','cardinality','selected']
     pd.testing.assert_frame_equal(x[identity],y[identity],check_exact=True)
     d=pd.read_csv(right/'native_audit/diagnostic_candidates.csv')
@@ -461,9 +496,23 @@ def negative():
     assert 'gap' in json.dumps(status).lower(),status
     assert (attempts.internal_protected_output==0).all()
     save(CACHE/'negative_summary.json',dict(status='PASS_EXPECTED_SOURCE_GAP_REFUSAL',
-        process=result,run_status=status,attempts=len(attempts),committed=len(state),
+        process=result,run_status=status,completed_attempt_receipts=len(attempts),committed=len(state),
+        failed_attempts_without_row=1,failed_next_source_batch=int(attempts.batch.max()+1),
+        failure_scope='gap exception occurs on next prepare before attempts.csv receipt; not an extra commit',
         last_state_s=float(state.t.max()),gap_s=[5.2,5.3],
         raw_batches=int(uwb.source_message.nunique()),valid_batches=int(uwb[uwb.valid!=0].source_message.nunique())))
+    guards=[]
+    supplied=CACHE/'negative-supplied-observation';supplied.mkdir(exist_ok=True)
+    for name in ('imu.csv','uwb.csv','anchors.csv','gt.csv','manifest.json'):shutil.copy2(base/name,supplied/name)
+    manifest=json.loads((supplied/'manifest.json').read_text());manifest['initial_observation']={}
+    save(supplied/'manifest.json',manifest)
+    for method,data,label,reason in [('NOFDE',base,'negative-opt-in-off','requires engineering FDE on'),
+        ('FDE',supplied,'negative-opt-in-supplied','only for unqualified real dataset input')]:
+        execution=run_native('ISAS-Walk2',method,data,label,paced=False,pruning=True,best_effort=True)
+        refusal=json.loads((CACHE/'runs'/label/'run_status.json').read_text())
+        assert execution['status']=='FAIL' and reason in refusal['reason'] and refusal['epochs']==0
+        guards.append(dict(case=label,execution=execution,refusal=refusal))
+    save(CACHE/'negative_guard_summary.json',dict(status='PASS_EXPECTED_OPT_IN_REFUSALS',cases=guards))
 
 
 def extended_summary(run, sequence):
@@ -495,6 +544,9 @@ def extended_summary(run, sequence):
     result['slowest_epoch']=a.loc[a.core_ms.idxmax(),['batch','t','core_ms','fde_status']].to_dict()
     audit=run/'native_audit'
     if audit.exists():
+        integrity=pd.read_csv(audit/'integrity.csv',usecols=['publication_protected','formal_eligible'])
+        assert (integrity.publication_protected==0).all() and (integrity.formal_eligible==0).all()
+        result['raw_qualification_check']='PASS: every native formal/publication flag false'
         d=pd.read_csv(audit/'diagnostic_attempts.csv')
         final_stamp_ns=round(float(a.t.max())*1e9)
         result['audit_unfinalized_attempts']=int((d.input_timestamp_ns>final_stamp_ns).sum())
@@ -502,6 +554,11 @@ def extended_summary(run, sequence):
         result['census']={k:int(d[k].sum()) for k in ['generated_actions','kernel_evaluated_actions','pl_evaluated_actions','selected_actions',
             'base_svd','base_llt','candidate_reference_svd','candidate_inner_llt','imu_oracle_reintegrations']}
         result['hypotheses_max']=int(d.hypothesis_count.max())
+        square=pd.read_csv(audit/'diagnostic_square_root.csv')
+        square=square[square.attempt_id.isin(d.input_attempt_id)]
+        result['base_window_numerics']=dict(records=len(square),rank_min=int(square['rank'].min()),rank_max=int(square['rank'].max()),
+            dof_min=int(square.dof.min()),dof_max=int(square.dof.max()),unusable=int((square.usable==0).sum()),
+            certificate_not_ok=int((square.certificate_ok==0).sum()))
         result['resource_growth']={k:dict(first=float(d[k].iloc[0]),last=float(d[k].iloc[-1]),maximum=float(d[k].max()))
             for k in ['cache_entries','cache_bytes','marginalization_count','raw_imu_samples']}
         timing=pd.read_csv(audit/'timing.csv')
@@ -538,6 +595,61 @@ def extended_summary(run, sequence):
     return result
 
 
+def ros_equivalence():
+    source=CACHE/'ros-prefix-input';source.mkdir(exist_ok=True)
+    base=CACHE/'data/ISAS-Walk2'
+    for name in ('imu.csv','uwb.csv'):
+        rows=pd.read_csv(base/name,float_precision='round_trip')
+        rows[rows.t<=6].to_csv(source/name,index=False,float_format='%.17g')
+    for name in ('anchors.csv','gt.csv','manifest.json'):shutil.copy2(base/name,source/name)
+    manifest=json.loads((source/'manifest.json').read_text());manifest['files']=datasets.rows_file_metadata(source)
+    save(source/'manifest.json',manifest)
+    direct=run_native('ISAS-Walk2','NOFDE',source,'ros-direct-prefix',paced=False)
+    assert direct['status']=='FINISHED'
+    def invoke(data, direct_label, output_label):
+        out=CACHE/output_label;out.mkdir(exist_ok=True)
+        if not (out/'equivalence.json').exists():
+            command=['python3',str(ROOT/'tools/check_sim_realtime_equivalence.py'),'--cache',str(data),
+                '--direct',str(CACHE/'runs'/direct_label),'--output',str(out),'--playback-rate','20','--compact-anchor-ids']
+            setup=ROOT.parents[1]/'devel/setup.bash'
+            shell='source /opt/ros/noetic/setup.bash\nsource '+shlex.quote(str(setup))+'\nexec '+shlex.join(command)
+            with (out/'launcher.log').open('w') as log:
+                result=subprocess.run(['bash','-c',shell],stdout=log,stderr=subprocess.STDOUT,env=environment())
+            if not (out/'equivalence.json').exists():result.check_returncode()
+        return json.loads((out/'equivalence.json').read_text())
+    canonical=invoke(source,'ros-direct-prefix','ros-equivalence-mapped')
+    # A separate transport control, never substituted into the registered matrix.
+    wire=CACHE/'ros-wire-prefix-input';wire.mkdir(exist_ok=True)
+    for name in ('imu.csv','uwb.csv','anchors.csv','gt.csv','manifest.json'):shutil.copy2(source/name,wire/name)
+    ranges=pd.read_csv(wire/'uwb.csv',float_precision='round_trip')
+    before=ranges['range'].to_numpy().copy()
+    ranges['range']=ranges['range'].to_numpy().astype('float32').astype('float64')
+    ranges.to_csv(wire/'uwb.csv',index=False,float_format='%.17g')
+    manifest['files']=datasets.rows_file_metadata(wire);save(wire/'manifest.json',manifest)
+    control=run_native('ISAS-Walk2','NOFDE',wire,'ros-direct-wire-prefix',paced=False)
+    assert control['status']=='FINISHED'
+    matched=invoke(wire,'ros-direct-wire-prefix','ros-equivalence-wire')
+    save(CACHE/'ros_interface_summary.json',dict(canonical=canonical,wire_control=matched,
+        maximum_range_quantization_m=float(np.max(np.abs(before-ranges['range'].to_numpy()))),
+        canonical_hash=sensor_hash(source),wire_control_hash=sensor_hash(wire),
+        node_sha256=common.sha256(BIN/'uwb_imu_pl_realtime_node'),
+        scope='OFF state equivalence with explicit anchor-ID bijection; not FDE certificate equivalence; not realtime'))
+    assert matched['status']=='PASS',matched
+
+
+def paired_states(left, right):
+    paired=left.merge(right,on='t',suffixes=('_off','_on'))
+    if not len(paired):return dict(n=0,label='NO_COMMON_NATIVE_RECEIPTS')
+    def vector(keys,side):return paired[[k+'_'+side for k in keys]].to_numpy()
+    qoff=Rotation.from_quat(vector(['qx','qy','qz','qw'],'off'))
+    qon=Rotation.from_quat(vector(['qx','qy','qz','qw'],'on'))
+    return dict(n=len(paired),interval_s=[float(paired.t.min()),float(paired.t.max())],
+        maximum_component_difference=max(float(np.max(np.abs(paired[k+'_off']-paired[k+'_on']))) for k in left.columns if k!='t'),
+        maximum_body_position_difference_m=float(np.linalg.norm(vector(['px','py','pz'],'off')-vector(['px','py','pz'],'on'),axis=1).max()),
+        maximum_attitude_difference_rad=float((qoff.inv()*qon).magnitude().max()),
+        label='same-time internal state differences only; not physical errors or FDE recovery')
+
+
 def evaluate():
     results={}
     for seq in ('ISAS-Walk2','ISAS-Walk3'):
@@ -546,12 +658,11 @@ def evaluate():
             if (run/'execution.json').exists():results[run.name]=extended_summary(run,seq)
         if seq+'-FDE-RESEARCH' in results:
             assert results[seq+'-FDE-RESEARCH']['input_identity']['sensor_hash']==results[seq+'-NOFDE']['input_identity']['sensor_hash']
-            left=pd.read_csv(CACHE/'runs'/(seq+'-NOFDE')/'states.csv')
-            right=pd.read_csv(CACHE/'runs'/(seq+'-FDE-RESEARCH')/'states.csv')
-            common=left.merge(right,on='t',suffixes=('_off','_on'))
-            results[seq+'-FDE-RESEARCH']['paired_state_diagnostic']=dict(n=len(common),
-                maximum_component_difference=max(float(np.max(np.abs(common[k+'_off']-common[k+'_on']))) for k in left.columns if k!='t'),
-                label='state difference only, not physical accuracy or FDE recovery')
+            left=exact_csv(CACHE/'runs'/(seq+'-NOFDE')/'states.csv')
+            right=exact_csv(CACHE/'runs'/(seq+'-FDE-RESEARCH')/'states.csv')
+            results[seq+'-FDE-RESEARCH']['paired_state_diagnostic']=paired_states(left,right)
+            results[seq+'-FDE-RESEARCH']['paired_state_diagnostic']['state_csv_byte_equal']=(
+                results[seq+'-FDE-RESEARCH']['trace_sha256']['states.csv']==results[seq+'-NOFDE']['trace_sha256']['states.csv'])
     for seq,cases in [('ISAS-Walk2',['U','A','G','J']),('ISAS-Walk3',['J'])]:
         for case in cases:
             pair={}
@@ -563,17 +674,27 @@ def evaluate():
                 result['injection']=injection
                 a=pd.read_csv(run/'attempts.csv');episodes=[]
                 ledger_path=run/'native_audit/factor_ledger.csv'
-                intervals=None
+                intervals=None;seen_uwb=set()
+                raw_uwb=pd.read_csv(CACHE/'injected'/(seq+'-'+case)/'uwb.csv')
+                accepted=raw_uwb[(raw_uwb.valid!=0)&(raw_uwb['range']>0)&(raw_uwb.sigma>0)]
+                uwb_ids={(int(row.source_message),int(row.source_range)):1000000+i for i,row in enumerate(accepted.itertuples())}
                 if ledger_path.exists():
-                    ledger=pd.read_csv(ledger_path,usecols=['factor_id','sensor','factor_kind','time_begin_ns','time_end_ns'])
+                    ledger=pd.read_csv(ledger_path,usecols=['factor_id','sensor','factor_kind','time_begin_ns','time_end_ns','measurement_ids'])
                     intervals=ledger[ledger.sensor.eq('IMU')&ledger.factor_kind.eq('COMBINED_IMU')].drop_duplicates('factor_id')
+                    for value in ledger.loc[ledger.sensor.eq('UWB'),'measurement_ids'].dropna().unique():
+                        seen_uwb.update(int(x) for x in str(value).split(';') if x)
                 for e in injection['episodes']:
                     ep=dict(e);active=a[(a.t>=e['begin_s'])&(a.t<=e['end_s']+.1)]
                     after=a[a.t>e['end_s']+.1]
                     valid_count=sum(row[2]!=0 for row in e['source_ids']) if e['sensor']=='UWB' else len(e['source_ids'])
                     reached=bool(len(a) and a.max_sensor_stamp_used.max()>=e['end_s'])
+                    preceding=a[a.t<e['begin_s']]
+                    already_alarm=bool(len(preceding) and preceding.detector_valid.iloc[-1]==1 and preceding.detector_passed.iloc[-1]==0)
+                    activity_alarms=active[(active.detector_valid==1)&(active.detector_passed==0)]
                     ep.update(source_time_reached=reached,valid_injected_samples=valid_count,
                         observed=reached and valid_count>0,
+                        alarm_already_active_before=already_alarm,
+                        first_activity_alarm_s=float(activity_alarms.t.iloc[0]) if len(activity_alarms) else None,
                         activity_attempts=len(active),activity_commits=int(active.committed.sum()),
                         alarm_attempts=int(((active.detector_valid==1)&(active.detector_passed==0)).sum()),
                         actual_recovery_commits=int(active.estimation_outcome.eq('ACTUAL_FDE_RECOVERY').sum()) if 'estimation_outcome' in active else 0,
@@ -587,16 +708,18 @@ def evaluate():
                         supports=intervals[(intervals.time_end_ns>=e['begin_s']*1e9)&(intervals.time_begin_ns<=e['end_s']*1e9)]
                         ep['native_pim_intervals']=supports[['factor_id','time_begin_ns','time_end_ns']].astype('int64').values.tolist()
                         ep['adc_samples_in_pim_support']=sum(bool(((supports.time_begin_ns<=t*1e9)&(supports.time_end_ns>=t*1e9)).any()) for t in e['sample_times'])
+                    if e['sensor']=='UWB':
+                        ep['expected_native_measurement_ids']=[uwb_ids[(x[0],x[1])] for x in e['source_ids'] if x[2]]
+                        ep['native_support_seen_ids']=sorted(set(ep['expected_native_measurement_ids'])&seen_uwb) if ledger_path.exists() else None
                     episodes.append(ep)
                 result['episodes']=episodes;results[run.name]=result;pair[method]=result
             if len(pair)==2:
                 assert pair['FDE']['input_identity']['sensor_hash']==pair['NOFDE']['input_identity']['sensor_hash']
-                left=pd.read_csv(CACHE/'runs'/(seq+'-'+case+'-NOFDE')/'states.csv')
-                right=pd.read_csv(CACHE/'runs'/(seq+'-'+case+'-FDE')/'states.csv')
-                common=left.merge(right,on='t',suffixes=('_off','_on'))
-                maxdiff=max(float(np.max(np.abs(common[k+'_off']-common[k+'_on']))) for k in left.columns if k!='t') if len(common) else None
-                results[seq+'-'+case+'-FDE']['paired_state_diagnostic']=dict(n=len(common),maximum_component_difference=maxdiff,
-                    label='state difference only, not physical accuracy or FDE recovery')
+                left=exact_csv(CACHE/'runs'/(seq+'-'+case+'-NOFDE')/'states.csv')
+                right=exact_csv(CACHE/'runs'/(seq+'-'+case+'-FDE')/'states.csv')
+                results[seq+'-'+case+'-FDE']['paired_state_diagnostic']=paired_states(left,right)
+                results[seq+'-'+case+'-FDE']['paired_state_diagnostic']['state_csv_byte_equal']=(
+                    pair['FDE']['trace_sha256']['states.csv']==pair['NOFDE']['trace_sha256']['states.csv'])
     save(CACHE/'evaluation.json',results)
     print('evaluated',len(results),'actual runs; absent runs remain unexecuted')
 
@@ -605,7 +728,7 @@ def figures(results):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-    plt.rcParams.update({'font.size':9,'svg.fonttype':'none'})
+    plt.rcParams.update({'font.size':9,'svg.fonttype':'none','svg.hashsalt':'sc8-walk-followup-v1'})
     out=REPORT.parent
     colors={'NOM':'#56B4E9','NOFDE':'#777777','FDE-RESEARCH':'#0072B2'}
     fig,axs=plt.subplots(1,2,figsize=(10,4.5),layout='constrained')
@@ -617,11 +740,12 @@ def figures(results):
         ax.set_ylabel('Native commits / all valid planned batches (%)')
         ax.text(.5,.47,'Physical APE / ARE / RPE: NA\nTracker–IMU/tag reference OPEN',transform=ax.transAxes,ha='center',bbox=dict(facecolor='white',edgecolor='.7'))
         sf=json.loads((CACHE/'sfuise_summary.json').read_text())[seq]
-        ax.text(.5,.20,f"SFUISE: online {sf['online_n']}, history {sf['final_n']} states\nDifferent output rate / initialization; no count ranking",transform=ax.transAxes,ha='center')
+        ax.text(.5,.20,f"SFUISE: online {sf['online_n']}, history {sf['final_n']} states\nDifferent output rate / initialization; no count ranking",transform=ax.transAxes,ha='center',bbox=dict(facecolor='white',edgecolor='none'))
     fig.suptitle('Walk full-recording output coverage — ordinary estimates are not FDE recovery')
-    fig.savefig(out/'walk_coverage.svg');plt.close(fig)
+    fig.savefig(out/'walk_coverage.svg',metadata={'Date':None});fig.savefig(CACHE/'walk_coverage_preview.png',dpi=140);plt.close(fig)
 
     cases=[('ISAS-Walk2',c) for c in ['U','A','G','J']]+[('ISAS-Walk3','J')]
+    recording_ends={seq:float(pd.read_csv(CACHE/'data'/seq/'imu.csv').t.max()) for seq in ('ISAS-Walk2','ISAS-Walk3')}
     fig,axs=plt.subplots(len(cases),1,figsize=(10,7.5),sharex=True,layout='constrained')
     for ax,(seq,case) in zip(axs,cases):
         key=seq+'-'+case+'-FDE';r=results[key];a=pd.read_csv(CACHE/'runs'/key/'attempts.csv')
@@ -633,11 +757,14 @@ def figures(results):
         for ep in r['episodes']:
             end=ep['end_s'] if ep['end_s']>ep['begin_s'] else ep['begin_s']+.06
             ax.axvspan(ep['begin_s'],end,alpha=.3,color='#D55E00' if ep['sensor']=='UWB' else '#E69F00')
+        if not r['source_complete']:
+            ax.axvspan(float(a.t.max()),recording_ends[seq],color='grey',alpha=.2,hatch='//')
         ax.set_ylim(0,1.2);ax.set_yticks([.25,.65,1],['commit','alarm','isolation']);ax.set_ylabel(seq[-1]+': '+case)
+        ax.set_xlim(0,max(recording_ends.values())+1)
         ax.text(.99,.78,f"recovery commits={r['actual_fde_recovery']}; physical errors NA",ha='right',transform=ax.transAxes)
     axs[-1].set_xlabel('Source time (s); orange=IMU injection, red=UWB injection')
     fig.suptitle('Registered added faults and native outcomes — no inferred recovery from best-effort')
-    fig.savefig(out/'walk_fault_timeline.svg');plt.close(fig)
+    fig.savefig(out/'walk_fault_timeline.svg',metadata={'Date':None});fig.savefig(CACHE/'walk_fault_timeline_preview.png',dpi=140);plt.close(fig)
 
     fig,axs=plt.subplots(1,3,figsize=(13,4.4),layout='constrained')
     for n,seq in enumerate(('ISAS-Walk2','ISAS-Walk3')):
@@ -650,12 +777,13 @@ def figures(results):
             axs[0].bar(seq[-1],value,bottom=bottom,color=color,label=label if n==0 else None);bottom+=value
         timeline=r['timeline'];axs[1].plot([x['t'] for x in timeline],[x['queue_ms']/1000 for x in timeline],label=seq)
         for j,(status,count) in enumerate(r['statuses'].items()):
-            axs[2].barh(seq[-1]+' '+status,count)
+            short={'AMBIGUOUS_UNAVAILABLE':'ambiguous','NO_VALID_CANDIDATE':'no candidate','RISK_BUDGET_INVALID':'risk refusal'}.get(status,status)
+            axs[2].barh(seq[-1]+' '+short,count)
     axs[0].set(title='Exclusive mean service costs',ylabel='ms / attempted batch',xlabel='Walk');axs[0].legend(fontsize=7)
     axs[1].set(title='Measured queue delay (sparse actual receipts)',xlabel='Source time (s)',ylabel='s');axs[1].legend()
     axs[2].set(title='Native FDE status (all attempts)',xlabel='Count')
     fig.suptitle('Engineering FDE runtime — raw PL / HMI probability: UNQUALIFIED')
-    fig.savefig(out/'walk_runtime.svg');plt.close(fig)
+    fig.savefig(out/'walk_runtime.svg',metadata={'Date':None});fig.savefig(CACHE/'walk_runtime_preview.png',dpi=140);plt.close(fig)
 
 def evidence():
     """Save compact measured evidence in the one report before owned-cache cleanup."""
@@ -665,7 +793,7 @@ def evidence():
     figures(results)
     lines=['## 全录制与注入：冻结实测表', '',
         '分位数采用 nearest-rank；延迟包含完整等待队列。所有物理误差及其 ON−OFF 收益均为 NA。', '',
-        '|运行|结束|原始/有效/eligible|attempt/commit/未尝试后缀|覆盖有效计划|报警/真实恢复/bridge|未保护best-effort|',
+        '|运行|结束|原始/有效/eligible|完整attempt收据/commit/缺失收据后缀|覆盖有效计划|报警/真实恢复/bridge|未保护best-effort|',
         '|---|---|---|---|---|---|---|']
     for name,r in results.items():
         lines.append(f"|{name}|{r['status']}|{r['raw_planned']}/{r['planned_valid']}/{r['eligible_planned']}|{r['attempted']}/{r['committed']}/{r['unattempted_eligible']}|{100*r['coverage_all_valid']:.3f}%|{r['alarm_count']}/{r['actual_fde_recovery']}/{r['bridge_attempts']}|{r.get('outcomes',{}).get('UNPROTECTED_BEST_EFFORT',0)}|")
@@ -674,30 +802,58 @@ def evidence():
     def four(v):return '/'.join(f'{v[k]:.3f}' for k in ('p50','p95','p99','max'))
     for name,r in results.items():
         lines.append(f"|{name}|{four(r['core_ms'])}|{four(r['sink_ms'])}|{four(r['queue_ms'])}|{r['cpu_s']:.3f}/{r['service_RTF']:.3f}/{r['peak_rss_kib']}|{r['timely_50ms']}/{r['attempted']}|")
+    sf=json.loads((CACHE/'sfuise_summary.json').read_text())
+    lines+=['','|S-ONLINE|active service P50/P95/P99/max ms|numeric-input→sink P50/P95/P99/max ms|root CPU s/RSS KiB|服务RTF|≤50ms次数|',
+        '|---|---|---|---|---|---|']
+    for name,r in sf.items():
+        t=r['runtime']
+        lines.append(f"|{name}|{four(t['active_service_ms'])}|{four(t['measurement_to_sink_ms'])}|{t['root_cpu_s']:.3f}/{t['peak_rss_kib']}|{t['service_RTF']:.3f}|{t['timely_50ms']}/{r['online_n']}|")
+    lines+=['','SFUISE软件源时钟分辨率1ms并含ROS抖动；observer core累计相邻输出间被计时的callback/run活动工作，包含发布后维护而不含idle sleep。它按输出计量，不是每个UWB批次；root CPU另报，不用wall服务和进程CPU互代。独立queue未导出，记NA，不用sink−core伪造队列。S-FINAL是历史后验，不参加在线时效排名。']
     lines+=['','|运行|FDE状态全分母|动作记录/未求解/selected|prior替换/受保护输出|', '|---|---|---|---|']
     for name,r in results.items():
         c=r.get('candidate_results',{})
         lines.append(f"|{name}|{json.dumps(r['statuses'],ensure_ascii=False)}|{c.get('records','NA')}/{c.get('not_solved','NA')}/{c.get('selected','NA')}|{r['history_replacement_attempts']}/{r['protected_attempts']}|")
     lines+=['','注入活动统计包含结束后0.1秒，以覆盖异步下一批读取；这是响应观察窗，不是故障时刻修改。原始自然异常无真值标签，报警不能解释为新增故障的因果检出率。', '',
-        '|运行/episode|真实注入秒|原始/有效注入样本数|observed|活动attempt/commit/alarm|正确排除/真实恢复/bridge|之后commit|',
-        '|---|---|---|---|---|---|---|']
+        '|运行/episode|真实注入秒|原始/有效注入样本数|observed|活动attempt/commit/alarm|之前已报警|正确排除/真实恢复/bridge|之后commit|',
+        '|---|---|---|---|---|---|---|---|']
     for name,r in results.items():
         for e in r.get('episodes',[]):
-            lines.append(f"|{name}/{e['sensor']}-{e['strength']}|{e['begin_s']:.6f}–{e['end_s']:.6f}|{len(e['source_ids'])}/{e['valid_injected_samples']}|{e['observed']}|{e['activity_attempts']}/{e['activity_commits']}/{e['alarm_attempts']}|{e['correct_exclusion']}/{e['actual_recovery_commits']}/{e['bridge_commits']}|{e['post_commits']}|")
+            lines.append(f"|{name}/{e['sensor']}-{e['strength']}|{e['begin_s']:.6f}–{e['end_s']:.6f}|{len(e['source_ids'])}/{e['valid_injected_samples']}|{e['observed']}|{e['activity_attempts']}/{e['activity_commits']}/{e['alarm_attempts']}|{e['alarm_already_active_before']}|{e['correct_exclusion']}/{e['actual_recovery_commits']}/{e['bridge_commits']}|{e['post_commits']}|")
     lines+=['','|IMU episode|修改ADC源行ID|落在实际PIM支撑内的样本|跨越的原生PIM因子ID|','|---|---|---|---|']
     for name,r in results.items():
         for e in r.get('episodes',[]):
             if 'native_pim_intervals' in e:
                 lines.append(f"|{name}/{e['strength']}|{e['source_ids'][0]}–{e['source_ids'][-1]}|{e['adc_samples_in_pim_support']}/{len(e['source_ids'])}|{','.join(str(x[0]) for x in e['native_pim_intervals'])}|")
+    lines+=['','|UWB episode|有效输入对应原生measurement ID|实际ledger出现的ID|','|---|---|---|']
+    for name,r in results.items():
+        for e in r.get('episodes',[]):
+            if e.get('native_support_seen_ids') is not None:
+                lines.append(f"|{name}/{e['strength']}|{e['expected_native_measurement_ids']}|{e['native_support_seen_ids']}|")
     lines+=['','## 冻结身份与可复核摘要','',
         '下列摘要保留输入与trace内容哈希、首末原生状态、事务检查、census计数、最慢实际epoch和资源增长；完整大trace在本轮验收后清理，按复现命令重建。', '','```json']
     compact={name:{k:v for k,v in r.items() if k in ('input_identity','trace_sha256','first_state','last_state','receipt_checks',
-        'census','candidate_results','history_summary','primary_failures','audit_unfinalized_attempts','hypotheses_max','resource_growth','exclusive_mean_ms','fastest_epoch','slowest_epoch','paired_state_diagnostic')} for name,r in results.items()}
+        'source_complete_scope','raw_imu_samples_total','imu_samples_after_last_attempt','raw_qualification_check',
+        'census','candidate_results','base_window_numerics','history_summary','primary_failures','audit_unfinalized_attempts','hypotheses_max','resource_growth','exclusive_mean_ms','fastest_epoch','slowest_epoch','paired_state_diagnostic')} for name,r in results.items()}
+    for r in compact.values():
+        r['input_identity']={k:v for k,v in r['input_identity'].items() if k not in ('command','identity_before','sampled_rss_kib')}
+        for key in ('first_state','last_state'):
+            r[key]={k:v for k,v in r[key].items() if k in ('t','px','py','pz','qx','qy','qz','qw')}
+        if 'candidate_results' in r:
+            r['candidate_results']={k:v for k,v in r['candidate_results'].items() if k not in ('rank_counts','dof_counts')}
     # Commands contain reproducible local paths; input/binary hashes bind actual executions.
     freeze={p:common.sha256(ROOT/p) for p in ['apps/nominal_dataset_runner.cpp',
         'include/uwb_imu_pl/integrity/integrity_monitor.hpp','src/uwb_imu_pl/integrity/integrity_monitor.cpp',
-        'tools/sc8_walk_followup.py','config/sc8_walk_followup.yaml','test/test_fde_post_selection.cpp']}
-    lines.append(json.dumps(dict(source_freeze=freeze,runs=compact),ensure_ascii=False,indent=2));lines+=['```','',
+        'tools/sc8_walk_followup.py','tools/run_sfuise_benchmark.py','tools/sc8_sfuise_observer.py',
+        'tools/check_sim_realtime_equivalence.py','config/sc8_walk_followup.yaml','test/test_fde_post_selection.cpp']}
+    freeze['/usr/local/lib/libgtsam.so.4']=common.sha256(Path('/usr/local/lib/libgtsam.so.4'))
+    sf_compact={name:{k:r[k] for k in ['sensor_hash','trace_sha256','runtime','final_receipt','first_native_export','last_native_export','actual_topics']} for name,r in sf.items()}
+    sf_bin=ROOT.parents[1]/'.uwb_benchmark/sfuise_isolated_ws/devel/lib/uwb_benchmark_sfuise_adapter'
+    sf_identity={name:common.sha256(sf_bin/name) for name in ['sfuise_sc8_observed','sfuise_trajectory_adapter']}
+    verification={name:json.loads((CACHE/(name+'.json')).read_text()) for name in [
+        'ros_interface_summary','regression_results','regression_build_overlap','negative_summary',
+        'negative_guard_summary','noninterference','pruning_equivalence','best_effort_local','cal_accel_diagnostic']}
+    lines.append(json.dumps(dict(source_freeze=freeze,runs=compact,sfuise=sf_compact,sfuise_elf_sha256=sf_identity,
+        verification=verification),ensure_ascii=False,indent=2));lines+=['```','',
         '![全录制覆盖率与参考资格](walk_coverage.svg)', '',
         '![真实注入、报警与动作时间线](walk_fault_timeline.svg)', '',
         '![互斥阶段耗时与实际队列](walk_runtime.svg)','']
@@ -709,7 +865,8 @@ def evidence():
 def main():
     commands={'prepare':prepare,'noninterference':noninterference,'baseline':baseline,'sfuise':sfuise_baseline,
         'summarize':summarize_baseline,'inject':inject,'cal-accel':cal_accel,'profile':profile,
-        'sfuise-summary':sfuise_summary,'local':local,'continuous':continuous,'paired':paired,'negative':negative,'evaluate':evaluate,'evidence':evidence}
+        'sfuise-summary':sfuise_summary,'local':local,'continuous':continuous,'paired':paired,'negative':negative,
+        'ros-equivalence':ros_equivalence,'evaluate':evaluate,'evidence':evidence}
     p=argparse.ArgumentParser();p.add_argument('command',choices=list(commands));args=p.parse_args()
     commands[args.command]()
 
