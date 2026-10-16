@@ -1,4 +1,6 @@
 #include "joint_raw.hpp"
+#include "physical_time.hpp"
+#include <map>
 namespace uwb_imu_pl::research {
 namespace {
 using I=RollingInterval;
@@ -80,6 +82,119 @@ JointConstraintEvidence jointContract(RollingRawState& old,RollingRawState& next
   if(!any)throw std::invalid_argument("JOINT_ALL_BRANCHES_INCONSISTENT");
   old=rollingProject(union_old);next=rollingProject(union_next);evidence.valid=true;
  }catch(const std::exception& error){if(std::string(error.what())=="JOINT_ALL_BRANCHES_INCONSISTENT")throw;old=original_old;next=original_next;evidence.fallback=true;evidence.valid=true;evidence.branches=7;evidence.frontier=7;evidence.empty=0;for(auto& branch:evidence.branch_widths)branch=evidence.before;}
+ for(int j=0;j<6;++j)evidence.after[j]=next.bias[j].upper()-next.bias[j].lower();
+ return evidence;
+}
+
+JointConstraintEvidence jointContract(RollingRawState& old,RollingRawState& next,
+ TimestampNs begin,TimestampNs end,const std::vector<JointTimedSample>& samples,
+ const JointRawLaw& law,size_t budget){
+ validate(law);
+ if(old.epoch==std::numeric_limits<size_t>::max() || next.epoch!=old.epoch+1 || samples.empty())
+  throw std::invalid_argument("JOINT_TIMED_WINDOW_ORDER");
+ const I duration=durationSeconds(begin,end);
+ TimestampNs previous=begin;
+ std::map<MeasurementId,const JointTimedSample*> parents;
+ // Validate the complete source schedule before any set mutation. Timing and
+ // parent identity errors are input failures, never numeric fallback success.
+ for(const auto& s:samples){
+  if(!(previous<s.integration_end) || end<s.integration_end || s.integration_end<s.raw.timestamp ||
+     !s.raw.specific_force_mps2.allFinite() || !s.raw.angular_velocity_radps.allFinite())
+   throw std::invalid_argument("JOINT_TIMED_SOURCE_INVALID");
+  auto inserted=parents.emplace(s.raw.id,&s);
+  if(!inserted.second){const auto& prior=*inserted.first->second;const auto& p=prior.raw;
+   if(p.timestamp!=s.raw.timestamp || p.specific_force_mps2!=s.raw.specific_force_mps2 ||
+      p.angular_velocity_radps!=s.raw.angular_velocity_radps)
+    throw std::invalid_argument("JOINT_TIMED_PARENT_CONFLICT");
+   for(int axis=0;axis<6;++axis)if(prior.adc_radius[axis].lower()!=s.adc_radius[axis].lower() ||
+       prior.adc_radius[axis].upper()!=s.adc_radius[axis].upper())
+    throw std::invalid_argument("JOINT_TIMED_PARENT_NOISE_CONFLICT");
+  }
+  for(const auto& radii:{s.adc_radius,s.rw_from_begin,s.rw_to_end})for(auto r:radii)
+   if(!std::isfinite(r.lower()) || !std::isfinite(r.upper()) || r.lower()<0)
+    throw std::invalid_argument("JOINT_TIMED_SOURCE_RADIUS");
+  previous=s.integration_end;
+ }
+ if(previous!=end)throw std::invalid_argument("JOINT_TIMED_END_MISSING");
+ JointConstraintEvidence evidence;
+ evidence.method="sc9-nonuniform-raw-imu-state-integral-v2";
+ evidence.fault_relaxation="ALL7_PER_RAW_SAMPLE_AXIS_UNION_ARBITRARY_PHASE_OUTER";
+ evidence.first_source=samples.front().raw.id.value();evidence.last_source=samples.back().raw.id.value();
+ for(int j=0;j<6;++j)evidence.before[j]=next.bias[j].upper()-next.bias[j].lower();
+ const auto original_old=old,original_next=next;
+ auto a=old,b=next;
+ auto distance=[](TimestampNs x,TimestampNs y){return x==y?I(0):x<y?durationSeconds(x,y):durationSeconds(y,x);};
+ RollingVector integral_v{I(0),I(0),I(0)},integral_p=integral_v;
+ I remainder_v(0),remainder_p(0);previous=begin;
+ try{
+  for(const auto& sample:samples){
+   const I ds=durationSeconds(previous,sample.integration_end);
+   const I remaining=sample.integration_end==end?I(0):durationSeconds(sample.integration_end,end);
+   const I weight=ds*(remaining+ds/2.);
+   const I age=distance(sample.raw.timestamp,sample.integration_end);
+   const I from_time=distance(begin,sample.raw.timestamp),to_time=distance(sample.raw.timestamp,end);
+   RollingRawState union_old,union_next;RollingVector acceleration_union;bool any=false;
+   for(int branch=0;branch<7;++branch){
+    const int omitted=branch-1;++evidence.branches;
+    auto x=a,y=b;RollingVector acceleration{sym(I(law.acceleration)),sym(I(law.acceleration)),sym(I(law.acceleration))};
+    bool possible=true;
+    if(size_t(branch)>=budget){++evidence.frontier;}
+    else{
+     std::array<RollingVector,3> rotation;std::array<I,6> bias,signal;
+     for(int j=0;j<3;++j)for(int k=0;k<3;++k){
+      rotation[j][k]=x.rotation[j][k]+sym(I(law.rate)*from_time);
+      possible&=meet(rotation[j][k],y.rotation[j][k]+sym(I(law.rate)*to_time));
+      possible&=meet(rotation[j][k],I(-1,1));
+     }
+     for(int axis=0;axis<6 && possible;++axis){
+      const bool accel=axis<3;const int j=axis%3;
+      bias[axis]=x.bias[axis]+sym(sample.rw_from_begin[axis]);
+      possible&=meet(bias[axis],y.bias[axis]+sym(sample.rw_to_end[axis]));
+      if(!possible)break;
+      I physical=accel?I(law.gravity)*rotation[2][j]+sym(I(law.acceleration)):sym(I(law.rate));
+      if(axis==omitted)signal[axis]=physical; // Arbitrary fault at this raw time.
+      else{
+       I measured(accel?sample.raw.specific_force_mps2[j]:sample.raw.angular_velocity_radps[j]);
+       const I noise=sym(sample.adc_radius[axis]);
+       possible&=meet(bias[axis],measured-physical+noise);
+       signal[axis]=measured-bias[axis]+noise;
+       possible&=meet(signal[axis],physical);
+      }
+      possible&=meet(x.bias[axis],bias[axis]+sym(sample.rw_from_begin[axis]));
+      possible&=meet(y.bias[axis],bias[axis]+sym(sample.rw_to_end[axis]));
+     }
+     if(possible)for(int j=0;j<3;++j){
+      I measured_acceleration(0);for(int k=0;k<3;++k)measured_acceleration+=rotation[j][k]*signal[k];
+      if(j==2)measured_acceleration-=I(law.gravity);
+      possible&=meet(acceleration[j],measured_acceleration);
+     }
+    }
+    if(!possible){++evidence.empty;continue;}
+    if(!any){union_old=x;union_next=y;acceleration_union=acceleration;any=true;}
+    else{unite(union_old,x);unite(union_next,y);for(int j=0;j<3;++j)acceleration_union[j]=hull(acceleration_union[j],acceleration[j]);}
+   }
+   if(!any)throw std::invalid_argument("JOINT_ALL_BRANCHES_INCONSISTENT");
+   a=rollingProject(union_old);b=rollingProject(union_next);
+   for(int j=0;j<3;++j){integral_v[j]+=ds*acceleration_union[j];integral_p[j]+=weight*acceleration_union[j];}
+   // For right sample t_i and arbitrary held parent t_s<=t_i:
+   // |a(t)-a(t_s)| <= J*((t_i-t)+|t_i-t_s|).
+   // Integrate once and against (T-t), retaining nonuniform third-order term.
+   remainder_v+=I(law.jerk)*(square(ds)/2.+age*ds);
+   remainder_p+=I(law.jerk)*(remaining*square(ds)/2.+ds*square(ds)/3.+age*weight);
+   previous=sample.integration_end;
+  }
+  for(int j=0;j<3;++j){
+   const I dv=integral_v[j]+sym(remainder_v),dp=integral_p[j]+sym(remainder_p);
+   if(!meet(b.v[j],a.v[j]+dv) || !meet(a.v[j],b.v[j]-dv) ||
+      !meet(b.p[j],a.p[j]+duration*a.v[j]+dp) || !meet(a.p[j],b.p[j]-duration*a.v[j]-dp) ||
+      !meet(a.v[j],(b.p[j]-a.p[j]-dp)/duration))throw std::invalid_argument("JOINT_ALL_BRANCHES_INCONSISTENT");
+  }
+  old=rollingProject(a);next=rollingProject(b);evidence.valid=true;
+ }catch(const std::exception& error){
+  if(std::string(error.what())=="JOINT_ALL_BRANCHES_INCONSISTENT")throw;
+  old=original_old;next=original_next;evidence.valid=true;evidence.fallback=true;
+  evidence.branches=7*samples.size();evidence.frontier=evidence.branches;evidence.empty=0;
+ }
  for(int j=0;j<6;++j)evidence.after[j]=next.bias[j].upper()-next.bias[j].lower();
  return evidence;
 }

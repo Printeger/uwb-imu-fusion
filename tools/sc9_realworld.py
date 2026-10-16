@@ -75,7 +75,7 @@ def legacy(freeze):
 
 def check():
     CACHE.mkdir(parents=True, exist_ok=True)
-    for name in ['sc9_input_checks', 'sc9_event_checks', 'sc9_time_checks']:
+    for name in ['sc9_input_checks', 'sc9_event_checks', 'sc9_time_checks', 'sc9_joint_checks']:
         with (CACHE / (name + '.log')).open('w') as log:
             subprocess.run([str(BIN / name)], cwd=ROOT, env=environment(),
                            stdout=log, stderr=subprocess.STDOUT, check=True)

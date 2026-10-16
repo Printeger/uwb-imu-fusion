@@ -602,4 +602,7 @@ set_source_files_properties(research/sc9_event_checks.cpp PROPERTIES COMPILE_OPT
 add_executable(sc9_time_checks EXCLUDE_FROM_ALL research/sc9_time_checks.cpp)
 target_link_libraries(sc9_time_checks fde_research tbb)
 set_source_files_properties(research/sc9_time_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+add_executable(sc9_joint_checks EXCLUDE_FROM_ALL research/sc9_joint_checks.cpp)
+target_link_libraries(sc9_joint_checks fde_research tbb)
+set_source_files_properties(research/sc9_joint_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
 set_source_files_properties(research/sc7_support_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")

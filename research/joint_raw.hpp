@@ -11,4 +11,14 @@ struct JointRawLaw {
 bool jointInitial(RollingRawState&,const ImuMeasurement&,const JointRawLaw&,const TimeUniformEvent&);
 JointConstraintEvidence jointContract(RollingRawState&,RollingRawState&,
  const std::vector<ImuMeasurement>&,const JointRawLaw&,const TimeUniformEvent&,size_t branch_budget=7,bool dominant_hull_shortcut=true);
+// Actual RAW sample plus its integration interval end. A held endpoint keeps
+// the original measurement timestamp/ID and reuses its noise support.
+struct JointTimedSample {
+ ImuMeasurement raw;
+ TimestampNs integration_end;
+ std::array<RollingInterval,6> adc_radius,rw_from_begin,rw_to_end;
+};
+JointConstraintEvidence jointContract(RollingRawState&,RollingRawState&,
+ TimestampNs begin,TimestampNs end,const std::vector<JointTimedSample>&,
+ const JointRawLaw&,size_t branch_budget=7);
 }
