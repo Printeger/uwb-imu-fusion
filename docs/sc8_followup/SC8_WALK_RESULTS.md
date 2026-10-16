@@ -1,6 +1,11 @@
 # SC8 Walk Real-Data Follow-up
 
-状态：**W0–W3 已执行，W4 最终冻结与缓存清理进行中。** 本文件为本轮唯一结果报告，不改写旧 SC8。
+状态：**WALK_FOLLOWUP_EVALUATED_WITH_GAPS；W0–W4有限工作矩阵已实际完成。** 本文件为本轮唯一结果报告，不改写旧 SC8。
+
+名义与未保护普通估计达到完整有效计划覆盖目标：Walk2 1140/1172（97.270%），Walk3 1222/1253（97.526%），所有启动后可用批次均实际提交。16条原生全录制及2条SFUISE运行完成。**真实FDE恢复为0，研究ON全部为未保护best-effort；不授予WALK_ENGINEERING_FDE_CONTINUOUS_FOR_SCOPE。** 物理参考REFERENCE_OPEN，物理精度/收益NA；50ms实时性OPEN，真实raw PL/HMI资格UNQUALIFIED。OFF保留全部监测的反事实也未建立。阶段执行完成不等于这些能力通过。
+
+W4已核对冻结源码/二进制身份、全矩阵收据及3张SVG预览，保存必要统计和trace哈希。仅本轮 `.cache/sc8_walk_followup/` 已实际删除；原bag、旧SC8成果和用户未跟踪HTML/PDF未修改。完整大trace可按下文重建，不随交付保留。
+
 
 ## W0：输入、版本和参考资格
 
@@ -152,11 +157,11 @@ python3 tools/sc8_walk_followup.py evidence
 
 核心回归按下文`verification.regression_results`中精确target/filter执行，各目标先以`make -C /home/mint/ws_fusion_uwb/build/uwb_imu_pl <target>/fast -j1`构建，然后从`devel/.private/uwb_imu_pl/lib/uwb_imu_pl/<target> --gtest_filter='<filter>'`运行。实际完成38项核心测试、3项参考测试及13项评分器测试；不要在性能回放中改动runner/DSO。正式矩阵只有16条原生全录制及2条SFUISE运行；局部oracle、接口和期望拒绝进程另列，不混入成功率。缓存中的execution记录用于中断恢复，脚本校验输入及研究开关后复用已有执行；如需新测量须明确使用新输出目录，不把缓存读取声称重跑。
 
-阶段提交：W0 `a026811`；W1 `d65413e`；W2实现与小oracle `5ef0560`、全录制与安全回归 `96c1ef6`；W3接口/support检查点 `9c3d41a`。最终W3/W4提交见本文件Git历史。无自动push，原SC8报告及用户HTML/PDF保持原样。
+阶段提交：W0 `a026811`；W1 `d65413e`；W2实现与小oracle `5ef0560`、全录制与安全回归 `96c1ef6`；W3接口/support检查点 `9c3d41a`。W3全矩阵与三图 `c7d75df`；W4最终提交见本文件Git历史。无自动push，原SC8报告及用户HTML/PDF保持原样。
 
 ## WF01–WF18 验收表
 
-PASS仅表示该行限定工作及证据通过；OPEN不被普通连续输出抵扣。全矩阵已完成；最终清理尚未完成。
+PASS仅表示该行限定工作及证据通过；OPEN不被普通连续输出抵扣。全矩阵、三图、证据冻结及本轮缓存清理均已完成。
 
 |条款|状态|实测证据与边界|
 |---|---|---|
@@ -177,7 +182,7 @@ PASS仅表示该行限定工作及证据通过；OPEN不被普通连续输出抵
 |WF15|PASS|38项相关核心回归、3个实际runner期望拒绝；无保护发布，首次错误fixture和陈旧测试ELF失败均披露。|
 |WF16|PASS|Walk3冻结确认，同一参数/故障强度，无TEST外参/噪声/阈值/seed选择。|
 |WF17|PASS|三张实测SVG已生成并查看预览；完整统计、冻结摘要及复现命令保存在本报告。|
-|WF18|OPEN|唯一报告与阶段本地提交已维护；最终缓存清理、W4提交尚未完成。|
+|WF18|PASS|唯一报告、三图与阶段本地提交保存；仅删除本轮.cache/sc8_walk_followup/，无push，用户文件保留。|
 
 ## 全录制与注入：冻结实测表
 
