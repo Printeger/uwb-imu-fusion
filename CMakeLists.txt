@@ -104,6 +104,7 @@ include_directories(
 # =============================================
 add_library(${PROJECT_NAME}
   src/uwb_imu_pl/common/types.cpp
+  src/uwb_imu_pl/common/runtime_route_audit.cpp
   src/uwb_imu_pl/common/integrity_ids.cpp
   src/uwb_imu_pl/common/failure_reason.cpp
   src/uwb_imu_pl/common/integrity_identity.cpp
@@ -228,6 +229,8 @@ target_link_libraries(candidate_replay ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-c
 # Research-only targets: excluded from ordinary builds and never linked into
 # the production DSO/node. No installation or protected publication entry.
 add_library(fde_research STATIC EXCLUDE_FROM_ALL research/raw_imu_episode.cpp research/online_gaussian_history.cpp)
+find_package(OpenSSL REQUIRED)
+target_link_libraries(fde_research OpenSSL::Crypto)
 target_sources(fde_research PRIVATE research/sc4_input.cpp research/sc4_system.cpp)
 add_executable(sc4_system_checks EXCLUDE_FROM_ALL research/sc4_system_checks.cpp)
 target_link_libraries(sc4_system_checks fde_research)
@@ -630,3 +633,5 @@ set_source_files_properties(research/sc9_topology_checks.cpp PROPERTIES COMPILE_
 add_executable(sc9_dataset_runner EXCLUDE_FROM_ALL research/sc9_dataset_runner.cpp)
 target_link_libraries(sc9_dataset_runner fde_research tbb)
 set_source_files_properties(research/sc9_dataset_runner.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+add_executable(sc9_route_checks EXCLUDE_FROM_ALL research/sc9_route_checks.cpp)
+target_link_libraries(sc9_route_checks fde_research tbb)

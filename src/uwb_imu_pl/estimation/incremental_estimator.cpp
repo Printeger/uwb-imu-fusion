@@ -1,4 +1,5 @@
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
+#include "uwb_imu_pl/common/runtime_route_audit.hpp"
 
 #include <gtsam/inference/Ordering.h>
 #include <gtsam/inference/Symbol.h>
@@ -778,6 +779,7 @@ IncrementalUwbImuEstimator::IncrementalUwbImuEstimator(
         params.optimizationParams = gtsam::ISAM2DoglegParams();
         return params;
       }()) {
+  recordRuntimeRouteEventV1(RuntimeRouteEventV1::IncrementalBackendConstruction);
   // Defensively clear any registry entry left at a recycled object address.
   eraseP007Certificates(this);
   const auto tuning = readEstimationTuningV1(config_);

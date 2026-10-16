@@ -11,6 +11,8 @@ struct Sc6Result {
  std::chrono::steady_clock::time_point alarm_time,selected_time,commit_time,proof_time;
  std::chrono::steady_clock::time_point imu_alarm_time;
  uint64_t version=0,generation=0,parent=0,source_prefix=0;
+ uint32_t backend_updates=0;
+ std::string source_digest,receipt_digest,ledger_digest,boundary_digest;
  size_t active_states=0,proof_explicit=0;
  RangeCounts input_counts;
  size_t time_factor_groups=0,time_committed_factors=0;double max_range_transport=0;
@@ -44,6 +46,7 @@ class UnifiedRollingIntegrityCore {
  IncrementalUwbImuEstimator backend_;
  std::array<RollingInterval,6> reference_bias_;
  std::deque<ImuMeasurement> replay_;std::deque<RollingRawState> capsules_;
+ bool semantic_audit_=false;
  public:
  UnifiedRollingIntegrityCore(const YAML::Node&,const IntegrityConfig&,const NavigationState&,
  const Eigen::Vector3d&,const Sc6MotionDomain&,const ImuMeasurement&,bool tight=false,bool shadow=false,bool optimized=false);
@@ -53,6 +56,7 @@ class UnifiedRollingIntegrityCore {
  void anchorOnline(AnchorId anchor,bool online){anchors_.online(anchor,online);}
  static constexpr const char* implementationId(){return "unified-sc6-sc7-rolling-v1";}
  uint64_t updateCount()const{return backend_.backendUpdateCount();}
+ void enableSemanticAudit(){semantic_audit_=true;}
  Sc6Result step(const Sc6Envelope&,bool fde);
 };
 using Sc6Service = UnifiedRollingIntegrityCore; // Source-compatible legacy wrapper.

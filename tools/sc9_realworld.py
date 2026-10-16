@@ -8,7 +8,7 @@ import struct
 import subprocess
 from pathlib import Path
 
-from sc4_system_research import ROOT, BIN, environment
+from sc4_system_research import ROOT, BIN, BUILD, environment
 
 CACHE = ROOT / '.cache/sc9'
 # Fixed before observing these runs. Both fault rows extend past injection and x0 exit.
@@ -84,9 +84,14 @@ def legacy(freeze):
     print('FROZEN' if freeze else ('LEGACY_PARITY_ONE_ULP_FINAL_BOUND' if result['final_bound_roundoff'] else 'EXACT_LEGACY_PARITY'), result['identity'])
 
 
-def check():
+def check(build=False):
     CACHE.mkdir(parents=True, exist_ok=True)
-    for name in ['sc9_input_checks', 'sc9_event_checks', 'sc9_time_checks', 'sc9_joint_checks', 'sc9_recovery_checks', 'sc9_boundary_checks', 'sc9_core_checks', 'sc9_bootstrap_checks', 'sc9_time_factor_checks', 'sc9_topology_checks']:
+    targets=['sc9_input_checks', 'sc9_event_checks', 'sc9_time_checks', 'sc9_joint_checks', 'sc9_recovery_checks', 'sc9_boundary_checks', 'sc9_core_checks', 'sc9_bootstrap_checks', 'sc9_time_factor_checks', 'sc9_topology_checks', 'sc9_route_checks']
+    if build:
+        with (CACHE/'check-build.log').open('w') as log:
+            subprocess.run(['cmake','-S',str(ROOT),'-B',str(BUILD)],env=environment(),stdout=log,stderr=subprocess.STDOUT,check=True)
+            subprocess.run(['cmake','--build',str(BUILD),'--target']+targets+['sc9_dataset_runner','epoch_raim_runner','-j2'],env=environment(),stdout=log,stderr=subprocess.STDOUT,check=True)
+    for name in targets:
         with (CACHE / (name + '.log')).open('w') as log:
             subprocess.run([str(BIN / name)], cwd=ROOT, env=environment(),
                            stdout=log, stderr=subprocess.STDOUT, check=True)
@@ -426,6 +431,10 @@ def score_walk(args):
     if sha(model_path) != freeze['model']:
         raise RuntimeError('scoring model differs from run freeze')
     model = json.loads(model_path.read_text()); ref = model['reference']
+    diagnostic_path=CACHE/'calibration-diagnostic.json'
+    if sha(diagnostic_path)!=model['calibration_sha']:
+        raise RuntimeError('CAL diagnostic changed after model freeze')
+    stability=json.loads(diagnostic_path.read_text())['parameter_stability']
     world = Rotation.from_matrix(model['R_model_from_anchor_world'])
     external = Rotation.from_matrix(ref['R_anchor_from_tracker_world'])
     mount = Rotation.from_matrix(ref['R_tracker_from_imu'])
@@ -438,7 +447,7 @@ def score_walk(args):
                     median=float(np.median(values)),p95=float(ordered[int(np.ceil(.95*len(values)))-1]),
                     p99=float(ordered[int(np.ceil(.99*len(values)))-1]),maximum=float(ordered[-1]))
     output = dict(scope='CAL_ONLY_EMPIRICAL_REFERENCE; no TEST alignment or fit; bias truth NA',
-                  model_sha=freeze['model'],runs={},pairs={})
+                  model_sha=freeze['model'],scorer_sha=sha(__file__),runs={},pairs={},injection_causality={})
     frames = {}
     for case in freeze['cases']:
         walk_name = case.split('-')[0]
@@ -475,6 +484,35 @@ def score_walk(args):
             # and subsequent recovery, independent of estimated errors.
             local=(time>=20)&(time<26)
             report['registered_window_20_26s']=dict(ape_m=statistics(np.linalg.norm(error[local],axis=1)),are_deg=statistics(angle[local]))
+            # Perturb only the scoring reference with magnitudes already
+            # measured between CAL training fractions. Do not pick a best fit
+            # or change estimator parameters from these TEST scores.
+            clock_delta=stability['clock_delta_s']
+            safe=(reference_time-clock_delta>=gt.t.min())&(reference_time+clock_delta<=gt.t.max())
+            tr=reference_time[safe];er=estimate_rotation[safe]
+            estimated_tag=data[['tag_x','tag_y','tag_z']].to_numpy()[safe]
+            tracker_tag=pos(tr)+rot(tr).apply(ref['tracker_to_tag_m'])
+            family={key:[] for key in ['world_rotation','world_translation','tracker_mount','clock']}
+            def variant(key,p,r):
+                family[key].append(dict(ape_rmse_m=float(np.sqrt(np.mean(np.sum((estimated_tag-p)**2,axis=1)))),
+                                        are_rmse_deg=float(np.sqrt(np.mean(((r.inv()*er).magnitude()*180/np.pi)**2)))))
+            base_rotation=world*external*rot(tr)*mount
+            base_tag=world.apply(external.apply(tracker_tag)+np.asarray(ref['t_anchor_from_tracker_world_m']))
+            for axis in np.eye(3):
+                for sign in [-1,1]:
+                    changed=Rotation.from_rotvec(sign*axis*stability['world_rotation_delta_rad'])*external
+                    variant('world_rotation',world.apply(changed.apply(tracker_tag)+np.asarray(ref['t_anchor_from_tracker_world_m'])),world*changed*rot(tr)*mount)
+                    variant('world_translation',base_tag+world.apply(sign*axis*stability['world_translation_delta_m']),base_rotation)
+                    changed_tag=pos(tr)+rot(tr).apply(np.asarray(ref['tracker_to_tag_m'])+sign*axis*stability['mount_delta_m'])
+                    variant('tracker_mount',world.apply(external.apply(changed_tag)+np.asarray(ref['t_anchor_from_tracker_world_m'])),base_rotation)
+            for sign in [-1,1]:
+                changed_time=tr+sign*clock_delta
+                changed_tag=pos(changed_time)+rot(changed_time).apply(ref['tracker_to_tag_m'])
+                variant('clock',world.apply(external.apply(changed_tag)+np.asarray(ref['t_anchor_from_tracker_world_m'])),world*external*rot(changed_time)*mount)
+            report['reference_sensitivity']=dict(scope='one CAL-stability perturbation at a time; descriptive, not a confidence bound',
+                matched=int(safe.sum()),cal_parameter_stability=stability,
+                families={key:{metric:[min(v[metric] for v in values),max(v[metric] for v in values)]
+                          for metric in ['ape_rmse_m','are_rmse_deg']} for key,values in family.items()})
             # Relative displacement in the body frame and relative attitude;
             # interpolation only inside observed support, no trajectory alignment.
             if len(time)>2:
@@ -500,6 +538,39 @@ def score_walk(args):
             same_imu_alarm=bool((joined.imu_alarm_off==joined.imu_alarm_on).all()),
             same_source_prefix=bool((joined.source_prefix_off==joined.source_prefix_on).all()),
             same_risk=bool((joined.event_risk_off==joined.event_risk_on).all()))
+    registration=json.loads((CACHE/'injection-registration.json').read_text())
+    if sha(CACHE/'injection-registration.json') != freeze['registration']:
+        raise RuntimeError('injection registration changed')
+    for case in freeze['cases']:
+        sequence,fault=case.split('-')
+        if fault=='base' or sequence+'-base' not in freeze['cases']:
+            continue
+        declared=registration['ISAS-'+sequence]
+        first=min(declared['range_times_s'])+model['range_to_imu_time_s'] if fault in ['U','J'] else declared['imu_begin_s']
+        for mode in ['off','on']:
+            overlay=frames[case+'-'+mode];base=frames[sequence+'-base-'+mode]
+            common=base.merge(overlay,on=['epoch','batch_id','stamp_ns'],suffixes=('_base','_overlay'))
+            cols=['tag_x','tag_y','tag_z','px','py','pz','vx','vy','vz','qw','qx','qy','qz',
+                  'bax','bay','baz','bgx','bgy','bgz','status','imu_alarm','uwb_alarm','excluded_source',
+                  'bridge','repair','rejoined','source_prefix','event_risk','boundary','hpl','vpl']
+            # Original message identity avoids classifying the first changed
+            # batch as pre-injection when its rounded ns lies <0.5ns below t.
+            before=(common.batch_id.to_numpy()<declared['range_source'][0]['source_message']+1) if fault in ['U','J'] else (common.stamp_ns.to_numpy()<round(first*1e9))
+            mismatches=[]
+            for col in cols:
+                a=common.loc[before,col+'_base'].reset_index(drop=True)
+                b=common.loc[before,col+'_overlay'].reset_index(drop=True)
+                if not a.equals(b):mismatches.append(col)
+            extra_sources=common.loc[common.excluded_source_overlay.notna() &
+                         (common.excluded_source_overlay!=declared['anchor_id']) &
+                         (common.excluded_source_overlay!=common.excluded_source_base),'excluded_source_overlay']
+            output['injection_causality'][case+'-'+mode]=dict(matched=len(common),
+                pre_injection_epochs=int(before.sum()),pre_injection_mismatched_columns=mismatches,
+                new_imu_alarm_epochs=int(((common.imu_alarm_overlay>0)&(common.imu_alarm_base==0)).sum()),
+                new_uwb_alarm_epochs=int(((common.uwb_alarm_overlay>0)&(common.uwb_alarm_base==0)).sum()),
+                new_bridge_epochs=int(((common.bridge_overlay>0)&(common.bridge_base==0)).sum()),
+                nonregistered_extra_source_epochs=int(len(extra_sources)),
+                excluded_sources=overlay.excluded_source.dropna().astype('int64').value_counts().to_dict())
     (destination/'scores.json').write_text(json.dumps(output,indent=2)+'\n')
     print(json.dumps({name:{k:result[k] for k in ['committed','ape_m','are_deg','registered_window_20_26s']} for name,result in output['runs'].items()},indent=2))
 
@@ -559,6 +630,11 @@ def walk(args):
                           repairs=sum(int(r['repair']) for r in rows),
                           polluted_prior=sum(int(r['polluted_prior']) for r in rows),
                           rejoins=sum(int(r['rejoined']) for r in rows))
+            if rows and 'old_engine_calls' in rows[0]:
+                result['runtime_route']={key:max(int(r[key]) for r in rows) for key in
+                    ['old_pipeline_constructions','old_engine_calls','old_fde_calls','backend_constructions']}
+                result['semantic_audit_rows']=sum(all(len(r[key])==64 for key in
+                    ['source_digest','receipt_digest','ledger_digest','boundary_digest']) for r in rows)
             receipt.write_text(json.dumps(result,indent=2)+'\n')
             results[key]=result
             print(key,json.dumps({k:v for k,v in result.items() if k not in ['command','output_sha']}),flush=True)
@@ -573,13 +649,14 @@ if __name__ == '__main__':
     parser.add_argument('--profile',choices=['gate','full'],default='gate')
     parser.add_argument('--run-id')
     parser.add_argument('--cases',help='comma-separated Walk2-base, Walk3-base, Walk2-U/A/G/J, Walk3-J names')
+    parser.add_argument('--build',action='store_true',help='configure/build all SC9 checks before running check')
     args = parser.parse_args()
     if args.command == 'score':
         score_walk(args)
     elif args.command == 'walk':
         walk(args)
     elif args.command == 'check':
-        check()
+        check(args.build)
     elif args.command == 'prepare':
         prepare()
     elif args.command == 'inject':

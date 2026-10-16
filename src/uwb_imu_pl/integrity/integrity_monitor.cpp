@@ -1,4 +1,5 @@
 #include "uwb_imu_pl/integrity/integrity_monitor.hpp"
+#include "uwb_imu_pl/common/runtime_route_audit.hpp"
 
 #include "uwb_imu_pl/common/failure_reason.hpp"
 #include "uwb_imu_pl/common/integrity_identity.hpp"
@@ -2142,6 +2143,7 @@ RealtimeIntegrityPipeline::RealtimeIntegrityPipeline(
       health_(estimator ? estimator->config().health : HealthConfigV2{}),
       publication_(publication_limits),
       candidate_workers_(new CandidateWorkerPool(4)) {
+  recordRuntimeRouteEventV1(RuntimeRouteEventV1::OldPipelineConstruction);
   clearPipelineTestSeams(this);
   if (estimator_ == nullptr) throw std::invalid_argument("estimator must not be null");
   if (estimator_->config().resolved_scope.requiresUwbFaults()) {
@@ -2368,6 +2370,7 @@ processUwbBatchWithFinishElapsedOverride(
     const std::optional<double>& finish_elapsed_ms_override,
     AttemptProofArena* proof_arena) {
   const auto before = estimator_->currentEpoch();
+  recordRuntimeRouteEventV1(RuntimeRouteEventV1::OldEngineCall);
   ++input_attempt_count_;
   last_attempt_output_ = IntegrityOutput();
   AllAttemptTimerV1 attempt_timer(&last_attempt_output_);

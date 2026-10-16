@@ -196,8 +196,15 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
    }
   }
   const size_t earliest_dependency=historical_range?std::min(result.first_dependency,observed_uwb_onset_):result.first_dependency;
+  size_t prior_boundary=0;
+  if(actual_time_){prior_boundary=std::numeric_limits<size_t>::max();
+   for(auto key:tx.frozen_values->keys())if(gtsam::Symbol(key).chr()=='x')prior_boundary=std::min(prior_boundary,size_t(gtsam::Symbol(key).index()));
+   if(prior_boundary==std::numeric_limits<size_t>::max())throw std::runtime_error("ACTUAL_PRIOR_BOUNDARY_KEYS_MISSING");
+  }
+  // Pollution belongs to the incoming native prior. The next separator may
+  // be one epoch newer, but its outgoing marginalization has not happened yet.
   if(!isolated_ && !tx.frozen_values->exists(gtsam::Symbol('x',0)) &&
-     (!actual_time_ || earliest_dependency<=tx.proposed_epoch+1-policy_.fgo)){
+     (!actual_time_ || earliest_dependency<=prior_boundary)){
    size_t boundary=tx.proposed_epoch+1-policy_.fgo;
    const RollingRawState* capsule=nullptr;for(const auto& c:capsules)if(c.epoch==boundary)capsule=&c;
    if(!capsule)throw std::runtime_error("BOUNDED_RAW_RECOVERY_CAPSULE_MISSING");
@@ -214,7 +221,7 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
    if(actual_time_){bool found=false;for(const auto& source:timeline_)if(source.epoch==boundary){boundary_time=source.end;found=true;break;}
     if(!found)throw std::runtime_error("ACTUAL_BOUNDARY_TIME_MISSING");}
    HistoricalEpochContext provenance;provenance.previous_epoch=boundary;provenance.proposed_epoch=boundary;provenance.begin=provenance.end=boundary_time;provenance.groups.push_back(std::move(regularizer));tx.recoverable_history.push_back(std::move(provenance));
-   result.boundary_repair=true;result.history_marginalized=earliest_dependency<=boundary;
+   result.boundary_repair=true;result.history_marginalized=actual_time_?earliest_dependency<=prior_boundary:result.first_dependency<=boundary;
   }
  }
  std::set<uint64_t> remove,add;for(auto id:result.plan.groups_to_remove)remove.insert(id.value());for(auto id:result.plan.groups_to_add)add.insert(id.value());

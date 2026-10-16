@@ -1,4 +1,5 @@
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
+#include "uwb_imu_pl/common/runtime_route_audit.hpp"
 #include "uwb_imu_pl/common/integrity_identity.hpp"
 #include "uwb_imu_pl/integrity/fde_post_selection.hpp"
 #include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
@@ -230,6 +231,7 @@ FdeDecision FdeManager::decideImpl(
     const RiskBudgetV2& risk,
     const FdeDecisionContextV1* context,
     const FdeDecisionContextV4* complete_context) const {
+  recordRuntimeRouteEventV1(RuntimeRouteEventV1::OldFdeCall);
   FdeDecision decision;
   if (complete_context && complete_context->ledger_result)
     *complete_context->ledger_result = {};

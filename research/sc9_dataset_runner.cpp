@@ -1,6 +1,7 @@
 #include "unified_rolling_core.hpp"
 #include "measurement_bootstrap.hpp"
 #include "numerical_candidate.hpp"
+#include "uwb_imu_pl/common/runtime_route_audit.hpp"
 #include <tbb/global_control.h>
 #include <fstream>
 #include <iomanip>
@@ -72,20 +73,24 @@ int main(int argc,char** argv){try{
  if(!seed.allFinite()){seed.setZero();for(const auto& m:initial_ranges.measurements)seed+=m.anchor_position_m;seed/=initial_ranges.measurements.size();}
  numerical.position_world_m=seed-numerical.q_world_body*lever;
  UnifiedRollingIntegrityCore core(law,cfg,numerical,lever,domain,*first,std::move(initialization));
+ core.enableSemanticAudit();
  size_t cursor=first_index+1,epoch=0;const size_t planned=batches.size()-startup-1;
  std::cerr<<"core="<<core.implementationId()<<" model="<<domain.id<<" startup_raw="<<first->id.value()<<" startup_ns="<<first->timestamp.value()<<" planned_after_startup="<<planned<<" mode="<<mode<<"\n";
  std::ofstream out(argv[3]);if(!out)throw std::runtime_error("OUTPUT_OPEN");out<<std::setprecision(17);
- out<<"epoch,batch_id,stamp_ns,core_id,model_status,bound_status,set_valid,status,recovery,imu_alarm,uwb_alarm,excluded,excluded_source,bridge,repair,polluted_prior,rejoined,first_dependency,updates,version,generation,parent,boundary,source_prefix,q,event_risk,registered,visible,measurements,invalid,time_groups,time_live,max_transport,hpl,vpl,raw_qualified,publication_protected,tag_x,tag_y,tag_z,px,py,pz,vx,vy,vz,qw,qx,qy,qz,bax,bay,baz,bgx,bgy,bgz,core_ms,prepare_ms,candidate_ms,proof_ms,commit_ms,cleanup_ms,active_states,proof_explicit,slots,ledger,replay,capsules,rss_kb\n";
+ out<<"epoch,batch_id,stamp_ns,core_id,model_status,bound_status,set_valid,status,recovery,imu_alarm,uwb_alarm,excluded,excluded_source,bridge,repair,polluted_prior,rejoined,first_dependency,updates,version,generation,parent,boundary,source_prefix,q,event_risk,registered,visible,measurements,invalid,time_groups,time_live,max_transport,hpl,vpl,raw_qualified,publication_protected,tag_x,tag_y,tag_z,px,py,pz,vx,vy,vz,qw,qx,qy,qz,bax,bay,baz,bgx,bgy,bgz,core_ms,prepare_ms,candidate_ms,proof_ms,commit_ms,cleanup_ms,active_states,proof_explicit,slots,ledger,replay,capsules,rss_kb,old_pipeline_constructions,old_engine_calls,old_fde_calls,backend_constructions,source_digest,receipt_digest,ledger_digest,boundary_digest\n";
  for(size_t k=startup+1;k<batches.size() && (!maximum || epoch<maximum);++k){if(!(numerical.timestamp<batches[k].values.timestamp))continue;
   Sc6Envelope input;input.epoch=++epoch;input.uwb=batches[k].values;input.range_events=batches[k].events;input.ready=input.uwb.timestamp;
   while(cursor<imu.size() && !(input.uwb.timestamp<imu[cursor].timestamp))input.imu.push_back(imu[cursor++]);
   const auto started=std::chrono::steady_clock::now();Sc6Result r;
   try{r=core.step(input,mode=="on" && epoch>enable_after);}catch(const std::exception& error){std::cerr<<"FAILED epoch="<<epoch<<" source_batch="<<input.uwb.id.value()<<" stamp="<<input.uwb.timestamp.value()<<" reason="<<error.what()<<'\n';throw;}
   const double elapsed=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
-  out<<epoch<<','<<input.uwb.id.value()<<','<<r.state.timestamp.value()<<','<<core.implementationId()<<",DECLARED_EMPIRICAL,"<<r.bound.status<<','<<r.bound.valid<<','<<r.action.status<<','<<r.action.recovery<<','<<r.imu_alarm<<','<<r.action.uwb_alarm<<','<<r.action.excluded<<','<<(r.action.excluded_source?std::to_string(r.action.excluded_source->value()):"")<<','<<r.action.current_bridge<<','<<r.action.boundary_repair<<','<<r.action.history_marginalized<<','<<r.action.rejoined<<','<<r.action.first_dependency<<",1,"<<r.version<<','<<r.generation<<','<<r.parent<<','<<r.boundary<<','<<r.source_prefix<<','<<r.q<<','<<r.bound.event_risk<<','<<r.input_counts.registered<<','<<r.input_counts.visible<<','<<r.input_counts.measurements<<','<<r.input_counts.invalid<<','<<r.time_factor_groups<<','<<r.time_committed_factors<<','<<r.max_range_transport<<','<<r.bound.hpl<<','<<r.bound.pl.z()<<",0,0";
+  const auto route=runtimeRouteAuditV1();
+  if(route.old_pipeline_constructions || route.old_engine_calls || route.old_fde_calls || route.incremental_backend_constructions!=1)
+   throw std::runtime_error("DATASET_RUNTIME_ROUTE_MISMATCH");
+  out<<epoch<<','<<input.uwb.id.value()<<','<<r.state.timestamp.value()<<','<<core.implementationId()<<",DECLARED_EMPIRICAL,"<<r.bound.status<<','<<r.bound.valid<<','<<r.action.status<<','<<r.action.recovery<<','<<r.imu_alarm<<','<<r.action.uwb_alarm<<','<<r.action.excluded<<','<<(r.action.excluded_source?std::to_string(r.action.excluded_source->value()):"")<<','<<r.action.current_bridge<<','<<r.action.boundary_repair<<','<<r.action.history_marginalized<<','<<r.action.rejoined<<','<<r.action.first_dependency<<','<<r.backend_updates<<','<<r.version<<','<<r.generation<<','<<r.parent<<','<<r.boundary<<','<<r.source_prefix<<','<<r.q<<','<<r.bound.event_risk<<','<<r.input_counts.registered<<','<<r.input_counts.visible<<','<<r.input_counts.measurements<<','<<r.input_counts.invalid<<','<<r.time_factor_groups<<','<<r.time_committed_factors<<','<<r.max_range_transport<<','<<r.bound.hpl<<','<<r.bound.pl.z()<<",0,0";
   for(const auto& v:std::vector<Eigen::Vector3d>{r.tag,r.state.position_world_m,r.state.velocity_world_mps})for(int j=0;j<3;++j)out<<','<<v[j];
   const auto& q=r.state.q_world_body;out<<','<<q.w()<<','<<q.x()<<','<<q.y()<<','<<q.z();for(const auto& v:std::vector<Eigen::Vector3d>{r.state.accel_bias_mps2,r.state.gyro_bias_radps})for(int j=0;j<3;++j)out<<','<<v[j];
-  out<<','<<elapsed<<','<<r.prepare_ms<<','<<r.candidate_ms<<','<<r.proof_ms<<','<<r.commit_ms<<','<<r.cleanup_ms<<','<<r.active_states<<','<<r.proof_explicit<<','<<r.slots<<','<<r.ledger<<','<<r.replay<<','<<r.capsules<<','<<r.rss<<'\n';out.flush();
+  out<<','<<elapsed<<','<<r.prepare_ms<<','<<r.candidate_ms<<','<<r.proof_ms<<','<<r.commit_ms<<','<<r.cleanup_ms<<','<<r.active_states<<','<<r.proof_explicit<<','<<r.slots<<','<<r.ledger<<','<<r.replay<<','<<r.capsules<<','<<r.rss<<','<<route.old_pipeline_constructions<<','<<route.old_engine_calls<<','<<route.old_fde_calls<<','<<route.incremental_backend_constructions<<','<<r.source_digest<<','<<r.receipt_digest<<','<<r.ledger_digest<<','<<r.boundary_digest<<'\n';out.flush();
  }
  std::cerr<<"COMMITTED="<<epoch<<" planned="<<planned<<" max_requested="<<maximum<<" backend_updates="<<core.updateCount()<<'\n';return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}}

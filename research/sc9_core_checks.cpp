@@ -1,12 +1,14 @@
 #include "unified_rolling_core.hpp"
 #include "sc6_provider.hpp"
+#include "uwb_imu_pl/common/runtime_route_audit.hpp"
 #include <tbb/global_control.h>
 #include <iostream>
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
 void require(bool b,const char* m){if(!b)throw std::runtime_error(m);}
 int main(){try{
  tbb::global_control serial(tbb::global_control::max_allowed_parallelism,1);
- for(const std::string scenario:{"U","A","G","J-held"}){
+ for(const std::string scenario:{"U","A","G","J-held","A-boundary-edge"}){
+  const auto route_before=runtimeRouteAuditV1();
   const size_t n=scenario=="U"?5:12;
   Sc6Provider src("config/sc7.yaml","S0",20261010,1);auto cfg=src.cfg;cfg.anchors.clear();cfg.imu.max_gap_s=.025;
   cfg.realtime.prior_sigmas.setConstant(.001);
@@ -22,7 +24,8 @@ int main(){try{
   ImuMeasurement raw;raw.id=MeasurementId(uint64_t(1)<<42);raw.timestamp=initial.timestamp;
   raw.specific_force_mps2={0,0,law.gravity};raw.angular_velocity_radps.setZero();
   UnifiedRollingIntegrityCore core(src.law,cfg,initial,src.lever,domain,raw,std::move(model));
-  TimestampNs begin=initial.timestamp;int64_t onset=0;size_t alarms=0,exclusions=0,bridges=0,repairs=0,polluted=0,rejoins=0,post=0;
+  core.enableSemanticAudit();
+  TimestampNs begin=initial.timestamp;int64_t onset=0;size_t alarms=0,exclusions=0,bridges=0,repairs=0,polluted=0,rejoins=0,post=0,prior_boundary=0;
   for(size_t k=1;k<=80;++k){
    const auto end=TimestampNs(begin.value()+(k%2?47000003LL:63000007LL));if(k==40)onset=begin.value()+13000000;
    Sc6Envelope input;input.epoch=k;input.uwb.id=BatchId(90000+k);input.uwb.timestamp=end;input.ready=end;
@@ -30,7 +33,7 @@ int main(){try{
     raw.timestamp=TimestampNs(raw.timestamp.value()+12000000LL);raw.id=MeasurementId(raw.id.value()+7);
     raw.specific_force_mps2={0,0,law.gravity};raw.angular_velocity_radps.setZero();
     if(onset && onset<=raw.timestamp.value() && raw.timestamp.value()<onset+500000000LL){
-     if(scenario=="A" || scenario=="J-held")raw.specific_force_mps2.x()+=20;
+     if(scenario=="A" || scenario=="J-held" || scenario=="A-boundary-edge")raw.specific_force_mps2.x()+=20;
      if(scenario=="G")raw.angular_velocity_radps.x()+=1;
     }
     input.imu.push_back(raw);
@@ -41,9 +44,12 @@ int main(){try{
     if((scenario=="U" || scenario=="J-held") && k>=40 && k<=42 && i==0)m.range_m+=2.25;
     input.uwb.measurements.push_back(m);input.range_events.push_back({m,end,1,true});
    }
-   const bool fde=scenario!="J-held" || k>=73;
+   const bool fde=scenario=="A-boundary-edge"?k>=60:(scenario!="J-held" || k>=73);
    Sc6Result r;try{r=core.step(input,fde);}catch(const std::exception& e){std::cerr<<scenario<<" epoch="<<k<<" ";throw;}if(!(r.max_range_transport>0 && r.time_factor_groups>0 && r.time_committed_factors>0)){std::cerr<<scenario<<" k="<<k<<" radius="<<r.max_range_transport<<" groups="<<r.time_factor_groups<<" committed="<<r.time_committed_factors<<"\n";throw std::runtime_error("actual time factor missing from native ledger");}require(r.bound.valid && r.source_prefix>0,"missing common-core bound");
    require(r.state.timestamp==end && r.generation==k && core.updateCount()==k+1,"common-core commit/source mismatch");
+   require(r.backend_updates==1 && r.source_digest.size()==64 && r.receipt_digest.size()==64 && r.ledger_digest.size()==64 && r.boundary_digest.size()==64,"native semantic audit missing");
+   if(scenario=="A-boundary-edge" && k==60)require(r.action.first_dependency==prior_boundary+1 && r.boundary==r.action.first_dependency && r.action.current_bridge && !r.action.boundary_repair,"incoming prior confused with outgoing separator");
+   prior_boundary=r.boundary;
    for(int j=0;j<3;++j)require(r.bound.low[j]<=truth[j] && truth[j]<=r.bound.high[j],"fault union lost truth");
    alarms+=r.imu_alarm || r.action.uwb_alarm;exclusions+=r.action.excluded>=0;bridges+=r.action.current_bridge;repairs+=r.action.boundary_repair;polluted+=r.action.history_marginalized;rejoins+=r.action.rejoined;
    if(rejoins && !r.action.current_bridge)++post;
@@ -52,8 +58,11 @@ int main(){try{
   require(alarms>0,"fault did not trigger real monitor");
   if(scenario=="U")require(exclusions==5,"UWB source hold did not end after two further observations");
   else require(bridges>0 && rejoins>0 && post>=4,"missing native bridge/rejoin post epochs");
-  if(scenario=="A" || scenario=="G")require(repairs==0,"uncontaminated marginal prior replaced");
+  if(scenario=="A" || scenario=="G" || scenario=="A-boundary-edge")require(repairs==0,"uncontaminated marginal prior replaced");
   if(scenario=="J-held")require(polluted>0 && exclusions>0,"no actual delayed marginal repair/joint action");
+  const auto route=runtimeRouteAuditV1();
+  require(route.old_pipeline_constructions==0 && route.old_engine_calls==0 && route.old_fde_calls==0 &&
+          route.incremental_backend_constructions==route_before.incremental_backend_constructions+1,"unified core entered old engine or constructed extra backend");
   std::cout<<"SC9 common core "<<scenario<<" N="<<n<<" commits=80 alarms="<<alarms<<" exclusions="<<exclusions<<" bridge="<<bridges<<" repair="<<repairs<<" polluted="<<polluted<<" rejoin="<<rejoins<<" post="<<post<<'\n'<<std::flush;
  }
  return 0;
