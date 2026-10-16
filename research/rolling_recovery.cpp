@@ -16,21 +16,27 @@ void reintegrate(PendingFactorGroup& group,const std::vector<ImuMeasurement>& ra
  for(size_t i=1;i<raw.size();++i)pim.integrateMeasurement(.5*(raw[i-1].specific_force_mps2+raw[i].specific_force_mps2),.5*(raw[i-1].angular_velocity_radps+raw[i].angular_velocity_radps),double(raw[i].timestamp.value()-raw[i-1].timestamp.value())/1e9);
  group.factors.resize(0);group.factors.emplace_shared<gtsam::CombinedImuFactor>(gtsam::Symbol('x',previous),gtsam::Symbol('v',previous),gtsam::Symbol('x',next),gtsam::Symbol('v',next),gtsam::Symbol('b',previous),gtsam::Symbol('b',next),pim);group.raw_covariance=pim.preintMeasCov();
 }
-void omitRange(EpochTransaction& tx,EpochCommitPlan& plan,int mask){
- if(mask<0)return;
- auto anchor=tx.uwb_batch.measurements.at(mask).anchor_id;
- auto contains=[](const PendingFactorGroup& g,MeasurementId id){return std::find(g.source_measurements.begin(),g.source_measurements.end(),id)!=g.source_measurements.end();};
- for(const auto& g:tx.uwb_groups)if(g.nominal){plan.groups_to_add.erase(std::remove(plan.groups_to_add.begin(),plan.groups_to_add.end(),g.id),plan.groups_to_add.end());break;}
- bool found=false;
- for(const auto& g:tx.uwb_groups)if(!g.nominal && g.source_measurements.size()==7 && !contains(g,tx.uwb_batch.measurements.at(mask).id)){plan.groups_to_add.push_back(g.id);found=true;break;}
- if(!found)throw std::runtime_error("CURRENT_UWB_REPLACEMENT_MISSING");
- for(const auto& h:tx.recoverable_history){MeasurementId source;
-  for(const auto& m:h.uwb_batch.measurements)if(m.anchor_id==anchor)source=m.id;
-  for(const auto& g:h.groups)if(g.kind==FactorKind::UwbBatch && std::find(h.selected_groups.begin(),h.selected_groups.end(),g.id)!=h.selected_groups.end() && contains(g,source)){
-   bool matched=false;for(const auto& replacement:h.groups)if(replacement.replaces_group && *replacement.replaces_group==g.id && replacement.source_measurements.size()+1==g.source_measurements.size() && !contains(replacement,source)){plan.groups_to_remove.push_back(g.id);plan.groups_to_add.push_back(replacement.id);matched=true;break;}
-   if(!matched)throw std::runtime_error("HISTORICAL_UWB_REPLACEMENT_MISSING");
+void omitRange(EpochTransaction& tx,EpochCommitPlan& plan,AnchorId anchor){
+ auto retained=[&](const UwbBatch& batch,const std::vector<MeasurementId>& members){
+  std::set<MeasurementId> bad;for(const auto& m:batch.measurements)if(m.anchor_id==anchor)bad.insert(m.id);
+  std::vector<MeasurementId> expected;for(auto id:members)if(!bad.count(id))expected.push_back(id);
+  return expected;
+ };
+ auto replace=[&](const UwbBatch& batch,const auto& groups,const std::vector<FactorGroupId>& selected,bool current){
+  for(const auto& g:groups)if(g.kind==FactorKind::UwbBatch && std::find(selected.begin(),selected.end(),g.id)!=selected.end()){
+   const auto expected=retained(batch,g.source_measurements);
+   if(expected==g.source_measurements)continue;
+   const PendingFactorGroup* replacement=nullptr;
+   for(const auto& candidate:groups)if(candidate.replaces_group && *candidate.replaces_group==g.id && candidate.source_measurements==expected){replacement=&candidate;break;}
+   if(!replacement)throw std::runtime_error(current?"CURRENT_UWB_REPLACEMENT_MISSING":"HISTORICAL_UWB_REPLACEMENT_MISSING");
+   if(current)plan.groups_to_add.erase(std::remove(plan.groups_to_add.begin(),plan.groups_to_add.end(),g.id),plan.groups_to_add.end());
+   else plan.groups_to_remove.push_back(g.id);
+   plan.groups_to_add.push_back(replacement->id);
   }
- }
+ };
+ const auto current=plan.groups_to_add;
+ replace(tx.uwb_batch,tx.uwb_groups,current,true);
+ for(const auto& h:tx.recoverable_history)replace(h.uwb_batch,h.groups,h.selected_groups,false);
 }
 PendingFactorGroup metric(const RollingRawState& raw,const IntegrityConfig& config,
  const EpochTransaction& tx,FactorGroupId replaces,bool stable_rotation){
@@ -79,25 +85,36 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
   // stay on their original global clock; this is not a healthy new task.
   alert_generation_=monitor.alert_generation;isolated_=false;
   quarantine_begin_=TimestampNs(0);quarantine_end_=TimestampNs(0);
-  observed_anchor_=-1;observed_uwb_onset_=0;held_anchor_=-1;held_until_=0;
+  observed_anchor_.reset();observed_uwb_onset_=0;held_anchor_.reset();held_until_=0;
   open_pending_=true;
  }
  if(policy_.open && open_pending_)assessment.alarm=true;
  if(!monitor.matches(tx) || (!assessment.nominal_possible && !assessment.possible))throw std::runtime_error("RECOVERY_MONITOR_SCOPE_REFUSED");
- std::array<std::optional<EpochRaim>,9> cached;
+ const auto masks=rawRangeFaultMasks(tx.uwb_batch);
+ std::vector<std::optional<EpochRaim>> cached(tx.uwb_batch.measurements.size()+1);
+ if(tx.uwb_batch.measurements.size()<4){
+  if(assessment.alarm || isolated_)throw std::runtime_error("INSUFFICIENT_UWB_ROWS_DURING_RECOVERY");
+  result.status="INSUFFICIENT_UWB_ROWS_FOR_FUNCTIONAL_POST";result.recovery="FUNCTIONAL_ACTION_UNAVAILABLE";return result;
+ }
  Eigen::MatrixXd anchor_design(tx.uwb_batch.measurements.size()-1,3);for(int i=1;i<int(tx.uwb_batch.measurements.size());++i)anchor_design.row(i-1)=(tx.uwb_batch.measurements[i].anchor_position_m-tx.uwb_batch.measurements[0].anchor_position_m).transpose();auto singular=Eigen::JacobiSVD<Eigen::MatrixXd>(anchor_design).singularValues();
- const bool difficult=numerical_ && singular.minCoeff()<1e-3*singular.maxCoeff();
- auto evaluate=[&](int mask){return difficult?numericalUwbCandidate(tx.uwb_batch,mask).functional:uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);};
+ const bool difficult=numerical_ && (tx.uwb_batch.measurements.size()<=5 || singular.minCoeff()<1e-3*singular.maxCoeff());
+ auto evaluate=[&](int mask){
+  size_t retained=0;for(const auto& m:tx.uwb_batch.measurements)
+   if(mask<0 || m.anchor_id!=tx.uwb_batch.measurements[mask].anchor_id)++retained;
+  return difficult || (numerical_ && retained<5)?numericalUwbCandidate(tx.uwb_batch,mask).functional:uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);
+ };
  auto candidate=[&](int mask){if(!optimized_)return evaluate(mask);auto& item=cached[mask+1];if(!item)item=evaluate(mask);return *item;};
  // Complete numerical mask census is bounded and entirely before native commit.
- if(difficult)for(int mask=-1;mask<8;++mask)candidate(mask);
+ if(difficult)for(int mask:masks)candidate(mask);
  auto all=candidate(-1);bool uwb_alarm=all.gaussian.statistic>all.gaussian.threshold;result.uwb_alarm=uwb_alarm;if(uwb_alarm)result.uwb_alarm_time=Clock::now();
  int detected=-1;
- if(uwb_alarm){double best=INFINITY;for(int mask=0;mask<8;++mask){auto c=candidate(mask);if(c.gaussian.statistic<=c.gaussian.threshold && c.gaussian.statistic<best){best=c.gaussian.statistic;detected=mask;}}}
- if(detected>=0){observed_anchor_=detected;if(!observed_uwb_onset_)observed_uwb_onset_=tx.proposed_epoch;}
+ if(uwb_alarm){double best=INFINITY;for(int mask:masks){if(mask<0)continue;auto c=candidate(mask);if(c.gaussian.statistic<=c.gaussian.threshold && c.gaussian.statistic<best){best=c.gaussian.statistic;detected=mask;}}}
+ if(detected>=0){observed_anchor_=tx.uwb_batch.measurements.at(detected).anchor_id;if(!observed_uwb_onset_)observed_uwb_onset_=tx.proposed_epoch;}
  if(!fde){result.status=assessment.alarm || uwb_alarm?"DETECTION_HELD":"KEEP";result.recovery="FDE_DISABLED";return result;}
  if(policy_.open && history_unavailable_){result.status="RECOVERY_OUT_OF_BUFFER";result.recovery="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE";return result;}
- bool held=held_anchor_>=0 && int(tx.proposed_epoch)<=held_until_;
+ auto rowFor=[&](const std::optional<AnchorId>& anchor){if(anchor)for(int mask:masks)if(mask>=0 && tx.uwb_batch.measurements[mask].anchor_id==*anchor)return mask;return -1;};
+ const int held_row=rowFor(held_anchor_),observed_row=rowFor(observed_anchor_);
+ bool held=held_anchor_.has_value() && tx.proposed_epoch<=held_until_;
  // A retired alarm does not make the previous shared PIM endpoint healthy.
  // Keep the inferred support until no physical sample of this PIM overlaps.
  auto touches_quarantine=[&]{return std::any_of(tx.raw_imu_slice.begin(),tx.raw_imu_slice.end(),[&](const auto& m){return !(m.timestamp<quarantine_begin_) && m.timestamp<quarantine_end_;});};
@@ -109,7 +126,7 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
   result.first_dependency=size_t((quarantine_begin_.value()-5000000)/50000000+1);
  }
  if(bridge && !result.first_dependency)result.first_dependency=size_t((quarantine_begin_.value()-5000000)/50000000+1);
- const bool historical_range=observed_anchor_>=0 && !isolated_ && observed_uwb_onset_<tx.proposed_epoch;
+ const bool historical_range=observed_anchor_.has_value() && !isolated_ && observed_uwb_onset_<tx.proposed_epoch;
  if(bridge && !isolated_){
   auto first=result.first_dependency;if(historical_range)first=std::min(first,observed_uwb_onset_);
   if(replay.empty() || replay.front().timestamp.value()>int64_t(first-1)*50000000LL || replay.back().timestamp!=tx.end){
@@ -119,22 +136,23 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
  }
  const bool search=uwb_alarm || assessment.alarm || held || historical_range || (policy_.open && isolated_);
  if(!search)return result;
- result.actions=18;
+ result.actions=2*masks.size();
  // Evaluate the complete native mask x IMU-action product. Physical proof
  // keeps all task branches independently of this data-driven action selection.
  size_t best_card=100;double best_stat=INFINITY;int selected=-2;
- for(int mask=-1;mask<8;++mask)for(int imu=0;imu<2;++imu){
+ for(int mask:masks)for(int imu=0;imu<2;++imu){
   auto post=candidate(mask);
   bool eligible=post.gaussian.statistic<=post.gaussian.threshold && bool(imu)==bridge;
-  if(held && mask!=held_anchor_)eligible=false;
-  if(historical_range && mask!=observed_anchor_)eligible=false;
+  if(held && mask!=held_row)eligible=false;
+  if(historical_range && mask!=observed_row)eligible=false;
   if(!eligible)continue;
   size_t card=(mask>=0)+imu;
   if(std::make_pair(card,post.gaussian.statistic)<std::make_pair(best_card,best_stat)){best_card=card;best_stat=post.gaussian.statistic;selected=mask;}
  }
  if(selected==-2)throw std::runtime_error("NO_COMPLETE_POST_PASSED_ROLLING_ACTION");
  result.excluded=selected;result.current_bridge=bridge;
- if(selected>=0){omitRange(tx,result.plan,selected);held_anchor_=selected;if(uwb_alarm)held_until_=int(tx.proposed_epoch)+2;}
+ if(selected>=0){result.excluded_source=tx.uwb_batch.measurements.at(selected).anchor_id;omitRange(tx,result.plan,*result.excluded_source);held_anchor_=result.excluded_source;if(uwb_alarm)held_until_=tx.proposed_epoch+2;}
+ else if(historical_range){result.excluded_source=observed_anchor_;omitRange(tx,result.plan,*observed_anchor_);}
  if(isolated_ && !bridge){reintegrate(tx.imu_group,tx.raw_imu_slice,tx.preintegration,bias_observation_,tx.previous_epoch,tx.proposed_epoch);result.rejoined=true;result.status="IMU_REJOINED_ORIGINAL_BIAS_REINTEGRATION";result.recovery="FDE_SUCCESS_REJOINED";return result;}
  if(bridge){
   result.plan.groups_to_add.erase(std::remove(result.plan.groups_to_add.begin(),result.plan.groups_to_add.end(),tx.imu_group.id),result.plan.groups_to_add.end());

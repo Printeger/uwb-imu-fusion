@@ -17,8 +17,10 @@ struct EpochRaim {
   std::string status="MODEL_UNQUALIFIED";
 };
 inline UwbBatch retainRanges(const UwbBatch& b,int excluded) {
+  if(excluded < -1 || (excluded>=0 && size_t(excluded)>=b.measurements.size()))
+    throw std::invalid_argument("EXCLUDED_RANGE_INDEX_INVALID");
   UwbBatch r=b;r.measurements.clear();std::vector<int> ids;
-  for(int i=0;i<int(b.measurements.size());++i)if(i!=excluded){r.measurements.push_back(b.measurements[i]);ids.push_back(i);}
+  for(int i=0;i<int(b.measurements.size());++i)if(excluded<0 || b.measurements[i].anchor_id!=b.measurements[excluded].anchor_id){r.measurements.push_back(b.measurements[i]);ids.push_back(i);}
   r.covariance_m2=principal(validatedUwbCovariance(b),ids);return r;
 }
 inline bool spatialAnchors(const UwbBatch& b) {
@@ -60,7 +62,7 @@ inline EpochRaim uwbCandidate(const UwbBatch& batch,int excluded,double alpha,do
   r.gaussian=gaussianReference(h,z,validatedUwbCovariance(b),Eigen::Matrix3d::Identity(),faults,alpha,tail);
   r.tag=p+r.gaussian.mean;r.status=r.gaussian.status;
   if(r.gaussian.gain.size())responses(r,Eigen::Matrix3d::Identity(),0,n);
-  for(int i=0;i<int(batch.measurements.size());++i)if(i!=excluded)r.retained.push_back(i);
+  for(int i=0;i<int(batch.measurements.size());++i)if(excluded<0 || batch.measurements[i].anchor_id!=batch.measurements[excluded].anchor_id)r.retained.push_back(i);
   return r;
 }
 // Union over ALL n+1 candidates pays 2*(n+1)*tail, including wrongly deleted

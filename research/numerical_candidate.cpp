@@ -4,7 +4,10 @@ namespace uwb_imu_pl::research {
 NumericalCandidateResult numericalUwbCandidate(const UwbBatch& batch,int excluded,double alpha){
  NumericalCandidateResult out;auto& r=out.functional;r.excluded=excluded;
  auto b=retainRanges(batch,excluded);const int n=b.measurements.size();
- if(n<5 || !(alpha>0 && alpha<1)){r.status="NUMERICAL_INPUT_REFUSED";return out;}
+ // Four actual rows permit rank3 with one residual degree of freedom. Rank
+ // and roots are still checked below; row count alone never awards geometry.
+ // This is the explicitly unqualified functional solver, not legacy RAIM.
+ if(n<4 || !(alpha>0 && alpha<1)){r.status="NUMERICAL_INPUT_REFUSED";return out;}
  Eigen::Vector3d origin=Eigen::Vector3d::Zero();for(const auto& m:b.measurements){if(!m.anchor_position_m.allFinite() || !std::isfinite(m.range_m)){r.status="NUMERICAL_INPUT_REFUSED";return out;}origin+=m.anchor_position_m;}origin/=n;
  Eigen::MatrixXd design(n-1,3),centered(n,3);Eigen::VectorXd rhs(n-1);
  double scale=0;const auto& first=b.measurements[0];
@@ -49,7 +52,7 @@ NumericalCandidateResult numericalUwbCandidate(const UwbBatch& batch,int exclude
  out.functional_post_test=r.gaussian.dof>0 && std::isfinite(r.gaussian.statistic) && r.gaussian.statistic<=r.gaussian.threshold;
  r.gaussian.pl.setConstant(INFINITY);r.gaussian.status="MULTIROOT_LOCAL_DIAGNOSTIC_NO_ALPHA_QUALIFICATION";
  r.status="NUMERICAL_FUNCTIONAL_ONLY_GAUSSIAN_UNQUALIFIED";
- for(int i=0;i<int(batch.measurements.size());++i)if(i!=excluded)r.retained.push_back(i);
+ for(int i=0;i<int(batch.measurements.size());++i)if(excluded<0 || batch.measurements[i].anchor_id!=batch.measurements[excluded].anchor_id)r.retained.push_back(i);
  return out;
 }
 }
