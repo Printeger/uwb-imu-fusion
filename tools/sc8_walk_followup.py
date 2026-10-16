@@ -130,7 +130,7 @@ def prepare():
     print(json.dumps(dict(inventory=inventory,cal=registry['cal_diagnostic']),indent=2))
 
 
-def run_native(sequence, method, source=None, label=None, paced=True, audit=False, best_effort=False, pruning=False):
+def run_native(sequence, method, source=None, label=None, paced=True, audit=False, best_effort=False, pruning=False, fixed_config=None):
     import sc8_experiments as old
     source=source or CACHE/'data'/sequence
     run=CACHE/'runs'/(label or (sequence+'-'+method))
@@ -139,6 +139,7 @@ def run_native(sequence, method, source=None, label=None, paced=True, audit=Fals
     run.mkdir(parents=True,exist_ok=True)
     entry=dict(requested_method='O-FULL' if method=='FDE' else 'O-NOFDE',window=[30,30],stream=sequence)
     config=old.dataset_config(entry,source,run)
+    if fixed_config is not None:config.write_text(Path(fixed_config).read_text())
     if audit:
         cfg=yaml.safe_load(config.read_text());cfg['output'].update(write_candidates=True,write_hypothesis_evidence=True)
         config.write_text(yaml.safe_dump(cfg,sort_keys=False))
@@ -437,6 +438,34 @@ def paired():
                 run_native(seq,method,source,seq+'-'+case+'-'+method,audit=method=='FDE',pruning=method=='FDE',best_effort=method=='FDE')
 
 
+def negative():
+    """One bounded source-gap case exercises the actual runner fallback guard."""
+    base=CACHE/'data/ISAS-Walk2';source=CACHE/'negative-source-gap'
+    source.mkdir(exist_ok=True)
+    imu=pd.read_csv(base/'imu.csv',float_precision='round_trip')
+    uwb=pd.read_csv(base/'uwb.csv',float_precision='round_trip')
+    imu=imu[(imu.t<=6)&~((imu.t>=5.2)&(imu.t<=5.3))]
+    uwb=uwb[uwb.t<=6]
+    imu.to_csv(source/'imu.csv',index=False,float_format='%.17g')
+    uwb.to_csv(source/'uwb.csv',index=False,float_format='%.17g')
+    for name in ('anchors.csv','gt.csv','manifest.json'):shutil.copy2(base/name,source/name)
+    # Legacy dataset_config adapts max_gap to input. Freeze the original law so
+    # this negative case tests a gap, rather than silently widening the gate.
+    result=run_native('ISAS-Walk2','FDE',source,'negative-source-gap-fixed',paced=False,audit=True,pruning=True,best_effort=True,
+        fixed_config=CACHE/'runs/ISAS-Walk2-FDE-RESEARCH/effective_nominal_config.yaml')
+    run=CACHE/'runs/negative-source-gap-fixed'
+    assert result['status']=='FAIL'
+    state=pd.read_csv(run/'states.csv');attempts=pd.read_csv(run/'attempts.csv')
+    assert len(state)>0 and state.t.max()<5.3
+    status=json.loads((run/'run_status.json').read_text())
+    assert 'gap' in json.dumps(status).lower(),status
+    assert (attempts.internal_protected_output==0).all()
+    save(CACHE/'negative_summary.json',dict(status='PASS_EXPECTED_SOURCE_GAP_REFUSAL',
+        process=result,run_status=status,attempts=len(attempts),committed=len(state),
+        last_state_s=float(state.t.max()),gap_s=[5.2,5.3],
+        raw_batches=int(uwb.source_message.nunique()),valid_batches=int(uwb[uwb.valid!=0].source_message.nunique())))
+
+
 def extended_summary(run, sequence):
     from collections import Counter
     result=summarize_native(run,sequence)
@@ -445,20 +474,49 @@ def extended_summary(run, sequence):
         result['outcomes']={str(k):int(v) for k,v in a.estimation_outcome.value_counts().items()}
         result['actual_fde_recovery']=int(a.estimation_outcome.eq('ACTUAL_FDE_RECOVERY').sum())
         result['fde_rejected_nominal_continued']=int(((a.fde_backend_updates==0)&(a.committed==1)).sum())
+        fallback=a[a.estimation_outcome.eq('UNPROTECTED_BEST_EFFORT')]
+        assert (fallback.committed==1).all() and (fallback.backend_updates==1).all()
+        assert (fallback.internal_protected_output==0).all()
+        retried=fallback[fallback.fde_backend_updates==0]
+        assert (retried.transaction_id!=retried.fde_transaction_id).all()
+        result['receipt_checks']='PASS: unique timestamps/transactions, single backend update, unprotected fallback'
     else:result['actual_fde_recovery']=0
     result['alarm_count']=int(((a.detector_valid==1)&(a.detector_passed==0)).sum())
     result['input_identity']=json.loads((run/'execution.json').read_text())
+    result['input_identity']['effective_config_sha256']=common.sha256(run/'effective_nominal_config.yaml')
     result['first_state']=pd.read_csv(run/'states.csv').iloc[0].to_dict()
     result['last_state']=pd.read_csv(run/'states.csv').iloc[-1].to_dict()
+    result['trace_sha256']={name:common.sha256(run/name) for name in ('attempts.csv','states.csv','bootstrap.json','execution.json')}
+    result['bridge_attempts']=int(a.bridge_active.sum())
+    result['history_replacement_attempts']=int(a.history_removed_groups.notna().sum())
+    result['protected_attempts']=int(a.internal_protected_output.sum())
+    result['timely_50ms']=int((a.measurement_to_sink_ms<=50).sum())
+    result['fastest_epoch']=a.loc[a.core_ms.idxmin(),['batch','t','core_ms','fde_status']].to_dict()
+    result['slowest_epoch']=a.loc[a.core_ms.idxmax(),['batch','t','core_ms','fde_status']].to_dict()
     audit=run/'native_audit'
     if audit.exists():
         d=pd.read_csv(audit/'diagnostic_attempts.csv')
+        final_stamp_ns=round(float(a.t.max())*1e9)
+        result['audit_unfinalized_attempts']=int((d.input_timestamp_ns>final_stamp_ns).sum())
+        d=d[d.input_timestamp_ns<=final_stamp_ns]
         result['census']={k:int(d[k].sum()) for k in ['generated_actions','kernel_evaluated_actions','pl_evaluated_actions','selected_actions',
             'base_svd','base_llt','candidate_reference_svd','candidate_inner_llt','imu_oracle_reintegrations']}
         result['hypotheses_max']=int(d.hypothesis_count.max())
+        result['resource_growth']={k:dict(first=float(d[k].iloc[0]),last=float(d[k].iloc[-1]),maximum=float(d[k].max()))
+            for k in ['cache_entries','cache_bytes','marginalization_count','raw_imu_samples']}
+        timing=pd.read_csv(audit/'timing.csv')
+        if len(timing):
+            result['resource_growth']['logged_factor_count']=dict(first=int(timing.factor_count.iloc[0]),last=int(timing.factor_count.iloc[-1]),maximum=int(timing.factor_count.max()))
+        result['resource_growth']['backend_slot_count']='NOT_EXPORTED; do not substitute cumulative factor IDs'
         result['risk_reasons']=dict(Counter(d.risk_ledger_terms.fillna('NA')))
         result['primary_failures']=dict(Counter(d.primary_failure.fillna('NONE')))
+        history=pd.read_csv(audit/'diagnostic_history_summary.csv')
+        history=history[history.input_timestamp_ns<=final_stamp_ns]
+        result['history_summary']=dict(records=len(history),
+            counts={k:int(history[k].sum()) for k in ['present','valid','capacity_ok','claims_full_coverage']},
+            maxima={k:int(history[k].max()) for k in ['omitted_epoch_count','material_gap_epoch_count','fault_columns','emitted_rows']})
         s=pd.read_csv(audit/'diagnostic_stages.csv')
+        s=s[s.input_timestamp_ns<=final_stamp_ns]
         exclusive=s[~s.stage.str.startswith(('window_','candidate_batch_'))&s.stage.ne('core_total')]
         costs=exclusive.groupby('stage').wall_ms.sum()
         costs['wrapper_logging_fallback_and_unassigned']=float(a.core_ms.sum()-costs.sum())
@@ -466,8 +524,10 @@ def extended_summary(run, sequence):
         result['exclusive_mean_ms']={str(k):float(v/len(a)) for k,v in costs.items()}
         causes=Counter();selected=0;skipped=0;candidate_ids=0;rank=Counter();dofs=Counter()
         for c in pd.read_csv(audit/'diagnostic_candidates.csv',chunksize=10000):
+            c=c[c.input_timestamp_ns<=final_stamp_ns]
             causes.update(c.skip_reason.fillna('NONE'));skipped+=int(c.skip_reason.eq('SKIPPED_INELIGIBLE').sum())
-        for c in pd.read_csv(audit/'candidates.csv',usecols=['selected','rank','dof','valid','post_detector_passed'],chunksize=10000):
+        for c in pd.read_csv(audit/'candidates.csv',usecols=['timestamp_ns','selected','rank','dof','valid','post_detector_passed'],chunksize=10000):
+            c=c[c.timestamp_ns<=final_stamp_ns]
             candidate_ids+=len(c);selected+=int(c.selected.sum());rank.update(c['rank']);dofs.update(c.dof)
         result['candidate_results']=dict(records=candidate_ids,selected=selected,not_solved=skipped,
             terminal_counts=dict(causes),rank_counts={str(k):int(v) for k,v in rank.items()},dof_counts={str(k):int(v) for k,v in dofs.items()})
@@ -484,6 +544,14 @@ def evaluate():
         for method in ('NOM','NOFDE','FDE-RESEARCH'):
             run=CACHE/'runs'/(seq+'-'+method)
             if (run/'execution.json').exists():results[run.name]=extended_summary(run,seq)
+        if seq+'-FDE-RESEARCH' in results:
+            assert results[seq+'-FDE-RESEARCH']['input_identity']['sensor_hash']==results[seq+'-NOFDE']['input_identity']['sensor_hash']
+            left=pd.read_csv(CACHE/'runs'/(seq+'-NOFDE')/'states.csv')
+            right=pd.read_csv(CACHE/'runs'/(seq+'-FDE-RESEARCH')/'states.csv')
+            common=left.merge(right,on='t',suffixes=('_off','_on'))
+            results[seq+'-FDE-RESEARCH']['paired_state_diagnostic']=dict(n=len(common),
+                maximum_component_difference=max(float(np.max(np.abs(common[k+'_off']-common[k+'_on']))) for k in left.columns if k!='t'),
+                label='state difference only, not physical accuracy or FDE recovery')
     for seq,cases in [('ISAS-Walk2',['U','A','G','J']),('ISAS-Walk3',['J'])]:
         for case in cases:
             pair={}
@@ -494,10 +562,18 @@ def evaluate():
                 injection=json.loads((CACHE/'injected'/(seq+'-'+case)/'injection.json').read_text())
                 result['injection']=injection
                 a=pd.read_csv(run/'attempts.csv');episodes=[]
+                ledger_path=run/'native_audit/factor_ledger.csv'
+                intervals=None
+                if ledger_path.exists():
+                    ledger=pd.read_csv(ledger_path,usecols=['factor_id','sensor','factor_kind','time_begin_ns','time_end_ns'])
+                    intervals=ledger[ledger.sensor.eq('IMU')&ledger.factor_kind.eq('COMBINED_IMU')].drop_duplicates('factor_id')
                 for e in injection['episodes']:
                     ep=dict(e);active=a[(a.t>=e['begin_s'])&(a.t<=e['end_s']+.1)]
                     after=a[a.t>e['end_s']+.1]
-                    ep.update(observed=bool(len(a) and a.max_sensor_stamp_used.max()>=e['end_s']),
+                    valid_count=sum(row[2]!=0 for row in e['source_ids']) if e['sensor']=='UWB' else len(e['source_ids'])
+                    reached=bool(len(a) and a.max_sensor_stamp_used.max()>=e['end_s'])
+                    ep.update(source_time_reached=reached,valid_injected_samples=valid_count,
+                        observed=reached and valid_count>0,
                         activity_attempts=len(active),activity_commits=int(active.committed.sum()),
                         alarm_attempts=int(((active.detector_valid==1)&(active.detector_passed==0)).sum()),
                         actual_recovery_commits=int(active.estimation_outcome.eq('ACTUAL_FDE_RECOVERY').sum()) if 'estimation_outcome' in active else 0,
@@ -507,6 +583,10 @@ def evaluate():
                     # action requires manual native source-ledger verification.
                     ep['correct_exclusion']='OPEN_NEEDS_NATIVE_SUPPORT_REVIEW' if ep['actual_recovery_commits'] else False
                     ep['rejoin']='OPEN_NO_LEGAL_ISOLATION_RECEIPT' if not ep['bridge_commits'] else 'REVIEW_NATIVE_BRIDGE'
+                    if e['sensor']=='IMU' and intervals is not None:
+                        supports=intervals[(intervals.time_end_ns>=e['begin_s']*1e9)&(intervals.time_begin_ns<=e['end_s']*1e9)]
+                        ep['native_pim_intervals']=supports[['factor_id','time_begin_ns','time_end_ns']].astype('int64').values.tolist()
+                        ep['adc_samples_in_pim_support']=sum(bool(((supports.time_begin_ns<=t*1e9)&(supports.time_end_ns>=t*1e9)).any()) for t in e['sample_times'])
                     episodes.append(ep)
                 result['episodes']=episodes;results[run.name]=result;pair[method]=result
             if len(pair)==2:
@@ -566,7 +646,8 @@ def figures(results):
             'hypothesis/model':sum(v for k,v in cost.items() if k in ['hypothesis_evidence','model_generation','current_sensitivity','historical_sensitivity']),
             'action census':cost.get('health_actions',0),'candidate':cost.get('candidate_evaluation',0),
             'other':sum(cost.values())-sum(v for k,v in cost.items() if k in ['integrity_window','prepare','hypothesis_evidence','model_generation','current_sensitivity','historical_sensitivity','health_actions','candidate_evaluation'])}
-        for label,value in groups.items():axs[0].bar(seq[-1],value,bottom=bottom,label=label if n==0 else None);bottom+=value
+        for (label,value),color in zip(groups.items(),['#56B4E9','#E69F00','#0072B2','#009E73','#999999']):
+            axs[0].bar(seq[-1],value,bottom=bottom,color=color,label=label if n==0 else None);bottom+=value
         timeline=r['timeline'];axs[1].plot([x['t'] for x in timeline],[x['queue_ms']/1000 for x in timeline],label=seq)
         for j,(status,count) in enumerate(r['statuses'].items()):
             axs[2].barh(seq[-1]+' '+status,count)
@@ -576,8 +657,60 @@ def figures(results):
     fig.suptitle('Engineering FDE runtime — raw PL / HMI probability: UNQUALIFIED')
     fig.savefig(out/'walk_runtime.svg');plt.close(fig)
 
+def evidence():
+    """Save compact measured evidence in the one report before owned-cache cleanup."""
+    evaluate()
+    results=json.loads((CACHE/'evaluation.json').read_text())
+    assert len(results)==16, 'Every registered native run must have an execution result'
+    figures(results)
+    lines=['## 全录制与注入：冻结实测表', '',
+        '分位数采用 nearest-rank；延迟包含完整等待队列。所有物理误差及其 ON−OFF 收益均为 NA。', '',
+        '|运行|结束|原始/有效/eligible|attempt/commit/未尝试后缀|覆盖有效计划|报警/真实恢复/bridge|未保护best-effort|',
+        '|---|---|---|---|---|---|---|']
+    for name,r in results.items():
+        lines.append(f"|{name}|{r['status']}|{r['raw_planned']}/{r['planned_valid']}/{r['eligible_planned']}|{r['attempted']}/{r['committed']}/{r['unattempted_eligible']}|{100*r['coverage_all_valid']:.3f}%|{r['alarm_count']}/{r['actual_fde_recovery']}/{r['bridge_attempts']}|{r.get('outcomes',{}).get('UNPROTECTED_BEST_EFFORT',0)}|")
+    lines+=['','|运行|core P50/P95/P99/max ms|sink P50/P95/P99/max ms|queue P50/P95/P99/max ms|CPU s/服务RTF/RSS KiB|≤50ms次数|',
+        '|---|---|---|---|---|---|']
+    def four(v):return '/'.join(f'{v[k]:.3f}' for k in ('p50','p95','p99','max'))
+    for name,r in results.items():
+        lines.append(f"|{name}|{four(r['core_ms'])}|{four(r['sink_ms'])}|{four(r['queue_ms'])}|{r['cpu_s']:.3f}/{r['service_RTF']:.3f}/{r['peak_rss_kib']}|{r['timely_50ms']}/{r['attempted']}|")
+    lines+=['','|运行|FDE状态全分母|动作记录/未求解/selected|prior替换/受保护输出|', '|---|---|---|---|']
+    for name,r in results.items():
+        c=r.get('candidate_results',{})
+        lines.append(f"|{name}|{json.dumps(r['statuses'],ensure_ascii=False)}|{c.get('records','NA')}/{c.get('not_solved','NA')}/{c.get('selected','NA')}|{r['history_replacement_attempts']}/{r['protected_attempts']}|")
+    lines+=['','注入活动统计包含结束后0.1秒，以覆盖异步下一批读取；这是响应观察窗，不是故障时刻修改。原始自然异常无真值标签，报警不能解释为新增故障的因果检出率。', '',
+        '|运行/episode|真实注入秒|原始/有效注入样本数|observed|活动attempt/commit/alarm|正确排除/真实恢复/bridge|之后commit|',
+        '|---|---|---|---|---|---|---|']
+    for name,r in results.items():
+        for e in r.get('episodes',[]):
+            lines.append(f"|{name}/{e['sensor']}-{e['strength']}|{e['begin_s']:.6f}–{e['end_s']:.6f}|{len(e['source_ids'])}/{e['valid_injected_samples']}|{e['observed']}|{e['activity_attempts']}/{e['activity_commits']}/{e['alarm_attempts']}|{e['correct_exclusion']}/{e['actual_recovery_commits']}/{e['bridge_commits']}|{e['post_commits']}|")
+    lines+=['','|IMU episode|修改ADC源行ID|落在实际PIM支撑内的样本|跨越的原生PIM因子ID|','|---|---|---|---|']
+    for name,r in results.items():
+        for e in r.get('episodes',[]):
+            if 'native_pim_intervals' in e:
+                lines.append(f"|{name}/{e['strength']}|{e['source_ids'][0]}–{e['source_ids'][-1]}|{e['adc_samples_in_pim_support']}/{len(e['source_ids'])}|{','.join(str(x[0]) for x in e['native_pim_intervals'])}|")
+    lines+=['','## 冻结身份与可复核摘要','',
+        '下列摘要保留输入与trace内容哈希、首末原生状态、事务检查、census计数、最慢实际epoch和资源增长；完整大trace在本轮验收后清理，按复现命令重建。', '','```json']
+    compact={name:{k:v for k,v in r.items() if k in ('input_identity','trace_sha256','first_state','last_state','receipt_checks',
+        'census','candidate_results','history_summary','primary_failures','audit_unfinalized_attempts','hypotheses_max','resource_growth','exclusive_mean_ms','fastest_epoch','slowest_epoch','paired_state_diagnostic')} for name,r in results.items()}
+    # Commands contain reproducible local paths; input/binary hashes bind actual executions.
+    freeze={p:common.sha256(ROOT/p) for p in ['apps/nominal_dataset_runner.cpp',
+        'include/uwb_imu_pl/integrity/integrity_monitor.hpp','src/uwb_imu_pl/integrity/integrity_monitor.cpp',
+        'tools/sc8_walk_followup.py','config/sc8_walk_followup.yaml','test/test_fde_post_selection.cpp']}
+    lines.append(json.dumps(dict(source_freeze=freeze,runs=compact),ensure_ascii=False,indent=2));lines+=['```','',
+        '![全录制覆盖率与参考资格](walk_coverage.svg)', '',
+        '![真实注入、报警与动作时间线](walk_fault_timeline.svg)', '',
+        '![互斥阶段耗时与实际队列](walk_runtime.svg)','']
+    marker='## 全录制与注入：冻结实测表'
+    prior=REPORT.read_text().split(marker)[0].rstrip()
+    REPORT.write_text(prior+'\n\n'+'\n'.join(lines))
+
+
 def main():
-    p=argparse.ArgumentParser();p.add_argument('command',choices=['prepare','noninterference','baseline','sfuise','summarize','inject','cal-accel','profile','sfuise-summary','local','continuous','paired','evaluate']);args=p.parse_args()
-    {'prepare':prepare,'noninterference':noninterference,'baseline':baseline,'sfuise':sfuise_baseline,'summarize':summarize_baseline,'inject':inject,'cal-accel':cal_accel,'profile':profile,'sfuise-summary':sfuise_summary,'local':local,'continuous':continuous,'paired':paired,'evaluate':evaluate}[args.command]()
+    commands={'prepare':prepare,'noninterference':noninterference,'baseline':baseline,'sfuise':sfuise_baseline,
+        'summarize':summarize_baseline,'inject':inject,'cal-accel':cal_accel,'profile':profile,
+        'sfuise-summary':sfuise_summary,'local':local,'continuous':continuous,'paired':paired,'negative':negative,'evaluate':evaluate,'evidence':evidence}
+    p=argparse.ArgumentParser();p.add_argument('command',choices=list(commands));args=p.parse_args()
+    commands[args.command]()
 
 if __name__=='__main__':main()

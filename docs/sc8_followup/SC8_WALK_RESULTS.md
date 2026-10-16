@@ -1,6 +1,6 @@
 # SC8 Walk Real-Data Follow-up
 
-状态：**IN_PROGRESS，W0 已执行，W1–W4 继续同一 Goal。** 本文件为本轮唯一结果报告，不改写旧 SC8。
+状态：**IN_PROGRESS，W0/W1 已执行，W2–W4 继续同一 Goal。** 本文件为本轮唯一结果报告，不改写旧 SC8。
 
 ## W0：输入、版本和参考资格
 
@@ -20,7 +20,7 @@ Walk1 CAL 预先以时间前60%拟合、后40%留出。有限 `[-0.1,0.1] s` 时
 
 ## 后续执行与验收状态
 
-W1–W4 尚未完成；不授予结项状态。WF01–WF04 的输入/参考与小测试证据已建立，物理外参资格保持 OPEN；WF05–WF18 待本 Goal 后续实际运行、实现、回归与报告更新。
+W0/W1 与 W2 局部验证已完成，Walk2 工程研究全流已运行；Walk3、注入矩阵与最终回归继续。不授予结项状态；物理外参资格保持 OPEN。
 
 ```bash
 python3 tools/sc8_walk_followup.py prepare
@@ -29,7 +29,7 @@ python3 tools/sc8_walk_followup.py noninterference
 python3 tools/sc8_walk_followup.py baseline
 ```
 
-本轮 cache 尚需用于后续执行，未清理。禁止自动 push。资源中断时从上述 baseline 与本轮 cache 续跑，不重建另一个 Goal。
+本轮 cache 尚需用于后续执行，未清理。禁止自动 push。资源中断时依据本轮 cache 中 execution.json 续跑 continuous/paired；脚本跳过已有完整执行记录，不重建另一个 Goal。
 
 ## CAL 加速度/杆臂补充诊断
 
@@ -75,3 +75,28 @@ W1源码/输入与名义结果已保存，继续W2。
 9个确定性组合（不覆盖/mandatory/recoverability × favourable/tied/hostile数值）通过FdeManager对照小oracle。真实前缀剪枝与原始版：84次attempt、83次commit、495个动作身份及15D状态、保留候选数值、实际行动/拒绝、prior/bridge/ledger/health/事务逐值一致；412个动作明确未求解。core总计27.599→16.253s。这是局部调度结果，不推广成全流实时性。
 
 加best-effort的同一片段84/84提交，**84个全部未保护，实际FDE恢复0**。普通连续输出的验证不能抵扣WF12强UWB正确排除与IMU bridge/rejoin正例。完整Walk2/3及冻结额外故障继续执行；当前尚未授予W2完成等级。
+
+Walk2 完整研究运行：1140/1172 有效计划提交（97.270%），全1140个为未保护best-effort，0实际恢复；AMBIGUOUS_UNAVAILABLE=1057、NO_VALID_CANDIDATE=57、RISK_BUDGET_INVALID=26。core P50/P95/P99/max=988.464/1109.319/1173.916/1289.055ms，sink最大985639.262ms，CPU1058.797s、RSS1023604KiB、服务RTF13.906。完整437096动作记录中仅83个实际数值核求解，selected=0；动作集合构造平均620.749ms/attempt是主要剩余瓶颈。Walk3正在相同冻结ELF/DSO下确认。
+
+注入源预审：Walk2弱UWB的1条源测距原本invalid，strong-U的3条中2条valid，strong-J的3条中1条valid；Walk3 strong-J的3条全部valid。保留原始有效位，不后验更换源ID；无有效注入样本不能计入可检测正例或算漏检。所有IMU episode为41个真实ADC样本，具体PIM支撑由原生ledger另行核对。
+
+## 相关核心回归与负例（冻结算法）
+
+测试目标重新构建后，`test_integrity_v2`选定29项、`test_realtime_incremental`的gap/未来IMU非干扰2项、`test_fde_post_selection`4项（包含9组合的研究剪枝oracle）全部通过；另补齐容量fallback、假设维数超限拒绝、deadline后真实commit降级3项，共38项通过。之前旧test_integrity_v2 ELF存在未解析旧proof符号，属于陈旧构建，已重建消除；不隐去首次预检失败。小oracle核对的是合法集合与安全拒绝不变，不是实测FDE恢复正例。
+
+实际runner缺口负例：原输入截至6秒，删除5.2–5.3秒ADC。首次fixture沿用旧dataset_config，门限随最大输入gap被自动放大为0.108979秒，进程24次全部提交，故“应该拒绝”的测试断言失败。修正fixture为冻结原始20ms门限，未改算法；第二次进程按预期exit=1，原因`causal IMU hold exceeds imu.max_gap_s`，56原始/有效批次、32启动前、12提交、12未处理后缀，最后收据5.183996916秒。无保护输出，不将失败后缀静默补齐。普通原录制及幅值注入时间戳未变，门限均未因注入增大。
+
+测试构建与短回归同Walk3原录制中段重叠，影响共享主机负载；独立记录开始/结束时间，核验estimator ELF/DSO前后完全相同。Walk3耗时保留实测，不作为严格独占CPU速度对照。
+
+Walk2全流历史摘要1140次均present/valid/capacity_ok，但完整故障历史覆盖声明为0/1140，最大省略历史epoch=1120、fault_columns=160、emitted_rows=66；这不是“无数值历史摘要”，而是不能把有限窗口数值prior当完整故障保护历史。风险ledger中的bridge/history/model仍为UNKNOWN/ASSUMED_UNVALIDATED，omitted为UNKNOWN/NOT_IMPLEMENTED，不通过增大AL或置零概率掩盖。候选跳过记录的rank/dof=0表示未计算，不代表实测几何rank=0。
+
+## W2 全录制执行完成
+
+两条原始录制均已按冻结限制执行；下表保留实际结束状态，不把普通提交计入FDE恢复。
+
+|序列|结束/完整源|commit/有效计划|best-effort/恢复|core P95/max ms|sink P95/max ms|CPU s/RSS KiB|
+|---|---|---|---|---|---|---|
+|ISAS-Walk2|FINISHED/True|1140/1172|1140/0|1109.319/1289.055|931970.742/985639.262|1058.797/1023604|
+|ISAS-Walk3|FINISHED/True|1222/1253|1222/0|1137.777/1285.377|993735.706/1053675.457|1132.949/1058148|
+
+W2全流证据已保存，继续W3；不授予真正FDE恢复、物理GT或实时性通过。
