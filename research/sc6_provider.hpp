@@ -1,8 +1,8 @@
 #pragma once
+#include "sensor_envelope.hpp"
 #include "scenario_material.hpp"
 #include "sc6_motion.hpp"
 namespace uwb_imu_pl::research {
-struct Sc6Envelope {size_t epoch;std::vector<ImuMeasurement> imu;UwbBatch uwb;RawRangeLawEvidence range;bool source_valid=false;};
 // Online service receives only this envelope, domain and original law/config.
 class Sc6Provider {
  Sc6MotionRecipe recipe_;

@@ -13,6 +13,12 @@ bool sameRawBatch(const UwbBatch& a,const UwbBatch& b){
  }return true;
 }
 std::array<int,9> rawRangeFaultMasks(){return {-1,0,1,2,3,4,5,6,7};}
+std::vector<int> rawRangeFaultMasks(const UwbBatch& batch){
+ if(batch.measurements.size()>size_t(std::numeric_limits<int>::max()))throw std::length_error("RANGE_INDEX_CAPACITY");
+ std::vector<int> masks{-1};std::set<AnchorId> seen;
+ for(size_t i=0;i<batch.measurements.size();++i)if(seen.insert(batch.measurements[i].anchor_id).second)masks.push_back(static_cast<int>(i));
+ return masks;
+}
 bool rawRangeShells(const RawRangeLawEvidence& law,const UwbBatch& b,int epoch,std::array<RawRangeShell,8>& shells){
  return rawRangeShells(law,b,epoch,shells,50,7);
 }
@@ -38,13 +44,15 @@ void bounds(RawRangeResult& r,const Eigen::Vector3d& actual){
  r.hpl=sqrt(square(I(r.pl.x()))+square(I(r.pl.y()))).upper();
 }
 // Every update is a necessary condition; interval dependency only weakens it.
-bool propagate(Box& box,const UwbBatch& b,const std::array<RawRangeShell,8>& shells,int omitted,unsigned passes,bool tight_shell,bool optimized,bool lower_shell){
- int ref=omitted==0?1:0;
- for(size_t i=0;i<8;++i)if(int(i)!=omitted && shells[i].high<shells[i].low)return false;
- std::array<I,8> shell_squared,upper_squared,linear_rhs;std::array<std::array<I,3>,8> coefficients;
- if(optimized)for(int i=0;i<8;++i){if(i==omitted)continue;shell_squared[i]=square(I(shells[i].low,shells[i].high));upper_squared[i]=square(I(shells[i].high));const auto& a=b.measurements[i].anchor_position_m;const auto& a0=b.measurements[ref].anchor_position_m;for(int j=0;j<3;++j)coefficients[i][j]=2.*(I(a(j))-I(a0(j)));linear_rhs[i]=squaredNorm(a)-squaredNorm(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));}
+bool propagate(Box& box,const UwbBatch& b,const std::vector<RawRangeShell>& shells,int omitted,unsigned passes,bool tight_shell,bool optimized,bool lower_shell){
+ auto retained=[&](size_t i){return omitted<0 || b.measurements[i].anchor_id!=b.measurements.at(omitted).anchor_id;};
+ size_t ref=0;while(ref<b.measurements.size() && !retained(ref))++ref;
+ if(ref==b.measurements.size())return true; // Zero constraints: keep the entire prior domain.
+ for(size_t i=0;i<b.measurements.size();++i)if(retained(i) && shells[i].high<shells[i].low)return false;
+ std::vector<I> shell_squared(shells.size()),upper_squared(shells.size()),linear_rhs(shells.size());std::vector<std::array<I,3>> coefficients(shells.size());
+ if(optimized)for(int i=0;i<b.measurements.size();++i){if(!retained(i))continue;shell_squared[i]=square(I(shells[i].low,shells[i].high));upper_squared[i]=square(I(shells[i].high));const auto& a=b.measurements[i].anchor_position_m;const auto& a0=b.measurements[ref].anchor_position_m;for(int j=0;j<3;++j)coefficients[i][j]=2.*(I(a(j))-I(a0(j)));linear_rhs[i]=squaredNorm(a)-squaredNorm(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));}
  for(unsigned pass=0;pass<passes;++pass){Box previous=box;
-  for(size_t i=0;i<8;++i)if(int(i)!=omitted){
+  for(size_t i=0;i<b.measurements.size();++i)if(retained(i)){
    const auto& a=b.measurements[i].anchor_position_m;
    I distance2(0);for(int j=0;j<3;++j)distance2+=square(box[j]-I(a(j)));
    I shell2=optimized?shell_squared[i]:square(I(shells[i].low,shells[i].high));
@@ -80,10 +88,10 @@ bool propagate(Box& box,const UwbBatch& b,const std::array<RawRangeShell,8>& she
 }
 }
 RawRangeResult contractRawRangeBox(const Eigen::Vector3d& low,const Eigen::Vector3d& high,
- const UwbBatch& batch,const std::array<RawRangeShell,8>& shells,const Eigen::Vector3d& actual,RawRangeBudget budget){
+ const UwbBatch& batch,const std::vector<RawRangeShell>& shells,const Eigen::Vector3d& actual,RawRangeBudget budget){
  RawRangeResult r;auto begin=std::chrono::steady_clock::now();
- if(!low.allFinite() || !high.allFinite() || !actual.allFinite() || (low.array()>high.array()).any() || batch.measurements.size()!=8 || budget.passes>64 || budget.split_depth>16){r.reason="invalid kernel input";return r;}
- for(size_t i=0;i<8;++i)if(!batch.measurements[i].anchor_position_m.allFinite() || !std::isfinite(shells[i].low) || !std::isfinite(shells[i].high) || shells[i].low<0){r.reason="invalid shell";return r;}
+ if(!low.allFinite() || !high.allFinite() || !actual.allFinite() || (low.array()>high.array()).any() || batch.measurements.size()!=shells.size() || batch.measurements.size()>size_t(std::numeric_limits<int>::max()) || budget.passes>64 || budget.split_depth>16){r.reason="invalid kernel input";return r;}
+ for(size_t i=0;i<batch.measurements.size();++i)if(!batch.measurements[i].anchor_position_m.allFinite() || !std::isfinite(shells[i].low) || !std::isfinite(shells[i].high) || shells[i].low<0){r.reason="invalid shell";return r;}
  r.input_low=low;r.input_high=high;r.low=low;r.high=high;bounds(r,actual);r.old_pl=r.pl;r.old_hpl=r.hpl;
  Box original;for(int j=0;j<3;++j)original[j]=I(low(j),high(j));
  Eigen::Vector3d unionLow=Eigen::Vector3d::Constant(INFINITY),unionHigh=Eigen::Vector3d::Constant(-INFINITY);
@@ -92,7 +100,7 @@ RawRangeResult contractRawRangeBox(const Eigen::Vector3d& low,const Eigen::Vecto
  try{
   // Run-time directed addition witness, same as the inertial kernel.
   I witness=I(1)+I(std::ldexp(1.,-53));if(witness.lower()>1 || witness.upper()<std::nextafter(1.,INFINITY))throw std::runtime_error("directed arithmetic unavailable");
-  for(int omitted:rawRangeFaultMasks()){
+  for(int omitted:rawRangeFaultMasks(batch)){
    if(budget.all_ranges_healthy && omitted!=-1)continue;
    current_mask=omitted;current_frontier=false;++r.considered;size_t branchRetained=r.retained;
    std::deque<std::pair<Box,unsigned>> queue{{original,0}};
@@ -118,6 +126,10 @@ RawRangeResult contractRawRangeBox(const Eigen::Vector3d& low,const Eigen::Vecto
   }
  }catch(const std::exception& e){r.support.clear();r.low=low;r.high=high;bounds(r,actual);r.valid=r.pl.allFinite() && std::isfinite(r.hpl);r.status="FALLBACK_INERTIAL_VERIFIED";r.reason=e.what();}
  r.elapsed_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-begin).count();return r;
+}
+RawRangeResult contractRawRangeBox(const Eigen::Vector3d& low,const Eigen::Vector3d& high,
+ const UwbBatch& batch,const std::array<RawRangeShell,8>& shells,const Eigen::Vector3d& actual,RawRangeBudget budget){
+ return contractRawRangeBox(low,high,batch,std::vector<RawRangeShell>(shells.begin(),shells.end()),actual,budget);
 }
 RawRangeResult issueRawRangeContraction(const RawInclusionEvidence& inertial,const RawRangeLawEvidence& law,
  const EpochTransaction& tx,const CommitReceipt& receipt,const NavigationState& state,const Eigen::Vector3d& lever,RawRangeBudget budget){

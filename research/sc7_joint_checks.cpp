@@ -1,4 +1,5 @@
 #include "sc6_service.hpp"
+#include "sc6_provider.hpp"
 #include <tbb/global_control.h>
 #include <iostream>
 #include <fstream>

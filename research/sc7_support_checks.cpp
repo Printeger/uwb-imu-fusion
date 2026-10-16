@@ -1,5 +1,6 @@
 #include "tag_support.hpp"
 #include "sc6_service.hpp"
+#include "sc6_provider.hpp"
 #include <tbb/global_control.h>
 #include <iostream>
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;using I=RollingInterval;

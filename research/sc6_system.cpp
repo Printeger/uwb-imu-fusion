@@ -1,4 +1,5 @@
 #include "sc6_service.hpp"
+#include "sc6_provider.hpp"
 #include "sc6_delivery.hpp"
 #include <cstring>
 #include <ctime>

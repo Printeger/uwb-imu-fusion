@@ -1,4 +1,5 @@
 #include "sc6_service.hpp"
+#include "sc6_provider.hpp"
 #include "sc6_bias_prototype.hpp"
 #include "sc6_delivery.hpp"
 #include <boost/multiprecision/cpp_dec_float.hpp>

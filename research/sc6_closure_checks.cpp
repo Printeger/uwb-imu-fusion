@@ -1,6 +1,7 @@
 #include "sc6_temporal_monitor.hpp"
 #include "sc6_provider.hpp"
 #include "sc6_service.hpp"
+#include "sc6_provider.hpp"
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include <iostream>
 #include <fstream>

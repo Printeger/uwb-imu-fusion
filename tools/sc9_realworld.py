@@ -73,8 +73,20 @@ def legacy(freeze):
     print('FROZEN' if freeze else 'EXACT_LEGACY_PARITY', result['identity'])
 
 
+def check():
+    CACHE.mkdir(parents=True, exist_ok=True)
+    for name in ['sc9_input_checks', 'sc9_event_checks']:
+        with (CACHE / (name + '.log')).open('w') as log:
+            subprocess.run([str(BIN / name)], cwd=ROOT, env=environment(),
+                           stdout=log, stderr=subprocess.STDOUT, check=True)
+        print((CACHE / (name + '.log')).read_text(), end='')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument('command', choices=['legacy-freeze', 'legacy-parity'])
+    parser.add_argument('command', choices=['legacy-freeze', 'legacy-parity', 'check'])
     args = parser.parse_args()
-    legacy(args.command == 'legacy-freeze')
+    if args.command == 'check':
+        check()
+    else:
+        legacy(args.command == 'legacy-freeze')

@@ -27,6 +27,9 @@ bool rawRangeShells(const RawRangeLawEvidence&,const UwbBatch&,int epoch,
  std::array<RawRangeShell,8>&,int mission,double coordinate_radius);
 // NONE (-1) plus each physical row: current projection of the episode scope.
 std::array<int,9> rawRangeFaultMasks();
+// Representative row per distinct physical source, in input order; -1=KEEP.
+// Excluding a source removes every observation of that anchor.
+std::vector<int> rawRangeFaultMasks(const UwbBatch&);
 struct JointConstraintEvidence {
  std::string method="sc7-raw-imu-state-integral-theta-v1";
  std::string fault_relaxation="ALL7_EPOCH_CONSTANT_THETA_REPEAT_OUTER_NO_HEALTHY_GAP";
@@ -61,6 +64,8 @@ struct RawRangeResult {
 // Geometry kernel: all nine branches are mandatory; no FDE/truth input.
 RawRangeResult contractRawRangeBox(const Eigen::Vector3d&,const Eigen::Vector3d&,
  const UwbBatch&,const std::array<RawRangeShell,8>&,const Eigen::Vector3d&,RawRangeBudget={});
+RawRangeResult contractRawRangeBox(const Eigen::Vector3d&,const Eigen::Vector3d&,
+ const UwbBatch&,const std::vector<RawRangeShell>&,const Eigen::Vector3d&,RawRangeBudget={});
 RawRangeResult issueRawRangeContraction(const RawInclusionEvidence&,const RawRangeLawEvidence&,
  const EpochTransaction&,const CommitReceipt&,const NavigationState&,const Eigen::Vector3d&,
  RawRangeBudget={});
