@@ -16,7 +16,7 @@ void reintegrate(PendingFactorGroup& group,const std::vector<ImuMeasurement>& ra
  for(size_t i=1;i<raw.size();++i)pim.integrateMeasurement(.5*(raw[i-1].specific_force_mps2+raw[i].specific_force_mps2),.5*(raw[i-1].angular_velocity_radps+raw[i].angular_velocity_radps),double(raw[i].timestamp.value()-raw[i-1].timestamp.value())/1e9);
  group.factors.resize(0);group.factors.emplace_shared<gtsam::CombinedImuFactor>(gtsam::Symbol('x',previous),gtsam::Symbol('v',previous),gtsam::Symbol('x',next),gtsam::Symbol('v',next),gtsam::Symbol('b',previous),gtsam::Symbol('b',next),pim);group.raw_covariance=pim.preintMeasCov();
 }
-void omitRange(EpochTransaction& tx,EpochCommitPlan& plan,AnchorId anchor){
+void omitRange(EpochTransaction& tx,EpochCommitPlan& plan,AnchorId anchor,size_t first_epoch=0){
  auto retained=[&](const UwbBatch& batch,const std::vector<MeasurementId>& members){
   std::set<MeasurementId> bad;for(const auto& m:batch.measurements)if(m.anchor_id==anchor)bad.insert(m.id);
   std::vector<MeasurementId> expected;for(auto id:members)if(!bad.count(id))expected.push_back(id);
@@ -36,7 +36,7 @@ void omitRange(EpochTransaction& tx,EpochCommitPlan& plan,AnchorId anchor){
  };
  const auto current=plan.groups_to_add;
  replace(tx.uwb_batch,tx.uwb_groups,current,true);
- for(const auto& h:tx.recoverable_history)replace(h.uwb_batch,h.groups,h.selected_groups,false);
+ for(const auto& h:tx.recoverable_history)if(h.proposed_epoch>=first_epoch)replace(h.uwb_batch,h.groups,h.selected_groups,false);
 }
 PendingFactorGroup metric(const RollingRawState& raw,const IntegrityConfig& config,
  const EpochTransaction& tx,FactorGroupId replaces,bool stable_rotation){
@@ -128,7 +128,10 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
  auto all=candidate(-1);bool uwb_alarm=all.gaussian.statistic>all.gaussian.threshold;result.uwb_alarm=uwb_alarm;if(uwb_alarm)result.uwb_alarm_time=Clock::now();
  int detected=-1;
  if(uwb_alarm){double best=INFINITY;for(int mask:masks){if(mask<0)continue;auto c=candidate(mask);if(c.gaussian.statistic<=c.gaussian.threshold && c.gaussian.statistic<best){best=c.gaussian.statistic;detected=mask;}}}
- if(detected>=0){if(actual_time_ && observed_uwb_repaired_)observed_uwb_onset_=0;observed_uwb_repaired_=false;observed_anchor_=tx.uwb_batch.measurements.at(detected).anchor_id;if(!observed_uwb_onset_)observed_uwb_onset_=tx.proposed_epoch;}
+ // An alarm may precede identifiable source support (e.g. four rows followed
+ // by five). Preserve that contiguous unresolved episode for later repair.
+ if(actual_time_){if(uwb_alarm && !pending_uwb_onset_)pending_uwb_onset_=tx.proposed_epoch;if(!uwb_alarm)pending_uwb_onset_=0;}
+ if(detected>=0){if(actual_time_ && observed_uwb_repaired_)observed_uwb_onset_=0;observed_uwb_repaired_=false;observed_anchor_=tx.uwb_batch.measurements.at(detected).anchor_id;if(!observed_uwb_onset_)observed_uwb_onset_=actual_time_?pending_uwb_onset_:tx.proposed_epoch;}
  if(!fde){result.status=assessment.alarm || uwb_alarm?"DETECTION_HELD":"KEEP";result.recovery="FDE_DISABLED";return result;}
  if(policy_.open && history_unavailable_){result.status="RECOVERY_OUT_OF_BUFFER";result.recovery="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE";return result;}
  auto rowFor=[&](const std::optional<AnchorId>& anchor){if(anchor)for(int mask:masks)if(mask>=0 && tx.uwb_batch.measurements[mask].anchor_id==*anchor)return mask;return -1;};
@@ -180,8 +183,8 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
   result.status="NO_FUNCTIONAL_POST_PASSED";result.recovery="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE";return result;
  }
  result.excluded=selected;result.current_bridge=bridge;
- if(selected>=0){result.excluded_source=tx.uwb_batch.measurements.at(selected).anchor_id;omitRange(tx,result.plan,*result.excluded_source);held_anchor_=result.excluded_source;if(uwb_alarm){held_until_=tx.proposed_epoch+2;if(actual_time_)held_remaining_=2;}}
- else if(historical_range){result.excluded_source=observed_anchor_;omitRange(tx,result.plan,*observed_anchor_);}
+ if(selected>=0){result.excluded_source=tx.uwb_batch.measurements.at(selected).anchor_id;omitRange(tx,result.plan,*result.excluded_source,actual_time_?observed_uwb_onset_:0);held_anchor_=result.excluded_source;if(uwb_alarm){held_until_=tx.proposed_epoch+2;if(actual_time_)held_remaining_=2;}}
+ else if(historical_range){result.excluded_source=observed_anchor_;omitRange(tx,result.plan,*observed_anchor_,actual_time_?observed_uwb_onset_:0);}
  if(isolated_ && !bridge){reintegrate(tx.imu_group,tx.raw_imu_slice,tx.preintegration,bias_observation_,tx.previous_epoch,tx.proposed_epoch);result.rejoined=true;result.status="IMU_REJOINED_ORIGINAL_BIAS_REINTEGRATION";result.recovery="FDE_SUCCESS_REJOINED";return result;}
  if(bridge){
   result.plan.groups_to_add.erase(std::remove(result.plan.groups_to_add.begin(),result.plan.groups_to_add.end(),tx.imu_group.id),result.plan.groups_to_add.end());
@@ -192,7 +195,9 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
     if(pair!=2)throw std::runtime_error("HISTORY_BRIDGE_PAIR_MISSING");
    }
   }
-  if(!isolated_ && !tx.frozen_values->exists(gtsam::Symbol('x',0))){
+  const size_t earliest_dependency=historical_range?std::min(result.first_dependency,observed_uwb_onset_):result.first_dependency;
+  if(!isolated_ && !tx.frozen_values->exists(gtsam::Symbol('x',0)) &&
+     (!actual_time_ || earliest_dependency<=tx.proposed_epoch+1-policy_.fgo)){
    size_t boundary=tx.proposed_epoch+1-policy_.fgo;
    const RollingRawState* capsule=nullptr;for(const auto& c:capsules)if(c.epoch==boundary)capsule=&c;
    if(!capsule)throw std::runtime_error("BOUNDED_RAW_RECOVERY_CAPSULE_MISSING");
@@ -209,7 +214,7 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
    if(actual_time_){bool found=false;for(const auto& source:timeline_)if(source.epoch==boundary){boundary_time=source.end;found=true;break;}
     if(!found)throw std::runtime_error("ACTUAL_BOUNDARY_TIME_MISSING");}
    HistoricalEpochContext provenance;provenance.previous_epoch=boundary;provenance.proposed_epoch=boundary;provenance.begin=provenance.end=boundary_time;provenance.groups.push_back(std::move(regularizer));tx.recoverable_history.push_back(std::move(provenance));
-   result.boundary_repair=true;result.history_marginalized=result.first_dependency<=boundary;
+   result.boundary_repair=true;result.history_marginalized=earliest_dependency<=boundary;
   }
  }
  std::set<uint64_t> remove,add;for(auto id:result.plan.groups_to_remove)remove.insert(id.value());for(auto id:result.plan.groups_to_add)add.insert(id.value());

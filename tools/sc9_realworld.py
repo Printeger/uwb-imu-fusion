@@ -414,11 +414,171 @@ def empirical_model():
     print(json.dumps({k:output[k] for k in ['model_id','gravity_mps2','range_to_imu_time_s','accel_adc_sigma','gyro_adc_sigma','initial_bias_radius','motion']},indent=2))
 
 
+def score_walk(args):
+    """Post-sink CAL-only empirical reference: never called by the estimator."""
+    import numpy as np
+    import pandas as pd
+    from scipy.interpolate import CubicSpline
+    from scipy.spatial.transform import Rotation, Slerp
+    destination = CACHE/'walk'/args.run_id
+    freeze = json.loads((destination/'freeze.json').read_text())
+    model_path = CACHE/'empirical-model.json'
+    if sha(model_path) != freeze['model']:
+        raise RuntimeError('scoring model differs from run freeze')
+    model = json.loads(model_path.read_text()); ref = model['reference']
+    world = Rotation.from_matrix(model['R_model_from_anchor_world'])
+    external = Rotation.from_matrix(ref['R_anchor_from_tracker_world'])
+    mount = Rotation.from_matrix(ref['R_tracker_from_imu'])
+    def statistics(values):
+        values = np.asarray(values)
+        if not len(values):
+            return dict(n=0)
+        ordered = np.sort(values)
+        return dict(n=len(values),rmse=float(np.sqrt(np.mean(values**2))),
+                    median=float(np.median(values)),p95=float(ordered[int(np.ceil(.95*len(values)))-1]),
+                    p99=float(ordered[int(np.ceil(.99*len(values)))-1]),maximum=float(ordered[-1]))
+    output = dict(scope='CAL_ONLY_EMPIRICAL_REFERENCE; no TEST alignment or fit; bias truth NA',
+                  model_sha=freeze['model'],runs={},pairs={})
+    frames = {}
+    for case in freeze['cases']:
+        walk_name = case.split('-')[0]
+        gt_path = CACHE/f'data/ISAS-{walk_name}/gt.csv'
+        gt = pd.read_csv(gt_path,float_precision='round_trip').drop_duplicates('t')
+        pos = CubicSpline(gt.t,gt[['px','py','pz']])
+        rot = Slerp(gt.t,Rotation.from_quat(gt[['qx','qy','qz','qw']]))
+        for mode in ['off','on']:
+            name = case+'-'+mode
+            receipt = json.loads((destination/(name+'.json')).read_text())
+            csv_path = destination/(name+'.csv')
+            if receipt['output_sha'] != sha(csv_path):
+                raise RuntimeError('output changed after receipt')
+            data = pd.read_csv(csv_path,float_precision='round_trip')
+            frames[name]=data
+            time = data.stamp_ns.to_numpy()/1e9
+            reference_time = time+ref['imu_to_tracker_time_s']
+            valid = (reference_time>=gt.t.min()) & (reference_time<=gt.t.max())
+            data = data[valid]; time = time[valid]; reference_time=reference_time[valid]
+            reference_rotation = world*external*rot(reference_time)*mount
+            tag = world.apply(external.apply(pos(reference_time)+rot(reference_time).apply(ref['tracker_to_tag_m']))+np.asarray(ref['t_anchor_from_tracker_world_m']))
+            error = data[['tag_x','tag_y','tag_z']].to_numpy()-tag
+            estimate_rotation = Rotation.from_quat(data[['qx','qy','qz','qw']])
+            angle = (reference_rotation.inv()*estimate_rotation).magnitude()*180/np.pi
+            report = dict(reference_sha=sha(gt_path),committed=len(frames[name]),reference_matched=int(valid.sum()),
+                          reference_missing=int((~valid).sum()),returncode=receipt['returncode'],
+                          ape_m=statistics(np.linalg.norm(error,axis=1)),horizontal_m=statistics(np.linalg.norm(error[:,:2],axis=1)),
+                          vertical_m=statistics(np.abs(error[:,2])),are_deg=statistics(angle),
+                          offline_core_ms=statistics(frames[name].core_ms),
+                          diagnostic_h_exceedances=int((np.linalg.norm(error[:,:2],axis=1)>data.hpl).sum()),
+                          diagnostic_v_exceedances=int((np.abs(error[:,2])>data.vpl).sum()),
+                          diagnostic_not_statistical_protection=True,rpe={})
+            # Fixed 20--26 s local window includes the registered injections
+            # and subsequent recovery, independent of estimated errors.
+            local=(time>=20)&(time<26)
+            report['registered_window_20_26s']=dict(ape_m=statistics(np.linalg.norm(error[local],axis=1)),are_deg=statistics(angle[local]))
+            # Relative displacement in the body frame and relative attitude;
+            # interpolation only inside observed support, no trajectory alignment.
+            if len(time)>2:
+                est_pos=CubicSpline(time,data[['px','py','pz']])
+                est_rot=Slerp(time,estimate_rotation)
+                def body_reference(t):
+                    tr=t+ref['imu_to_tracker_time_s']
+                    return world.apply(external.apply(pos(tr)+rot(tr).apply(ref['tracker_to_imu_m']))+np.asarray(ref['t_anchor_from_tracker_world_m']))
+                for interval in [.5,1.]:
+                    t=time[time+interval<=time[-1]]; end=t+interval
+                    er0=est_rot(t);er1=est_rot(end)
+                    rr0=world*external*rot(t+ref['imu_to_tracker_time_s'])*mount
+                    rr1=world*external*rot(end+ref['imu_to_tracker_time_s'])*mount
+                    delta=er0.inv().apply(est_pos(end)-est_pos(t))-rr0.inv().apply(body_reference(end)-body_reference(t))
+                    rotation_error=((rr0.inv()*rr1).inv()*(er0.inv()*er1)).magnitude()*180/np.pi
+                    report['rpe'][str(interval)]=dict(position_m=statistics(np.linalg.norm(delta,axis=1)),angle_deg=statistics(rotation_error))
+            output['runs'][name]=report
+    for case in freeze['cases']:
+        off,on=(frames[case+'-'+mode] for mode in ['off','on'])
+        joined=off.merge(on,on=['epoch','stamp_ns','batch_id'],suffixes=('_off','_on'))
+        output['pairs'][case]=dict(matched=len(joined),off_committed=len(off),on_committed=len(on),
+            tag_change_m=statistics(np.linalg.norm(joined[['tag_x_on','tag_y_on','tag_z_on']].to_numpy()-joined[['tag_x_off','tag_y_off','tag_z_off']].to_numpy(),axis=1)),
+            same_imu_alarm=bool((joined.imu_alarm_off==joined.imu_alarm_on).all()),
+            same_source_prefix=bool((joined.source_prefix_off==joined.source_prefix_on).all()),
+            same_risk=bool((joined.event_risk_off==joined.event_risk_on).all()))
+    (destination/'scores.json').write_text(json.dumps(output,indent=2)+'\n')
+    print(json.dumps({name:{k:result[k] for k in ['committed','ape_m','are_deg','registered_window_20_26s']} for name,result in output['runs'].items()},indent=2))
+
+
+def walk(args):
+    """Freeze before execution; run both action modes with the same sensors."""
+    if not args.run_id or not all(c.isalnum() or c in '-_' for c in args.run_id):
+        raise ValueError('walk requires a simple --run-id; existing frozen runs are resumable')
+    destination = CACHE/'walk'/args.run_id
+    destination.mkdir(parents=True, exist_ok=True)
+    cases = [(f'Walk{w}-base', CACHE/f'data/ISAS-Walk{w}') for w in [2,3]]
+    cases += [(f'Walk{w}-{f}', CACHE/f'injected/ISAS-Walk{w}-{f}')
+              for w, faults in [(2,['U','A','G','J']),(3,['J'])] for f in faults]
+    selected = args.cases.split(',') if args.cases else [name for name, _ in cases]
+    if set(selected)-{name for name,_ in cases}:
+        raise ValueError('unknown case')
+    cases = [(name,path) for name,path in cases if name in selected]
+    model = CACHE/'empirical-model.json'
+    freeze = dict(identity=identity(), runner=sha(BIN/'sc9_dataset_runner'),
+                  source_diff_sha=hashlib.sha256(subprocess.check_output(['git','diff','HEAD'],cwd=ROOT)).hexdigest(),
+                  launcher_sha=sha(__file__),
+                  configuration={str(p.relative_to(ROOT)):sha(p) for p in sorted((ROOT/'config').glob('*.yaml'))},
+                  model=sha(model), registration=sha(CACHE/'injection-registration.json'),
+                  profile=args.profile, cases={name:{file:sha(path/file)
+                  for file in ['imu.csv','uwb.csv','anchors.csv']} for name,path in cases})
+    manifest = destination/'freeze.json'
+    if manifest.exists():
+        if json.loads(manifest.read_text()) != freeze:
+            raise RuntimeError('frozen run identity changed; use a new --run-id')
+    else:
+        manifest.write_text(json.dumps(freeze,indent=2)+'\n')
+    limit = '340' if args.profile == 'gate' else '0'
+    results = {}
+    for name,path in cases:
+        for mode in ['off','on']:
+            key = name+'-'+mode
+            output = destination/(key+'.csv')
+            receipt = destination/(key+'.json')
+            if receipt.exists():
+                result = json.loads(receipt.read_text())
+                if result['returncode'] == 0 and result['output_sha'] == sha(output):
+                    results[key] = result
+                    continue
+                raise RuntimeError(f'{key}: retained failure/changed output; use a new run ID')
+            command = [str(BIN/'sc9_dataset_runner'),str(model),str(path),str(output),mode,limit]
+            with output.with_suffix('.log').open('w') as log:
+                completed = subprocess.run(command,cwd=ROOT,env=environment(),stdout=log,stderr=subprocess.STDOUT)
+            rows = list(csv.DictReader(output.open())) if output.exists() else []
+            from collections import Counter
+            result = dict(command=command,returncode=completed.returncode,committed=len(rows),
+                          output_sha=sha(output) if output.exists() else None,
+                          statuses=dict(Counter(row['status'] for row in rows)),
+                          imu_alarms=sum(int(r['imu_alarm']) for r in rows),
+                          uwb_alarms=sum(int(r['uwb_alarm']) for r in rows),
+                          exclusions=sum(bool(r['excluded_source']) for r in rows),
+                          bridges=sum(int(r['bridge']) for r in rows),
+                          repairs=sum(int(r['repair']) for r in rows),
+                          polluted_prior=sum(int(r['polluted_prior']) for r in rows),
+                          rejoins=sum(int(r['rejoined']) for r in rows))
+            receipt.write_text(json.dumps(result,indent=2)+'\n')
+            results[key]=result
+            print(key,json.dumps({k:v for k,v in result.items() if k not in ['command','output_sha']}),flush=True)
+    (destination/'summary.json').write_text(json.dumps(results,indent=2)+'\n')
+    if any(r['returncode'] for r in results.values()):
+        raise RuntimeError('matrix contains failures; all completed prefixes retained')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument('command', choices=['legacy-freeze', 'legacy-parity', 'check', 'prepare', 'calibrate', 'empirical-model', 'inject'])
+    parser.add_argument('command', choices=['legacy-freeze', 'legacy-parity', 'check', 'prepare', 'calibrate', 'empirical-model', 'inject', 'walk', 'score'])
+    parser.add_argument('--profile',choices=['gate','full'],default='gate')
+    parser.add_argument('--run-id')
+    parser.add_argument('--cases',help='comma-separated Walk2-base, Walk3-base, Walk2-U/A/G/J, Walk3-J names')
     args = parser.parse_args()
-    if args.command == 'check':
+    if args.command == 'score':
+        score_walk(args)
+    elif args.command == 'walk':
+        walk(args)
+    elif args.command == 'check':
         check()
     elif args.command == 'prepare':
         prepare()

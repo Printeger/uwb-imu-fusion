@@ -23,7 +23,7 @@ class RollingRecovery {
  std::optional<AnchorId> held_anchor_,observed_anchor_;
  size_t held_until_=0,held_remaining_=0;
  bool observed_uwb_repaired_=false;
- size_t observed_uwb_onset_=0;
+ size_t observed_uwb_onset_=0,pending_uwb_onset_=0;
  uint64_t alert_generation_=0;
  bool open_pending_=false,history_unavailable_=false,actual_time_=false;
  struct EpochSources {size_t epoch=0;TimestampNs begin,end;std::vector<std::pair<MeasurementId,TimestampNs>> parents;};

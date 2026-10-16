@@ -51,7 +51,8 @@ int main(){try{
   }
   require(alarms>0,"fault did not trigger real monitor");
   if(scenario=="U")require(exclusions==5,"UWB source hold did not end after two further observations");
-  else require(bridges>0 && repairs>0 && rejoins>0 && post>=4,"missing native bridge/prior/rejoin post epochs");
+  else require(bridges>0 && rejoins>0 && post>=4,"missing native bridge/rejoin post epochs");
+  if(scenario=="A" || scenario=="G")require(repairs==0,"uncontaminated marginal prior replaced");
   if(scenario=="J-held")require(polluted>0 && exclusions>0,"no actual delayed marginal repair/joint action");
   std::cout<<"SC9 common core "<<scenario<<" N="<<n<<" commits=80 alarms="<<alarms<<" exclusions="<<exclusions<<" bridge="<<bridges<<" repair="<<repairs<<" polluted="<<polluted<<" rejoin="<<rejoins<<" post="<<post<<'\n'<<std::flush;
  }
