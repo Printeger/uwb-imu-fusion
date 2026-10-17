@@ -230,3 +230,30 @@ The first uncapped arrived-IMU full Walk2 J run lost all UWB exclusions: growing
 Directed analytic tests cover both transport directions, rotating lever and a globally speed-bounded trajectory with deliberately wide endpoint velocity; diagonal/correlated factors retain the original noise covariance. The first factor test's unsigned index arithmetic error and its corrected pass remain recorded. Boundary law-tamper rejection and80 paired causal/direct native commits pass;400 shared-core commits and222 legacy rows also pass (the existing final-bound1-ULP allowance remains). The capped full Walk2 J functional run commits1232/1232, has3 UWB alarms,2 actual source7475 exclusion epochs,23 bridge epochs and2 rejoins; the injected IMU episode rejoins at300 with continued commits. Maximum time radius is0.02892m. These development runs are functional evidence only; separate1×ROS delivery measurement is required.
 
 The independent `arrived-speed-v1-Walk2-J` 1×run passes both same-wire and deadline gates:7470 sensor inputs,1232 planned/received results, exact startup and all state/action/source/receipt/ledger/boundary comparisons, queue high-water4. Core median/P95/P99/max=16.41/21.74/29.17/58.10ms; original UWB header→actual sink=34.13/42.15/49.08/75.97ms. Timely fraction=99.107% (1221/1232); all11 misses remain in the summary. Publish→sink P95=0.466ms. This awards only the tested Walk2 J profile; the remaining three required ROS profiles and W5 are still open. ELF/DSO/source/model/input hashes and whole-role CPU/RSS are frozen in that run directory.
+
+All four required original/J ROS profiles now pass same-wire and delivery gates under the same frozen implementation/model and arrived-IMU policy. Every input event and planned result is accounted for; old routes remain0, backend count1. The remaining three runs use commit `19b3e5b`; the first J run froze its identical implementation sources before that commit. No compiler or other experiment overlapped these timing runs.
+
+| Profile | Results | Core P95 ms | Original UWB→sink P95 ms | Sink P99 / max ms | Timely | Misses |
+|---|---:|---:|---:|---:|---:|---:|
+| Walk2-base | 1232 | 19.55 | 40.10 | 43.29 / 54.02 | 99.76% | 3 |
+| Walk2-J | 1232 | 21.74 | 42.15 | 49.08 / 75.97 | 99.11% | 11 |
+| Walk3-base | 1330 | 18.48 | 39.58 | 47.08 / 60.66 | 99.32% | 9 |
+| Walk3-J | 1330 | 20.54 | 40.66 | 46.42 / 79.01 | 99.32% | 9 |
+
+This establishes `REALTIME_P95_MET_FOR_TESTED_PROFILES` for these four recordings and the declared empirical model. It does not establish hardware raw-risk qualification or all SC9 acceptance. Queue high-water is3–4; whole-role resource files and every miss are retained. Full ON/OFF scoring is being refrozen for this canonical path; earlier CSV trajectory scores remain historical.
+
+## Canonical-path full ON/OFF evaluation
+
+The `canonical-arrived-v1` matrix refreezes all7 cases/14 runs at `19b3e5b`, with original integer wire clocks, the same arrived-IMU adapter as ROS, unchanged CAL/model/injection registration, and all17640 committed rows. Walk2 commits1232 per run and Walk3 commits1330; every row has a reference match,0 old calls and1 backend. All four ROS-profile ON outputs exactly match this matrix in every non-timing/resource CSV field. Offline scoring subtracts the original first-IMU integer timestamp before converting to the pre-existing reference coordinate; it performs no TEST fit.
+
+| Case | Tag RMSE OFF / ON m | Attitude RMSE OFF / ON deg | Exclusion epochs ON | Bridge / rejoin ON |
+|---|---:|---:|---:|---:|
+| Walk2-base | 0.2152 / 0.2161 | 61.44 / 61.45 | 0 | 10 / 1 |
+| Walk3-base | 0.4134 / 0.4138 | 58.23 / 58.27 | 0 | 19 / 1 |
+| Walk2-U | 0.2298 / 0.2179 | 64.34 / 62.02 | 2 | 10 / 1 |
+| Walk2-A | 0.3635 / 0.2166 | 95.56 / 112.72 | 0 | 24 / 2 |
+| Walk2-G | 0.2331 / 0.2166 | 55.94 / 112.72 | 0 | 24 / 2 |
+| Walk2-J | 0.2436 / 0.2200 | 63.31 / 43.61 | 2 | 23 / 2 |
+| Walk3-J | 0.4244 / 0.4165 | 51.69 / 38.41 | 5 | 36 / 2 |
+
+U/A/G/J position improvements are conditional empirical results. Walk2 A/G attitude becomes substantially worse (112.72°); Walk2 J improves attitude in this new policy, unlike the earlier frozen CSV run. These differences are exposed, not averaged away or used to tune TEST parameters. Original-background ON slightly worsens both metrics. All declared pre-injection fields are exactly unchanged for278 U/J epochs or281 A/G epochs; added exclusions involve only the registered source. Full0.5/1s RPE, fixed20–26s local errors, CAL-reference sensitivity and diagnostic H/V exceedances remain in the scorer output. Hardware risk remains unqualified; zero diagnostic exceedances do not certify a probability. W5 moving noisy simulation,5000/10000, SFUISE and final acceptance remain open.
