@@ -88,7 +88,7 @@ JointConstraintEvidence jointContract(RollingRawState& old,RollingRawState& next
 
 JointConstraintEvidence jointContract(RollingRawState& old,RollingRawState& next,
  TimestampNs begin,TimestampNs end,const std::vector<JointTimedSample>& samples,
- const JointRawLaw& law,size_t budget){
+ const JointRawLaw& law,size_t budget,bool reuse_common){
  validate(law);
  if(old.epoch==std::numeric_limits<size_t>::max() || next.epoch!=old.epoch+1 || samples.empty())
   throw std::invalid_argument("JOINT_TIMED_WINDOW_ORDER");
@@ -134,34 +134,50 @@ JointConstraintEvidence jointContract(RollingRawState& old,RollingRawState& next
    const I age=distance(sample.raw.timestamp,sample.integration_end);
    const I from_time=distance(begin,sample.raw.timestamp),to_time=distance(sample.raw.timestamp,end);
    RollingRawState union_old,union_next;RollingVector acceleration_union;bool any=false;
+   // x/y differ between branches only in their per-axis bias constraints.
+   // Rotation and an axis's healthy/omitted image therefore have identical
+   // inputs across branches. Cache only inside this one raw sample. Lazy
+   // evaluation preserves the original short-circuit and fallback behavior.
+   std::array<RollingVector,3> rotation;bool rotation_ready=false,rotation_possible=false;
+   struct AxisImage {bool ready=false,possible=false;I signal,before,after;};
+   std::array<std::array<AxisImage,2>,6> images;
    for(int branch=0;branch<7;++branch){
     const int omitted=branch-1;++evidence.branches;
     auto x=a,y=b;RollingVector acceleration{sym(I(law.acceleration)),sym(I(law.acceleration)),sym(I(law.acceleration))};
     bool possible=true;
     if(size_t(branch)>=budget){++evidence.frontier;}
     else{
-     std::array<RollingVector,3> rotation;std::array<I,6> bias,signal;
-     for(int j=0;j<3;++j)for(int k=0;k<3;++k){
-      rotation[j][k]=x.rotation[j][k]+sym(I(law.rate)*from_time);
-      possible&=meet(rotation[j][k],y.rotation[j][k]+sym(I(law.rate)*to_time));
-      possible&=meet(rotation[j][k],I(-1,1));
+     std::array<I,6> signal;
+     if(!reuse_common || !rotation_ready){rotation_possible=true;
+      for(int j=0;j<3;++j)for(int k=0;k<3;++k){
+       rotation[j][k]=a.rotation[j][k]+sym(I(law.rate)*from_time);
+       rotation_possible&=meet(rotation[j][k],b.rotation[j][k]+sym(I(law.rate)*to_time));
+       rotation_possible&=meet(rotation[j][k],I(-1,1));
+      }rotation_ready=true;
      }
+     possible=rotation_possible;
      for(int axis=0;axis<6 && possible;++axis){
-      const bool accel=axis<3;const int j=axis%3;
-      bias[axis]=x.bias[axis]+sym(sample.rw_from_begin[axis]);
-      possible&=meet(bias[axis],y.bias[axis]+sym(sample.rw_to_end[axis]));
-      if(!possible)break;
-      I physical=accel?I(law.gravity)*rotation[2][j]+sym(I(law.acceleration)):sym(I(law.rate));
-      if(axis==omitted)signal[axis]=physical; // Arbitrary fault at this raw time.
-      else{
-       I measured(accel?sample.raw.specific_force_mps2[j]:sample.raw.angular_velocity_radps[j]);
-       const I noise=sym(sample.adc_radius[axis]);
-       possible&=meet(bias[axis],measured-physical+noise);
-       signal[axis]=measured-bias[axis]+noise;
-       possible&=meet(signal[axis],physical);
+      auto& image=images[axis][axis==omitted?1:0];
+      if(!reuse_common || !image.ready){image.ready=true;const bool accel=axis<3;const int j=axis%3;
+       I bias=a.bias[axis]+sym(sample.rw_from_begin[axis]);
+       image.possible=meet(bias,b.bias[axis]+sym(sample.rw_to_end[axis]));
+       if(image.possible){
+        I physical=accel?I(law.gravity)*rotation[2][j]+sym(I(law.acceleration)):sym(I(law.rate));
+        if(axis==omitted)image.signal=physical; // Arbitrary fault at this raw time.
+        else{
+         I measured(accel?sample.raw.specific_force_mps2[j]:sample.raw.angular_velocity_radps[j]);
+         const I noise=sym(sample.adc_radius[axis]);
+         image.possible&=meet(bias,measured-physical+noise);
+         image.signal=measured-bias+noise;
+         image.possible&=meet(image.signal,physical);
+        }
+        image.before=a.bias[axis];image.after=b.bias[axis];
+        image.possible&=meet(image.before,bias+sym(sample.rw_from_begin[axis]));
+        image.possible&=meet(image.after,bias+sym(sample.rw_to_end[axis]));
+       }
       }
-      possible&=meet(x.bias[axis],bias[axis]+sym(sample.rw_from_begin[axis]));
-      possible&=meet(y.bias[axis],bias[axis]+sym(sample.rw_to_end[axis]));
+      possible&=image.possible;
+      if(possible){x.bias[axis]=image.before;y.bias[axis]=image.after;signal[axis]=image.signal;}
      }
      if(possible)for(int j=0;j<3;++j){
       I measured_acceleration(0);for(int k=0;k<3;++k)measured_acceleration+=rotation[j][k]*signal[k];
@@ -171,7 +187,9 @@ JointConstraintEvidence jointContract(RollingRawState& old,RollingRawState& next
     }
     if(!possible){++evidence.empty;continue;}
     if(!any){union_old=x;union_next=y;acceleration_union=acceleration;any=true;}
-    else{unite(union_old,x);unite(union_next,y);for(int j=0;j<3;++j)acceleration_union[j]=hull(acceleration_union[j],acceleration[j]);}
+    else{if(reuse_common){for(int j=0;j<6;++j){union_old.bias[j]=hull(union_old.bias[j],x.bias[j]);union_next.bias[j]=hull(union_next.bias[j],y.bias[j]);}}
+     else{unite(union_old,x);unite(union_next,y);}
+     for(int j=0;j<3;++j)acceleration_union[j]=hull(acceleration_union[j],acceleration[j]);}
    }
    if(!any)throw std::invalid_argument("JOINT_ALL_BRANCHES_INCONSISTENT");
    a=rollingProject(union_old);b=rollingProject(union_next);

@@ -86,7 +86,7 @@ def legacy(freeze):
 
 def check(build=False):
     CACHE.mkdir(parents=True, exist_ok=True)
-    targets=['sc9_input_checks', 'sc9_event_checks', 'sc9_time_checks', 'sc9_joint_checks', 'sc9_recovery_checks', 'sc9_boundary_checks', 'sc9_core_checks', 'sc9_bootstrap_checks', 'sc9_time_factor_checks', 'sc9_topology_checks', 'sc9_route_checks', 'sc9_stream_checks', 'sc9_native_time_checks']
+    targets=['sc9_input_checks', 'sc9_event_checks', 'sc9_time_checks', 'sc9_joint_checks', 'sc9_recovery_checks', 'sc9_boundary_checks', 'sc9_core_checks', 'sc9_bootstrap_checks', 'sc9_time_factor_checks', 'sc9_topology_checks', 'sc9_route_checks', 'sc9_stream_checks', 'sc9_native_time_checks', 'sc9_range_rounding_checks']
     if build:
         with (CACHE/'check-build.log').open('w') as log:
             subprocess.run(['cmake','-S',str(ROOT),'-B',str(BUILD)],env=environment(),stdout=log,stderr=subprocess.STDOUT,check=True)

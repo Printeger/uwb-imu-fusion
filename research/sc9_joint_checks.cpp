@@ -39,6 +39,12 @@ int main(){try{
   }
   for(size_t budget=0;budget<=7;++budget){
    auto a=before,b=after;auto result=jointContract(a,b,TimestampNs(origin),TimestampNs(finish),samples,law,budget);
+   auto ra=before,rb=after;auto reference=jointContract(ra,rb,TimestampNs(origin),TimestampNs(finish),samples,law,budget,false);
+   auto equal=[](I x,I y){return x.lower()==y.lower()&&x.upper()==y.upper();};
+   for(int j=0;j<3;++j){require(equal(a.p[j],ra.p[j])&&equal(a.v[j],ra.v[j])&&equal(b.p[j],rb.p[j])&&equal(b.v[j],rb.v[j]),"memoized integral mismatch");
+    for(int k=0;k<3;++k)require(equal(a.rotation[j][k],ra.rotation[j][k])&&equal(b.rotation[j][k],rb.rotation[j][k]),"memoized rotation mismatch");}
+   for(int j=0;j<6;++j)require(equal(a.bias[j],ra.bias[j])&&equal(b.bias[j],rb.bias[j]),"memoized bias mismatch");
+   require(result.branches==reference.branches&&result.empty==reference.empty&&result.frontier==reference.frontier&&result.fallback==reference.fallback,"memoized branch accounting mismatch");
    require(result.valid && !result.fallback && result.branches==42,"timed joint incomplete");
    for(int j=0;j<3;++j){require(inside(a.p[j],p0[j]) && inside(a.v[j],v0[j]),"initial truth removed");
     require(inside(b.p[j],position(.06)[j]) && inside(b.v[j],velocity(.06)[j]),"timed integral lost true trajectory");

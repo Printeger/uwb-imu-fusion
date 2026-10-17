@@ -35,22 +35,23 @@ bool rawRangeShells(const RawRangeLawEvidence& law,const UwbBatch& b,int epoch,s
 
 namespace {
 using Box=std::array<I,3>;
-I squaredNorm(const Eigen::Vector3d& a){I n(0);for(int j=0;j<3;++j)n+=square(I(a(j)));return n;}
-void checkFinite(I x){if(!std::isfinite(x.lower()) || !std::isfinite(x.upper()))throw std::runtime_error("nonfinite interval arithmetic");}
-bool intersect(I& x,I y){checkFinite(y);double l=std::max(x.lower(),y.lower()),h=std::min(x.upper(),y.upper());if(l>h)return false;x=I(l,h);return true;}
+template<class T>T squaredNorm(const Eigen::Vector3d& a){T n(0);for(int j=0;j<3;++j)n+=square(T(a(j)));return n;}
+template<class T>void checkFinite(T x){if(!std::isfinite(x.lower()) || !std::isfinite(x.upper()))throw std::runtime_error("nonfinite interval arithmetic");}
+template<class T>bool intersect(T& x,T y){checkFinite(y);double l=std::max(x.lower(),y.lower()),h=std::min(x.upper(),y.upper());if(l>h)return false;x=T(l,h);return true;}
 bool finiteBox(const Box& b){for(auto x:b)if(!std::isfinite(x.lower()) || !std::isfinite(x.upper()))return false;return true;}
 void bounds(RawRangeResult& r,const Eigen::Vector3d& actual){
  for(int j=0;j<3;++j)r.pl(j)=abs(I(r.low(j),r.high(j))-I(actual(j))).upper();
  r.hpl=sqrt(square(I(r.pl.x()))+square(I(r.pl.y()))).upper();
 }
 // Every update is a necessary condition; interval dependency only weakens it.
-bool propagate(Box& box,const UwbBatch& b,const std::vector<RawRangeShell>& shells,int omitted,unsigned passes,bool tight_shell,bool optimized,bool lower_shell){
+template<class T>bool propagateImpl(std::array<T,3>& box,const UwbBatch& b,const std::vector<RawRangeShell>& shells,int omitted,unsigned passes,bool tight_shell,bool optimized,bool lower_shell){
+ using I=T;using Box=std::array<I,3>;
  auto retained=[&](size_t i){return omitted<0 || b.measurements[i].anchor_id!=b.measurements.at(omitted).anchor_id;};
  size_t ref=0;while(ref<b.measurements.size() && !retained(ref))++ref;
  if(ref==b.measurements.size())return true; // Zero constraints: keep the entire prior domain.
  for(size_t i=0;i<b.measurements.size();++i)if(retained(i) && shells[i].high<shells[i].low)return false;
  std::vector<I> shell_squared(shells.size()),upper_squared(shells.size()),linear_rhs(shells.size());std::vector<std::array<I,3>> coefficients(shells.size());
- if(optimized)for(int i=0;i<b.measurements.size();++i){if(!retained(i))continue;shell_squared[i]=square(I(shells[i].low,shells[i].high));upper_squared[i]=square(I(shells[i].high));const auto& a=b.measurements[i].anchor_position_m;const auto& a0=b.measurements[ref].anchor_position_m;for(int j=0;j<3;++j)coefficients[i][j]=2.*(I(a(j))-I(a0(j)));linear_rhs[i]=squaredNorm(a)-squaredNorm(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));}
+ if(optimized)for(int i=0;i<b.measurements.size();++i){if(!retained(i))continue;shell_squared[i]=square(I(shells[i].low,shells[i].high));upper_squared[i]=square(I(shells[i].high));const auto& a=b.measurements[i].anchor_position_m;const auto& a0=b.measurements[ref].anchor_position_m;for(int j=0;j<3;++j)coefficients[i][j]=2.*(I(a(j))-I(a0(j)));linear_rhs[i]=squaredNorm<I>(a)-squaredNorm<I>(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));}
  for(unsigned pass=0;pass<passes;++pass){Box previous=box;
   for(size_t i=0;i<b.measurements.size();++i)if(retained(i)){
    const auto& a=b.measurements[i].anchor_position_m;
@@ -75,7 +76,7 @@ bool propagate(Box& box,const UwbBatch& b,const std::vector<RawRangeShell>& shel
    if(int(i)==ref)continue;
    const auto& a0=b.measurements[ref].anchor_position_m;
    std::array<I,3> c;if(optimized)c=coefficients[i];else for(int j=0;j<3;++j)c[j]=2.*(I(a(j))-I(a0(j)));
-   I rhs=optimized?linear_rhs[i]:squaredNorm(a)-squaredNorm(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));
+   I rhs=optimized?linear_rhs[i]:squaredNorm<I>(a)-squaredNorm<I>(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));
    checkFinite(rhs);for(auto coefficient:c)checkFinite(coefficient);
    for(int j=0;j<3;++j){if(c[j].lower()<=0 && c[j].upper()>=0)continue;
     I remainder=rhs;for(int k=0;k<3;++k)if(k!=j)remainder-=c[k]*box[k];
@@ -85,6 +86,18 @@ bool propagate(Box& box,const UwbBatch& b,const std::vector<RawRangeShell>& shel
   if(optimized){bool unchanged=true;for(int j=0;j<3;++j)unchanged&=previous[j].lower()==box[j].lower() && previous[j].upper()==box[j].upper();if(unchanged)break;}
  }
  return true;
+}
+bool propagate(Box& box,const UwbBatch& b,const std::vector<RawRangeShell>& shells,int omitted,const RawRangeBudget& budget){
+ if(!budget.scoped_rounding)return propagateImpl(box,b,shells,omitted,budget.passes,budget.tight_shell,budget.optimized,budget.lower_shell);
+ // Exactly the same directed operations, with one exception-safe rounding
+ // guard around this pure interval kernel. No split/center/Eigen arithmetic
+ // runs inside it; the caller's original mode is restored on every exit.
+ I::traits_type::rounding guard;
+ using U=boost::numeric::interval_lib::unprotect<I>::type;
+ std::array<U,3> local;for(int j=0;j<3;++j)local[j]=U(box[j].lower(),box[j].upper());
+ const bool result=propagateImpl(local,b,shells,omitted,budget.passes,budget.tight_shell,budget.optimized,budget.lower_shell);
+ if(result)for(int j=0;j<3;++j)box[j]=I(local[j].lower(),local[j].upper());
+ return result;
 }
 }
 RawRangeResult contractRawRangeBox(const Eigen::Vector3d& low,const Eigen::Vector3d& high,
@@ -108,7 +121,7 @@ RawRangeResult contractRawRangeBox(const Eigen::Vector3d& low,const Eigen::Vecto
     r.peak_boxes=std::max(r.peak_boxes,queue.size());
     if(r.visited>=budget.max_boxes){current_frontier=true;r.budget_exhausted=true;r.frontier+=queue.size();for(const auto& item:queue)retain(item.first);queue.clear();break;}
     auto item=queue.front();queue.pop_front();++r.visited;
-    if(!propagate(item.first,batch,shells,omitted,budget.passes,budget.tight_shell,budget.optimized,budget.lower_shell))continue;
+    if(!propagate(item.first,batch,shells,omitted,budget))continue;
     if(!finiteBox(item.first))throw std::runtime_error("nonfinite interval arithmetic");
     int axis=0;for(int j=1;j<3;++j)if(item.first[j].upper()-item.first[j].lower()>item.first[axis].upper()-item.first[axis].lower())axis=j;
     double mid=item.first[axis].lower()/2+item.first[axis].upper()/2;

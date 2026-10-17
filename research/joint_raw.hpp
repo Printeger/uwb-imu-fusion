@@ -22,5 +22,5 @@ struct JointTimedSample {
 };
 JointConstraintEvidence jointContract(RollingRawState&,RollingRawState&,
  TimestampNs begin,TimestampNs end,const std::vector<JointTimedSample>&,
- const JointRawLaw&,size_t branch_budget=7);
+ const JointRawLaw&,size_t branch_budget=7,bool reuse_common=true);
 }

@@ -40,7 +40,7 @@ RollingVector contracted(RollingRawState& s,const RollingRawMaterial& m,
  auto shells=shellsFor(s,m,e,l,acceleration,rate);
  auto t=tight?rollingTagSphere(s,l):rollingTag(s,l);Eigen::Vector3d low,high;
  for(int j=0;j<3;++j){low(j)=t[j].lower();high(j)=t[j].upper();}
- RawRangeBudget budget;budget.retain_support=audit;budget.tight_shell=tight;budget.optimized=optimized;auto result=contractRawRangeBox(low,high,m.batch,shells,Eigen::Vector3d::Zero(),budget);
+ RawRangeBudget budget;budget.retain_support=audit;budget.tight_shell=tight;budget.optimized=optimized;budget.scoped_rounding=bool(m.generalized);auto result=contractRawRangeBox(low,high,m.batch,shells,Eigen::Vector3d::Zero(),budget);
  if(!result.valid || result.considered!=rawRangeFaultMasks(m.batch).size())throw std::invalid_argument("RAW_CONTRACTION_SCOPE_INCONSISTENT");
  branches+=result.considered;
  if(audit){for(const auto& leaf:result.support)audit->push_back({leaf.frontier?"range_frontier":"range_leaf",s.epoch,leaf.omitted,leaf.low,leaf.high});audit->push_back({"range_hull",s.epoch,-2,result.low,result.high});}
@@ -123,7 +123,7 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
  // complete branch/frontier union also contracts the separator tag hull.
  if(support_){const auto& m=out.explicit_material.back();auto shells=shellsFor(states.back(),m,event_,lever_,acceleration_,rate_);
   auto tag=tight_?rollingTagSphere(states.back(),lever_):rollingTag(states.back(),lever_);Eigen::Vector3d low,high;for(int j=0;j<3;++j){low(j)=tag[j].lower();high(j)=tag[j].upper();}RawRangeBudget budget;budget.tight_shell=true;budget.optimized=optimized_;budget.retain_support=true;budget.lower_shell=true;budget.split_depth=2;budget.max_boxes=support_budget_;
-  out.geometry=contractRawRangeBox(low,high,m.batch,shells,Eigen::Vector3d::Zero(),budget);
+  budget.scoped_rounding=bool(m.generalized);out.geometry=contractRawRangeBox(low,high,m.batch,shells,Eigen::Vector3d::Zero(),budget);
   if(!out.geometry.valid)throw std::invalid_argument("SUPPORT_ALL_BRANCHES_INCONSISTENT");
   for(int j=0;j<3;++j)tag[j]=I(out.geometry.low(j),out.geometry.high(j));if(!(tight_?rollingContractTagSphere(states.back(),tag,lever_):rollingContractTag(states.back(),tag,lever_)))throw std::invalid_argument("SUPPORT_STATE_INTERSECTION_EMPTY");
  }
