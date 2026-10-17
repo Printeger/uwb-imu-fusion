@@ -48,7 +48,7 @@ template<class T>std::array<T,3> cross(const std::array<T,3>& a,const std::array
 }
 template<class T>T dot(const std::array<T,3>& a,const std::array<T,3>& b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
 template<class T>T determinant(const std::array<std::array<T,3>,3>& a){return dot(a[0],cross(a[1],a[2]));}
-template<class T>bool linearContract(std::array<T,3>& box,const std::vector<std::array<T,3>>& rows,const std::vector<T>& rhs,const std::vector<size_t>& eligible){
+template<class T>bool linearContract(std::array<T,3>& box,const std::vector<std::array<T,3>>& rows,const std::vector<T>& rhs,const std::vector<T>& without_reference,T reference_squared,const std::vector<size_t>& eligible){
  if(eligible.size()<3)return true;
  // Pivot selection affects strength only. All chosen equations remain exact
  // necessary squared-range differences; no floating inverse is trusted.
@@ -63,11 +63,21 @@ template<class T>bool linearContract(std::array<T,3>& box,const std::vector<std:
  const T denominator=determinant(matrix);checkFinite(denominator);
  if(denominator.lower()<=0&&denominator.upper()>=0)return true;
  const std::array<T,3> values{rhs[first],rhs[second],rhs[third]};
+ const std::array<size_t,3> selected{first,second,third};
  // Cramer's rule evaluated entirely with outward intervals encloses the
  // solution for every admitted range/geometry value. Rank-uncertain cases
  // keep the original box and still run the existing spherical contractor.
  for(int j=0;j<3;++j){auto numerator=matrix;for(int k=0;k<3;++k)numerator[k][j]=values[k];
   if(!intersect(box[j],determinant(numerator)/denominator))return false;
+  // All three differences reuse the SAME r_ref^2. Combine its coefficient
+  // before interval evaluation, instead of treating its occurrences as
+  // unrelated values. Both this form and the direct Cramer form are necessary
+  // outer bounds; intersecting them also keeps tiny inverse-roundoff effects
+  // from weakening the previous form. No noise independence is introduced.
+  T common_weight(0),separate(0);
+  for(int k=0;k<3;++k){auto unit=matrix;for(int row=0;row<3;++row)unit[row][j]=T(row==k?1:0);
+   const T weight=determinant(unit)/denominator;common_weight+=weight;separate+=weight*without_reference[selected[k]];}
+  if(!intersect(box[j],separate+common_weight*reference_squared))return false;
  }
  return true;
 }
@@ -78,10 +88,10 @@ template<class T>bool propagateImpl(std::array<T,3>& box,const UwbBatch& b,const
  size_t ref=0;while(ref<b.measurements.size() && !retained(ref))++ref;
  if(ref==b.measurements.size())return true; // Zero constraints: keep the entire prior domain.
  for(size_t i=0;i<b.measurements.size();++i)if(retained(i) && shells[i].high<shells[i].low)return false;
- std::vector<I> shell_squared(shells.size()),upper_squared(shells.size()),linear_rhs(shells.size());std::vector<std::array<I,3>> coefficients(shells.size());
- if(optimized||precondition)for(int i=0;i<b.measurements.size();++i){if(!retained(i))continue;shell_squared[i]=square(I(shells[i].low,shells[i].high));upper_squared[i]=square(I(shells[i].high));const auto& a=b.measurements[i].anchor_position_m;const auto& a0=b.measurements[ref].anchor_position_m;for(int j=0;j<3;++j)coefficients[i][j]=2.*(I(a(j))-I(a0(j)));linear_rhs[i]=squaredNorm<I>(a)-squaredNorm<I>(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));}
+ std::vector<I> shell_squared(shells.size()),upper_squared(shells.size()),linear_rhs(shells.size()),without_reference(precondition?shells.size():0);std::vector<std::array<I,3>> coefficients(shells.size());
+ if(optimized||precondition)for(int i=0;i<b.measurements.size();++i){if(!retained(i))continue;shell_squared[i]=square(I(shells[i].low,shells[i].high));upper_squared[i]=square(I(shells[i].high));const auto& a=b.measurements[i].anchor_position_m;const auto& a0=b.measurements[ref].anchor_position_m;for(int j=0;j<3;++j)coefficients[i][j]=2.*(I(a(j))-I(a0(j)));linear_rhs[i]=squaredNorm<I>(a)-squaredNorm<I>(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));if(precondition)without_reference[i]=squaredNorm<I>(a)-squaredNorm<I>(a0)-shell_squared[i];}
  if(precondition){std::vector<size_t> eligible;for(size_t i=0;i<b.measurements.size();++i)if(i!=ref&&retained(i))eligible.push_back(i);
-  if(!linearContract(box,coefficients,linear_rhs,eligible))return false;}
+  if(!linearContract(box,coefficients,linear_rhs,without_reference,shell_squared[ref],eligible))return false;}
  for(unsigned pass=0;pass<passes;++pass){Box previous=box;
   for(size_t i=0;i<b.measurements.size();++i)if(retained(i)){
    const auto& a=b.measurements[i].anchor_position_m;

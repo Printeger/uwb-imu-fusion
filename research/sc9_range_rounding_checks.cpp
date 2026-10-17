@@ -44,6 +44,19 @@ int main(){try{
   }
  }
  require(strict==6,"linear contraction fixture did not exercise strict improvement");
+ // Independent subtraction oracle: with anchors (1,+1,0),(1,-1,0),
+ // y=(r_minus^2-r_plus^2)/4. The deliberately wide r_origin shell cancels
+ // exactly. Verify this under all four choices of reference row, without
+ // spherical passes that could conceal a lost common-source cancellation.
+ for(int shift=0;shift<4;++shift){
+  const std::vector<Eigen::Vector3d> anchors{{0,0,0},{1,1,0},{1,-1,0},{0,0,1}};
+  const Eigen::Vector3d truth(.25,.25,.5);UwbBatch batch;std::vector<RawRangeShell> shells;
+  for(int i=0;i<4;++i){const int k=(i+shift)%4;UwbMeasurement m;m.anchor_id=AnchorId(k+1);m.anchor_position_m=anchors[k];m.range_m=(truth-anchors[k]).norm();batch.measurements.push_back(m);const double radius=k==0?.25:1e-12;shells.push_back({m.range_m-radius,m.range_m+radius});}
+  RawRangeBudget budget;budget.all_ranges_healthy=true;budget.linear_precondition=true;budget.scoped_rounding=true;budget.passes=0;
+  auto result=contractRawRangeBox(Eigen::Vector3d::Constant(-10),Eigen::Vector3d::Constant(10),batch,shells,truth,budget);
+  require(result.valid&&(result.low.array()<=truth.array()).all()&&(result.high.array()>=truth.array()).all(),"common range cancellation lost truth");
+  require(result.high.y()-result.low.y()<1e-9,"common reference-range dependence was not cancelled");
+ }
  // Finite input that overflows interval squares must take the same fallback,
  // restoring even a non-default caller mode during exception unwinding.
  std::fesetround(FE_TOWARDZERO);UwbBatch huge;UwbMeasurement m;m.anchor_id=AnchorId(1);m.anchor_position_m.setConstant(1e308);huge.measurements.push_back(m);
