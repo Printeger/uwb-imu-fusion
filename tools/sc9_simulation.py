@@ -6,7 +6,7 @@ from sc4_system_research import ROOT,BIN,environment
 
 def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
-def matrix(kind,run_id):
+def matrix(kind,run_id,geometry='original'):
     if not run_id or not all(c.isalnum() or c in '-_' for c in run_id):raise ValueError('simple run ID required')
     destination=ROOT/'.cache/sc9/simulation'/run_id;destination.mkdir(parents=True,exist_ok=True)
     schedule=ROOT/'.cache/sc9/simulation-B2-schedule.json';binary=BIN/'sc9_simulation_runner'
@@ -17,7 +17,8 @@ def matrix(kind,run_id):
     sources['tools/sc9_simulation.py']=sha(__file__);sources['CMakeLists.txt']=sha(ROOT/'CMakeLists.txt')
     frozen=dict(head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),sources=sources,
                 elf=sha(binary),dso=sha(BIN.parent/'libuwb_imu_pl.so'),schedule=sha(schedule),cases=cases,
-                registration=sha(ROOT/'.cache/sc9/generalized-simulation-registration.json'),
+                registration=sha(ROOT/'.cache/sc9'/('generalized-simulation-registration.json' if geometry=='original' else 'nondegenerate5-simulation-registration.json')),
+                geometry=geometry,
                 timing='unpaced core and inclusive provider+core; not an actual sink-latency award',hardware_qualification=False)
     frozen=json.loads(json.dumps(frozen));freeze=destination/'freeze.json'
     if freeze.exists():
@@ -34,6 +35,7 @@ def matrix(kind,run_id):
             if not r['pass'] or r['output_sha']!=sha(output):raise RuntimeError('retained failure or changed output: '+name)
             results[name]=r;continue
         command=[str(binary),str(count),fault,str(output),str(lag),str(window)]+([str(schedule)] if external else [])
+        if external and geometry!='original':command.append(geometry)
         with (destination/(name+'.log')).open('w') as log:
             code=subprocess.run(['/usr/bin/time','-v','-o',str(destination/(name+'.resources'))]+command,cwd=ROOT,env=environment(),stdout=log,stderr=subprocess.STDOUT).returncode
         rows=list(csv.DictReader(output.open())) if output.exists() else []
@@ -86,6 +88,7 @@ def prepare(wire,output,count):
 if __name__=='__main__':
     p=argparse.ArgumentParser(__doc__);p.add_argument('wire',nargs='?');p.add_argument('output',nargs='?');p.add_argument('--epochs',type=int,default=400)
     p.add_argument('--matrix',choices=['short','long']);p.add_argument('--run-id')
+    p.add_argument('--geometry',choices=['original','nondegenerate5'],default='original')
     a=p.parse_args()
-    if a.matrix:matrix(a.matrix,a.run_id)
+    if a.matrix:matrix(a.matrix,a.run_id,a.geometry)
     else:prepare(a.wire,a.output,a.epochs)

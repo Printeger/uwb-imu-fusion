@@ -28,8 +28,9 @@ struct Generator {
  JointRawLaw law;Eigen::Vector3d lever;std::mt19937 ar{20261017},br{20284514},rr{20268936};std::normal_distribution<double> normal;
  std::array<I,6> bias,bias_support;std::vector<Draw> draws;uint64_t raw_count=0,range_count=0;int64_t last_ns=0;
  double residue=0;std::vector<Eigen::Vector3d> anchors;
- Generator(const JointRawLaw& l,Eigen::Vector3d v):law(l),lever(v){for(auto& b:bias)b=I(0);for(auto& b:bias_support)b=I(0);
+ Generator(const JointRawLaw& l,Eigen::Vector3d v,bool nondegenerate_five=false):law(l),lever(v){for(auto& b:bias)b=I(0);for(auto& b:bias_support)b=I(0);
   anchors={{4,0,0},{0,4,0},{0,0,4},{-4,-4,-4},{4,4,-4}};
+  if(nondegenerate_five)anchors[4].z()=4;
   for(size_t k=5;k<12;++k)anchors.push_back({4*std::cos(double(k)),4*std::sin(double(k)),double(k%3)*2});
  }
  AnchorId aid(size_t k)const{return AnchorId((uint64_t(1)<<49)+113*k);}
@@ -63,12 +64,13 @@ struct Generator {
 };
 }
 int main(int argc,char** argv){try{
- if(argc<4 || argc>7)throw std::invalid_argument("usage: sc9_simulation_runner COUNT healthy|U|A|G|J|repeated OUTPUT [FGO_LAG] [INTEGRITY_WINDOW] [EXOGENOUS_SCHEDULE]");
+ if(argc<4 || argc>8)throw std::invalid_argument("usage: sc9_simulation_runner COUNT healthy|U|A|G|J|repeated OUTPUT [FGO_LAG] [INTEGRITY_WINDOW] [EXOGENOUS_SCHEDULE] [original|nondegenerate5]");
  const size_t count=std::stoull(argv[1]);const std::string fault=argv[2];require(count>0&&count<=10000,"SIM_COUNT_DOMAIN");
  require(fault=="healthy"||fault=="U"||fault=="A"||fault=="G"||fault=="J"||fault=="repeated","SIM_FAULT_DOMAIN");
  tbb::global_control serial(tbb::global_control::max_allowed_parallelism,1);
  YAML::Node schedule(YAML::NodeType::Undefined);std::vector<int64_t> imu_times;size_t batch_cursor=0,imu_cursor=0,n=12;int64_t initial_ns=500000000;
- if(argc==7){schedule=YAML::LoadFile(argv[6]);require(schedule["schema"].as<std::string>()=="sc9-exogenous-schedule-v1","SIM_SCHEDULE_SCHEMA");
+ const std::string geometry=argc==8?argv[7]:"original";require(geometry=="original"||geometry=="nondegenerate5","SIM_GEOMETRY_ID");
+ if(argc>=7){schedule=YAML::LoadFile(argv[6]);require(schedule["schema"].as<std::string>()=="sc9-exogenous-schedule-v1","SIM_SCHEDULE_SCHEMA");
   n=schedule["source_anchor_ids"].size();require(n>=4&&n<=12,"SIM_PROVIDER_GEOMETRY_SCOPE");
   imu_times=schedule["imu_ns"].as<std::vector<int64_t>>();require(!imu_times.empty(),"SIM_EMPTY_IMU");
   for(size_t i=1;i<imu_times.size();++i)require(imu_times[i]>imu_times[i-1]&&imu_times[i]-imu_times[i-1]<=50000000,"SIM_EXTERNAL_IMU_GAP");
@@ -79,6 +81,7 @@ int main(int argc,char** argv){try{
   const auto it=std::lower_bound(imu_times.begin(),imu_times.end(),end);require(it!=imu_times.end(),"SIM_EXTERNAL_BOOTSTRAP_IMU_MISSING");initial_ns=*it;
   require(batch_cursor+count<batches.size(),"SIM_EXTERNAL_SCHEDULE_TOO_SHORT");
  }
+ require(geometry=="original"||(schedule&&n==5),"SIM_FIVE_ANCHOR_FIXTURE_SCOPE");
  Sc6Provider base("config/sc7.yaml","S0",20261010,1);auto cfg=base.cfg;auto root=YAML::Clone(base.law);cfg.anchors.clear();cfg.imu.max_gap_s=.025;cfg.incremental.max_time_skew_s=.02;cfg.realtime.prior_sigmas.setConstant(.1);
  if(schedule)cfg.imu.max_gap_s=.05;
  const int lag=argc>4?std::stoi(argv[4]):30,window=argc>5?std::stoi(argv[5]):lag;root["fixed_lag_epochs"]=lag;
@@ -87,12 +90,12 @@ int main(int argc,char** argv){try{
  JointRawLaw law;law.gravity=cfg.imu.gravity_mps2;law.acceleration=1;law.rate=1;law.jerk=2;law.global_speed=1;
  cfg.imu.accelerometer_sigma=law.accel_adc;cfg.imu.gyroscope_sigma=law.gyro_adc;cfg.imu.accelerometer_bias_rw_sigma=law.accel_rw;cfg.imu.gyroscope_bias_rw_sigma=law.gyro_rw;
  cfg.bridge.generic.acceleration_bound_mps2=1;cfg.bridge.generic.angular_rate_bound_radps=1;cfg.bridge.generic.angular_acceleration_bound_radps2=2;cfg.bridge.generic.calibration_id=domain.id;
- Generator generator(law,base.lever);GeneralizedCoreInitialization model;model.raw_law=law;
+ Generator generator(law,base.lever,geometry=="nondegenerate5");GeneralizedCoreInitialization model;model.raw_law=law;
  model.sources=std::make_unique<GeneralizedSourceLedger>(policy.budget,law,ModelEvidenceStatus::VerifiedForDeclaredModel);
  auto* sources=model.sources.get();ImuMeasurement last;
  if(schedule){while(imu_cursor<imu_times.size()&&imu_times[imu_cursor]<=initial_ns){last=generator.imu(imu_times[imu_cursor++],-1,0);sources->append(last);}}
  else for(int64_t ns=0;ns<=initial_ns;ns+=10000000){last=generator.imu(ns,-1,0);sources->append(last);}
- for(size_t k=0;k<n;++k){AnchorRecord a;a.id=generator.aid(k);a.position_world_m=generator.anchors[k];a.covariance_m2.setZero();a.frame="world";a.map_version="sc9-synthetic-dynamic-v1";model.anchors.declare(a,1);}
+ for(size_t k=0;k<n;++k){AnchorRecord a;a.id=generator.aid(k);a.position_world_m=generator.anchors[k];a.covariance_m2.setZero();a.frame="world";a.map_version=geometry=="original"?"sc9-synthetic-dynamic-v1":"sc9-synthetic-nondegenerate5-v1";model.anchors.declare(a,1);}
  UwbBatch startup;startup.id=BatchId(1);startup.timestamp=last.timestamp;
  if(schedule){for(size_t b=0;b<=batch_cursor;++b)for(const auto& row:schedule["batches"][b]["ranges"]){const auto k=row["anchor"].as<size_t>();require(k<n,"SIM_EXTERNAL_ANCHOR");
    auto e=generator.range(0,k,row["stamp_ns"].as<int64_t>(),row["valid"].as<bool>(),0);sources->registerPotentialRange(e);if(b==batch_cursor&&e.valid)startup.measurements.push_back(e.measurement);}
