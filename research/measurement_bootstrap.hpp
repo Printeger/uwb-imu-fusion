@@ -18,7 +18,7 @@ inline InitialSetEvidence measurementInitial(GeneralizedSourceLedger& sources,
  for(const auto& m:batch.measurements){
   sources.append(m);
   const double q=sources.event().birth({SourceKind::Range,m.anchor_id.value(),m.id.value(),0}).q;
-  const I radius=I(q)*I(m.sigma_m)+rangeTransportRadius(domain,m.timestamp,batch.timestamp,lever,acceleration,rate);
+  const I radius=I(q)*I(m.sigma_m)+rangeTransportRadius(domain,m.timestamp,batch.timestamp,lever,acceleration,rate,sources.law().global_speed);
   const I upper=I(m.range_m)+radius;
   if(!std::isfinite(upper.upper()) || !m.anchor_position_m.allFinite())throw std::invalid_argument("BOOTSTRAP_RANGE_NONFINITE");
   shells.push_back({std::max(0.,(I(m.range_m)-radius).lower()),upper.upper()});

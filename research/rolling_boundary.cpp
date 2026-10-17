@@ -28,7 +28,7 @@ std::vector<RawRangeShell> shellsFor(const RollingRawState& state,const RollingR
  for(size_t i=0;i<m.batch.measurements.size();++i){const auto& range=m.batch.measurements[i];const double noise=evidence.range_noise_radius[i];
   if(!ids.insert(range.id).second || !range.anchor_position_m.allFinite() || !std::isfinite(range.range_m) || range.range_m<=0 ||
      !std::isfinite(noise) || noise<0 || (range.lever_arm_body_m && *range.lever_arm_body_m!=lever))throw std::invalid_argument("RAW_RANGE_SOURCE_INVALID");
-  I radius=I(noise)+rangeTransportRadius(state,range.timestamp,evidence.end,lever,acceleration,rate);
+  I radius=I(noise)+rangeTransportRadius(state,range.timestamp,evidence.end,lever,acceleration,rate,evidence.global_speed);
   const I lower=I(range.range_m)-radius,upper=I(range.range_m)+radius;
   if(!std::isfinite(lower.lower()) || !std::isfinite(upper.upper()))throw std::invalid_argument("RAW_RANGE_SHELL_OVERFLOW");
   shells.push_back({std::max(0.,lower.lower()),upper.upper()});
@@ -66,7 +66,7 @@ RollingIntegrity::RollingIntegrity(const ResolvedRollingPolicyV1& p,const Initia
  certificate_.committed_time=initial.timestamp;certificate_.source_risk=initial.risk_upper;certificate_.fault_counts_complete=false;
 }
 void RollingIntegrity::enableGeneralizedJoint(const JointRawLaw& law,unsigned sweeps){
- if(!generalized_ || certificate_.generation || joint_ || sweeps<1 || sweeps>2)throw std::invalid_argument("GENERALIZED_JOINT_ADMISSION");
+ if(!generalized_ || certificate_.generation || joint_ || sweeps<1 || sweeps>2 || std::isnan(law.global_speed) || law.global_speed<0)throw std::invalid_argument("GENERALIZED_JOINT_ADMISSION");
  joint_law_=law;joint_sweeps_=sweeps;joint_=true;
  certificate_.separator.tag_relation=rollingTagSphere(certificate_.separator,lever_);
  certificate_.separator.tag_lever=lever_;certificate_.separator.has_tag_relation=true;
@@ -84,7 +84,7 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
  if(bool(generalized)!=bool(generalized_))throw std::invalid_argument("RAW_EVIDENCE_MODE_MIX");
  if(generalized){const auto& e=*generalized;const I duration=durationSeconds(tx.begin,tx.end);
   if(!joint_ || tx.begin!=certificate_.committed_time || e.begin!=tx.begin || e.end!=tx.end || e.event_id!=event_id || e.status!=generalized_->status ||
-     e.source_prefix<certificate_.source_prefix || !std::isfinite(e.risk_upper) || e.risk_upper<certificate_.source_risk || e.risk_upper>policy_.budget ||
+     e.global_speed!=joint_law_.global_speed || e.source_prefix<certificate_.source_prefix || !std::isfinite(e.risk_upper) || e.risk_upper<certificate_.source_risk || e.risk_upper>policy_.budget ||
      !std::isfinite(e.max_coordinate_radius) || e.max_coordinate_radius<=0 || e.evolution.duration.lower()!=duration.lower() || e.evolution.duration.upper()!=duration.upper() || e.joint_samples.size()+1!=tx.raw_imu_slice.size() || e.range_calibration_versions.size()!=tx.uwb_batch.measurements.size())throw std::invalid_argument("RAW_GENERALIZED_EVIDENCE_MISMATCH");
   for(size_t i=0;i<e.joint_samples.size();++i){const auto& parent=e.joint_samples[i];const auto& used=tx.raw_imu_slice[i+1];
    if(parent.integration_end!=used.timestamp || parent.raw.id!=used.id || used.specific_force_mps2!=parent.raw.specific_force_mps2 || used.angular_velocity_radps!=parent.raw.angular_velocity_radps)

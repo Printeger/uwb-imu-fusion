@@ -54,12 +54,12 @@ inline std::string boundaryDigest(const RollingBoundaryCertificateV1& c){
  if(c.dynamic_anchors.empty())for(size_t i=0;i<c.anchor_ids.size();++i){h.u(c.anchor_ids[i].value());h.v(c.anchor_positions[i]);}return h.finish();
 }
 inline std::string sourceDigest(const Sc6Envelope& input,const GeneralizedRawEvidence& e){
- SemanticDigest h;h.s("sc9-epoch-original-source-material-v1");h.u(input.epoch);h.u(input.uwb.id.value());h.u(input.uwb.timestamp.value());h.u(input.imu.size());for(const auto& m:input.imu)h.imu(m);
+ SemanticDigest h;h.s("sc9-epoch-original-source-material-v2-global-speed");h.u(input.epoch);h.u(input.uwb.id.value());h.u(input.uwb.timestamp.value());h.u(input.imu.size());for(const auto& m:input.imu)h.imu(m);
  h.u(input.range_events.size());for(const auto& r:input.range_events){h.range(r.measurement);h.u(r.received.value());h.u(r.calibration_version);h.u(r.valid);}
  h.u(input.uwb.measurements.size());for(const auto& m:input.uwb.measurements)h.range(m);
  h.u(input.uwb.covariance_m2.rows());h.u(input.uwb.covariance_m2.cols());for(int j=0;j<input.uwb.covariance_m2.rows();++j)for(int k=0;k<input.uwb.covariance_m2.cols();++k)h.d(input.uwb.covariance_m2(j,k));h.s(input.uwb.covariance_model_id);
  h.u(e.begin.value());h.u(e.end.value());h.u(uint64_t(e.status));h.s(e.event_id);h.u(e.source_prefix);h.d(e.risk_upper);h.d(e.max_coordinate_radius);
- h.interval(e.evolution.duration);for(const auto& a:e.evolution.bias_radius)h.interval(a);
+ h.d(e.global_speed);h.interval(e.evolution.duration);for(const auto& a:e.evolution.bias_radius)h.interval(a);
  h.u(e.joint_samples.size());for(const auto& m:e.joint_samples){h.imu(m.raw);h.u(m.integration_end.value());for(const auto& a:m.adc_radius)h.interval(a);for(const auto& a:m.rw_from_begin)h.interval(a);for(const auto& a:m.rw_to_end)h.interval(a);}
  h.u(e.range_noise_radius.size());for(auto radius:e.range_noise_radius)h.d(radius);h.integers(e.range_calibration_versions);return h.finish();
 }

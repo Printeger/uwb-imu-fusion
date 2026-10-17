@@ -5,10 +5,10 @@
 #include <iostream>
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
 int main(int argc,char** argv){try{
- if(argc!=6)throw std::invalid_argument("usage: sc9_wire_runner MODEL ANCHORS EVENTS_JSONL OUTPUT_CSV on|off");
+ if(argc<6 || argc>7)throw std::invalid_argument("usage: sc9_wire_runner MODEL ANCHORS EVENTS_JSONL OUTPUT_CSV on|off [watermark|arrived-imu-20ms]");
  const std::string mode=argv[5];if(mode!="on" && mode!="off")throw std::invalid_argument("WIRE_MODE");
  tbb::global_control serial(tbb::global_control::max_allowed_parallelism,1);
- auto setup=empiricalSetup(YAML::LoadFile(argv[1]));CanonicalWireAdapter adapter(setup,wireAnchors(YAML::LoadFile(argv[2]),setup));
+ auto setup=empiricalSetup(YAML::LoadFile(argv[1]));CanonicalWireAdapter adapter(setup,wireAnchors(YAML::LoadFile(argv[2]),setup),wireEpochClosure(argc>6?argv[6]:"watermark"));
  std::ifstream input(argv[3]);std::ofstream output(argv[4]);if(!input || !output)throw std::runtime_error("WIRE_FILE_OPEN");output<<wireResultHeader();
  std::string line;while(std::getline(input,line)){
   if(line.size()>1024*1024)throw std::length_error("WIRE_LINE_CAPACITY");

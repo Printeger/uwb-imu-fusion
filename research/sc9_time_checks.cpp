@@ -56,6 +56,16 @@ int main(){try{
   double range_change=std::abs((end+r1*lever-anchor).norm()-(p+r0*lever-anchor).norm());
   auto radius=rangeTransportRadius(endpoint,TimestampNs(5000000000LL),TimestampNs(5000000000LL+k*1000000LL),lever,1.,.4);
   require(range_change<=radius.upper(),"asynchronous range transport underbound");
+  RollingRawState forward;for(int j=0;j<3;++j)forward.v[j]=I(v[j]);
+  const auto future=rangeTransportRadius(forward,TimestampNs(5000000000LL+k*1000000LL),TimestampNs(5000000000LL),lever,1.,.4);
+  require(range_change<=future.upper(),"arrived future-relative-to-state range removed analytic trajectory");
+  // The explicit global law |v(s)|<=.8 covers this entire analytic arc;
+  // the stored endpoint enclosure is deliberately much wider than that law.
+  RollingRawState wide;for(auto& component:wide.v)component=I(-50,50);
+  const auto capped=rangeTransportRadius(wide,TimestampNs(5000000000LL+k*1000000LL),TimestampNs(5000000000LL),lever,1.,.4,.8);
+  const auto uncapped=rangeTransportRadius(wide,TimestampNs(5000000000LL+k*1000000LL),TimestampNs(5000000000LL),lever,1.,.4);
+  require(range_change<=capped.upper() && capped.upper()<uncapped.upper(),"registered global speed transport removed truth or was unused");
+  refuses([&]{rangeTransportRadius(wide,TimestampNs(1),TimestampNs(2),lever,1.,.4,-1.);});
  }
  std::cout<<"SC9 time PASS actual ns/overflow, nonuniform dynamics/RW, shared/hold source, analytic trajectories and asynchronous rotating lever oracle\n";return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

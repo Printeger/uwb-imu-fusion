@@ -23,7 +23,8 @@ class GeneralizedSourceLedger {
   :event_(epsilon,capacity),law_(law),status_(status),sensor_(sensor){
   if(status==ModelEvidenceStatus::MissingOrInconsistent ||
      !std::isfinite(law.accel_adc+law.gyro_adc+law.accel_rw+law.gyro_rw) ||
-     std::min({law.accel_adc,law.gyro_adc,law.accel_rw,law.gyro_rw})<0)
+     std::min({law.accel_adc,law.gyro_adc,law.accel_rw,law.gyro_rw})<0 ||
+     std::isnan(law.global_speed) || law.global_speed<0)
    throw std::invalid_argument("SOURCE_MODEL_MISSING");
  }
  const SourceLayoutEvent& event()const{return event_;}
@@ -82,6 +83,7 @@ class GeneralizedSourceLedger {
   auto out=std::make_shared<GeneralizedRawEvidence>();
   out->begin=tx.begin;out->end=tx.end;out->event_id=event_.id();out->status=status_;
   out->source_prefix=event_.coordinates();out->risk_upper=event_.prefixUpper();
+  out->global_speed=law_.global_speed;
   const auto& first=raw_.at(tx.raw_imu_slice.front().id);
   if(tx.raw_imu_slice.front().specific_force_mps2!=first.specific_force_mps2 || tx.raw_imu_slice.front().angular_velocity_radps!=first.angular_velocity_radps)throw std::invalid_argument("NATIVE_FIRST_PARENT_MISMATCH");
   if(tx.begin<first.timestamp)throw std::invalid_argument("ORIGINAL_IMU_PARENT_FUTURE");

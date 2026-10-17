@@ -28,6 +28,7 @@ def main():
     p.add_argument('--wire', required=True)
     p.add_argument('--model', default='.cache/sc9/empirical-model.json')
     p.add_argument('--run-id', required=True)
+    p.add_argument('--closure',choices=['watermark','arrived-imu-20ms'],default='watermark')
     p.add_argument('--mode', choices=['on', 'off'], default='on')
     args = p.parse_args()
     if not args.run_id.replace('-', '').replace('_', '').isalnum():
@@ -70,7 +71,7 @@ def main():
     freeze = dict(host=platform.uname()._asdict(),cpu_affinity=sorted(os.sched_getaffinity(0)),loaded_libraries=loaded,head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                   input_manifest=json.loads((wire/'manifest.json').read_text()),model=sha(model), inputs={n:sha(wire/n) for n in ('events.jsonl','anchors.json','manifest.json')},
                   sources=sources, binaries={n:sha(BIN/n) for n in ('sc9_wire_runner','sc9_ros_node')},
-                  dso=sha(BIN.parent/'libuwb_imu_pl.so'), mode=args.mode,
+                  dso=sha(BIN.parent/'libuwb_imu_pl.so'), mode=args.mode,closure=args.closure,
                   primary_latency='original UWB batch header to actual sink, mapped only by original recording receive schedule; no CAL shift subtracted',
                   clock='same-host steady clock; release offsets from original bag receive_ns', speed=1)
     (destination/'freeze.json').write_text(json.dumps(freeze,indent=2)+'\n')
@@ -79,12 +80,14 @@ def main():
         raise RuntimeError('compiler active; refusing performance run')
     with (destination/'direct.log').open('w') as log:
         subprocess.run([str(BIN/'sc9_wire_runner'),str(model),str(wire/'anchors.json'),
-                        str(wire/'events.jsonl'),str(destination/'direct.csv'),args.mode],
+                        str(wire/'events.jsonl'),str(destination/'direct.csv'),args.mode,args.closure],
                        cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT,check=True)
     processes = []
     logs = []
     def launch(name, command):
         log = (destination/f'{name}.log').open('w');logs.append(log)
+        if name in ('node','producer','sink'):
+            command=['/usr/bin/time','-v','-o',str(destination/(name+'-resource.txt'))]+command
         proc = subprocess.Popen(command,cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
         processes.append(proc)
         return proc
@@ -105,7 +108,7 @@ def main():
                              '--timing',str(destination/'sink.jsonl'),'--status',str(destination/'sink-status.json')])
         node = launch('node',[str(BIN/'sc9_ros_node'),'_integrity_backend:=unified_rolling',
                              '_model:='+str(model),'_anchors:='+str(wire/'anchors.json'),'_rolling:='+args.mode,
-                             '_input_audit:='+str(destination/'arrivals.csv')])
+                             '_input_audit:='+str(destination/'arrivals.csv'),'_epoch_closure:='+args.closure])
         producer = launch('producer',['/usr/bin/python3',str(ROOT/'tools/sc9_ros_wire.py'),'publish',
                                      '--events',str(wire/'events.jsonl'),'--output',str(destination/'releases.csv')])
         for name, proc in [('producer',producer),('node',node),('sink',sink)]:
@@ -149,6 +152,10 @@ def main():
     summary['input_sequence_complete']=([int(r['event_sequence']) for r in arrivals]==list(range(1,len(releases)+2)) and all(r['accepted']=='1' for r in arrivals))
     summary['transport_arrival_ms']=distribution([(int(r['callback_ns'])-int(r['release_ns']))/1e6 for r in arrivals])
     summary['release_lateness_ms']=distribution([int(r['lateness_ns'])/1e6 for r in releases])
+    summary['role_resources']={}
+    for name in ('node','producer','sink'):
+        summary['role_resources'][name]={line.strip().rsplit(': ',1)[0]:line.strip().rsplit(': ',1)[1] for line in (destination/(name+'-resource.txt')).read_text().splitlines() if ': ' in line}
+    summary['publish_to_sink_ms']=distribution([r['publish_to_sink_ms'] for r in timings])
     summary['status_counts']=dict(Counter(r['status'] for r in ros))
     summary['committed_ratio']=len(ros)/len(direct)
     summary['clock_latency_diagnostics']={key:distribution([r[key] for r in timings if key in r])

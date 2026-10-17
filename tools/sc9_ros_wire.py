@@ -3,6 +3,7 @@
 import argparse
 import csv
 import json
+import math
 import time
 from pathlib import Path
 
@@ -105,6 +106,13 @@ def sink(args):
                                (m.latest_original_used_ns-m.recording_origin_ns))/1e6,
                            callback_to_sink_ms=(arrived-m.callback_steady_ns)/1e6,
                            worker_queue_ms=(m.worker_start_steady_ns-m.callback_steady_ns)/1e6)
+                if not math.isfinite(m.core_ms) or m.core_ms < 0 or row['measurement_to_sink_ms'] < 0:
+                    raise ValueError('invalid measured service/latency clock')
+                row['publish_to_sink_ms'] = (arrived-m.publish_steady_ns)/1e6
+                row['timely_core'] = m.core_ms <= 40
+                row['timely_delivery'] = row['measurement_to_sink_ms'] <= 50
+                row['timely'] = row['timely_core'] and row['timely_delivery']
+                row['publication_protected'] = False
                 stamps = range_times.get(m.batch_id)
                 if stamps:
                     for label, stamp in zip(('earliest_range_to_sink_ms','latest_range_to_sink_ms'), stamps):

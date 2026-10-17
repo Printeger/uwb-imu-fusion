@@ -5,6 +5,8 @@ namespace uwb_imu_pl::research {
 struct JointRawLaw {
  double accel_adc=.02,gyro_adc=.001,accel_rw=.001,gyro_rw=.0001;
  double gravity=9.81,acceleration=.04,rate=.2,jerk=.02;
+ // Optional global physical speed envelope. Infinity means no such evidence.
+ double global_speed=INFINITY;
 };
 // The original automaton has no episode at sample0; this is an original-law
 // necessary constraint, not FD declaring a later sample healthy.

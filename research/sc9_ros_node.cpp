@@ -27,7 +27,8 @@ int main(int argc,char** argv){ros::init(argc,argv,"sc9_unified_rolling");ros::N
   std::string backend,model,anchors,mode;priv.param<std::string>("integrity_backend",backend,"");priv.param<std::string>("model",model,"");priv.param<std::string>("anchors",anchors,"");priv.param<std::string>("rolling",mode,"on");
   if(backend!="unified_rolling")throw std::invalid_argument("ROS_EXPLICIT_UNIFIED_BACKEND_REQUIRED");if(mode!="on" && mode!="off")throw std::invalid_argument("ROS_ROLLING_MODE");
   tbb::global_control serial(tbb::global_control::max_allowed_parallelism,1);
-  auto setup=empiricalSetup(YAML::LoadFile(model));CanonicalWireAdapter adapter(setup,wireAnchors(YAML::LoadFile(anchors),setup));
+  std::string closure;priv.param<std::string>("epoch_closure",closure,"watermark");
+  auto setup=empiricalSetup(YAML::LoadFile(model));CanonicalWireAdapter adapter(setup,wireAnchors(YAML::LoadFile(anchors),setup),wireEpochClosure(closure));
   std::string audit_path;priv.param<std::string>("input_audit",audit_path,"");std::ofstream audit;
   if(!audit_path.empty()){audit.open(audit_path);if(!audit)throw std::runtime_error("ROS_INPUT_AUDIT_OPEN");audit<<"event_sequence,kind,stamp_ns,received_ns,release_ns,callback_ns,queue_before,accepted\n";}
   std::mutex mutex;std::condition_variable condition;std::deque<Queued> queue;size_t high_water=0;bool overflow=false;

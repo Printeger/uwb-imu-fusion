@@ -16,7 +16,7 @@ accel_adc_sigma: 0.01
 gyro_adc_sigma: 0.001
 accel_rw_sigma: 0.0001
 gyro_rw_sigma: 0.0001
-motion: {acceleration: 0.1, rate: 0.2, jerk: 0.1, alpha: 0.2}
+motion: {acceleration: 0.1, rate: 0.2, jerk: 0.1, alpha: 0.2, speed: 0.5}
 R_model_from_anchor_world: [[1,0,0],[0,1,0],[0,0,1]]
 range_to_imu_time_s: 0
 initial_velocity_radius: 0.1
@@ -63,12 +63,40 @@ gyro_bias_radps: [0,0,0]
   for(int j=0;j<3;++j)require(s.bound.low[j]<=truth[j] && truth[j]<=s.bound.high[j],"stream diagnostic set lost fixture truth");
  }
  require(exclusions>0,"stream never committed physical-source isolation");
+ // Second, independently framed reference: the range arrives at .557+60k
+ // seconds while the latest arrived IMU has stamp .540+60k (12ms latency).
+ // After measured startup at .560, every output uses that observed sample,
+ // preserving the original range stamp 15ms AFTER the estimated state time.
+ {
+  const auto closure=EmpiricalEpochClosure::ArrivedImu20ms;
+  CausalEmpiricalStream live(setup,registry,closure);std::vector<Sc6Result> actual;
+  for(const auto& arrival:arrivals){
+   if(arrival.imu)live.appendImu(imu[arrival.index],TimestampNs(arrival.time));else live.appendBatch(batches[arrival.index]);
+   while(auto out=live.next(true))actual.push_back(std::move(out->result));
+  }
+  const auto adapted=empiricalEpochSetup(setup,closure);
+  auto reference=empiricalBootstrap(adapted,registry,std::vector<ImuMeasurement>(imu.begin(),imu.begin()+57),batches.front().events,batches.front().values);
+  require(actual.size()==40 && live.updates()==41 && live.pendingBatches()==0,"arrived-IMU stream denominator");
+  require(live.startupDigest()==reference.source_digest,"arrived-IMU startup policy/source mismatch");
+  size_t raw_cursor=57,isolations=0;
+  for(size_t k=1;k<batches.size();++k){Sc6Envelope input;input.epoch=k;input.uwb=batches[k].values;input.uwb.timestamp=TimestampNs(origin+540000000+int64_t(k)*60000000);input.range_events=batches[k].events;input.ready=batches[k].events.front().received;
+   while(raw_cursor<imu.size() && !(input.uwb.timestamp<imu[raw_cursor].timestamp))input.imu.push_back(imu[raw_cursor++]);
+   const auto expected=reference.core->step(input,true);const auto& observed=actual[k-1];
+   require(observed.state.timestamp==input.uwb.timestamp,"arrived-IMU policy used an unarrived endpoint");
+   require(expected.source_digest==observed.source_digest && expected.receipt_digest==observed.receipt_digest && expected.ledger_digest==observed.ledger_digest && expected.boundary_digest==observed.boundary_digest,"arrived-IMU independent direct digest mismatch");
+   require(expected.tag==observed.tag && expected.bound.hpl==observed.bound.hpl && expected.bound.pl==observed.bound.pl,"arrived-IMU numeric mismatch");
+   require(observed.time_factor_groups>0 && observed.max_range_transport>0,"future-relative range did not enter bounded native factors");
+   isolations+=observed.action.excluded_source.has_value();
+   for(int j=0;j<3;++j)require(observed.bound.low[j]<=truth[j] && truth[j]<=observed.bound.high[j],"arrived-IMU diagnostic set lost truth");
+  }
+  require(isolations>0,"arrived-IMU stream lost actual strong UWB isolation");
+ }
  {CausalEmpiricalStream s(setup,registry);refuses([&]{s.appendImu(imu[0],TimestampNs(imu[0].timestamp.value()-1));});refuses([&]{s.next(true);});}
  {CausalEmpiricalStream s(setup,registry);s.appendImu(imu[0],imu[0].timestamp);refuses([&]{s.appendImu(imu[0],imu[0].timestamp);});}
  {CausalEmpiricalStream s(setup,registry);s.appendImu(imu[0],imu[0].timestamp);auto gap=imu[1];gap.timestamp=TimestampNs(imu[0].timestamp.value()+50000001);refuses([&]{s.appendImu(gap,gap.timestamp);});}
  {CausalEmpiricalStream s(setup,registry);auto b=batches[0];b.events[0].received=TimestampNs(b.events[0].measurement.timestamp.value()-1);refuses([&]{s.appendBatch(b);});}
  {CausalEmpiricalStream s(setup,registry);s.appendBatch(batches[1]);refuses([&]{s.appendBatch(batches[0]);});}
  {CausalEmpiricalStream s(setup,registry);for(size_t k=0;k<4096;++k){auto m=imu[0];m.id=MeasurementId(k+1);m.timestamp=TimestampNs(origin+int64_t(k)*10000000);s.appendImu(m,m.timestamp);}auto m=imu[0];m.timestamp=TimestampNs(origin+4096LL*10000000);refuses([&]{s.appendImu(m,m.timestamp);});}
- std::cout<<"SC9 causal stream PASS40 native epochs/direct digest equality, measured startup, early range/late IMU, sparse64/U/recovery, negative start, future/order/gap/capacity and failed-closed cases\n";
+ std::cout<<"SC9 causal stream PASS80 native epochs/direct digest equality under watermark and arrived-IMU closure, measured startup, early range/late IMU, sparse64/U/recovery, negative start, future/order/gap/capacity and failed-closed cases\n";
  return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

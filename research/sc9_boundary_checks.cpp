@@ -52,6 +52,8 @@ int main(){try{
    const auto plan=EpochCommitPlan::nominalPlan(tx);
    if(k==2){auto wrong=std::make_shared<GeneralizedRawEvidence>(*evidence);wrong->risk_upper=0;
     refuses([&]{proof.propose(tx,plan,{},view,wrong);});
+    wrong=std::make_shared<GeneralizedRawEvidence>(*evidence);wrong->global_speed=0;
+    refuses([&]{proof.propose(tx,plan,{},view,wrong);});
     wrong=std::make_shared<GeneralizedRawEvidence>(*evidence);wrong->joint_samples.back().raw.id=MeasurementId(999);
     refuses([&]{proof.propose(tx,plan,{},view,wrong);});}
    auto proposal=proof.propose(tx,plan,{},view,evidence);

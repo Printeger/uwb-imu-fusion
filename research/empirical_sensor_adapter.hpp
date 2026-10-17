@@ -15,6 +15,8 @@ struct EmpiricalSetup {
  double range_clock_offset=0;
 };
 EmpiricalSetup empiricalSetup(const YAML::Node& model);
+enum class EmpiricalEpochClosure { ImuWatermark, ArrivedImu20ms };
+EmpiricalSetup empiricalEpochSetup(EmpiricalSetup,EmpiricalEpochClosure);
 struct EmpiricalBootstrap {
  std::unique_ptr<UnifiedRollingIntegrityCore> core;
  NavigationState numerical;
@@ -36,6 +38,7 @@ struct EmpiricalEmission {
 };
 class CausalEmpiricalStream {
  EmpiricalSetup setup_;AnchorRegistry anchors_;
+ EmpiricalEpochClosure closure_;
  std::deque<ImuMeasurement> imu_;
  std::deque<EmpiricalBatch> batches_;
  std::vector<CanonicalRangeEvent> startup_ranges_;
@@ -43,12 +46,15 @@ class CausalEmpiricalStream {
  EmpiricalBootstrap bootstrap_;
  std::optional<TimestampNs> last_imu_,last_batch_;
  std::optional<TimestampNs> latest_received_;TimestampNs last_used_imu_;
+ TimestampNs committed_;
  size_t epochs_=0,startup_batches_=0,imu_received_=0,batches_received_=0;
  bool failed_=false;
  static constexpr size_t imu_capacity_=4096,batch_capacity_=128,startup_range_capacity_=16384;
  void available()const{if(failed_)throw std::logic_error("EMPIRICAL_STREAM_FAILED_CLOSED");}
  public:
- CausalEmpiricalStream(EmpiricalSetup setup,AnchorRegistry anchors):setup_(std::move(setup)),anchors_(std::move(anchors)){}
+ CausalEmpiricalStream(EmpiricalSetup setup,AnchorRegistry anchors,
+   EmpiricalEpochClosure closure=EmpiricalEpochClosure::ImuWatermark)
+   :setup_(empiricalEpochSetup(std::move(setup),closure)),anchors_(std::move(anchors)),closure_(closure){}
  void appendImu(const ImuMeasurement&,TimestampNs received);
  void appendBatch(EmpiricalBatch);
  std::optional<EmpiricalEmission> next(bool actions_enabled);

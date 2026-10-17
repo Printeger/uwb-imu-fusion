@@ -26,6 +26,7 @@ struct GeneralizedRawEvidence {
  uint64_t source_prefix=0;
  double risk_upper=0;
  double max_coordinate_radius=0;
+ double global_speed=INFINITY;
  RawTimeStep evolution;
  std::vector<JointTimedSample> joint_samples;
  std::vector<double> range_noise_radius;

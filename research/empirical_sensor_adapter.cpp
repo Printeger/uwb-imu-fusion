@@ -19,6 +19,8 @@ EmpiricalSetup empiricalSetup(const YAML::Node& model){
  rawlaw.gravity=model["gravity_mps2"].as<double>();rawlaw.accel_adc=model["accel_adc_sigma"].as<double>();rawlaw.gyro_adc=model["gyro_adc_sigma"].as<double>();rawlaw.accel_rw=model["accel_rw_sigma"].as<double>();rawlaw.gyro_rw=model["gyro_rw_sigma"].as<double>();
  domain.id=model["model_id"].as<std::string>();domain.acceleration=model["motion"]["acceleration"].as<double>();domain.rate=model["motion"]["rate"].as<double>();domain.jerk=model["motion"]["jerk"].as<double>();domain.alpha=model["motion"]["alpha"].as<double>();
  rawlaw.acceleration=domain.acceleration;rawlaw.rate=domain.rate;rawlaw.jerk=domain.jerk;
+ if(model["motion"]["speed"]){domain.global_speed=model["motion"]["speed"].as<double>();rawlaw.global_speed=domain.global_speed;
+  if(!std::isfinite(domain.global_speed) || domain.global_speed<0)throw std::invalid_argument("MODEL_GLOBAL_SPEED_INVALID");}
  cfg.imu.gravity_mps2=rawlaw.gravity;cfg.imu.accelerometer_sigma=rawlaw.accel_adc;cfg.imu.gyroscope_sigma=rawlaw.gyro_adc;
  cfg.imu.accelerometer_bias_rw_sigma=rawlaw.accel_rw;cfg.imu.gyroscope_bias_rw_sigma=rawlaw.gyro_rw;cfg.imu.max_gap_s=.05;
  cfg.bridge.generic.acceleration_bound_mps2=domain.acceleration;cfg.bridge.generic.angular_rate_bound_radps=domain.rate;cfg.bridge.generic.angular_acceleration_bound_radps2=domain.alpha;cfg.bridge.generic.calibration_id=domain.id;
@@ -27,6 +29,14 @@ EmpiricalSetup empiricalSetup(const YAML::Node& model){
  out.range_clock_offset=model["range_to_imu_time_s"].as<double>();
  if(!std::isfinite(out.range_clock_offset))throw std::invalid_argument("MODEL_CLOCK_INVALID");
  return out;
+}
+EmpiricalSetup empiricalEpochSetup(EmpiricalSetup setup,EmpiricalEpochClosure closure){
+ if(closure==EmpiricalEpochClosure::ArrivedImu20ms){
+  setup.config.incremental.max_time_skew_s=.02;
+  setup.model=YAML::Clone(setup.model);
+  setup.model["adapter_epoch_closure"]="arrived-imu-with-two-sided-20ms-transport-v1";
+ }
+ return setup;
 }
 EmpiricalBootstrap empiricalBootstrap(const EmpiricalSetup& setup,AnchorRegistry anchors,
  const std::vector<ImuMeasurement>& prefix,const std::vector<CanonicalRangeEvent>& potentials,UwbBatch ranges){
@@ -100,17 +110,32 @@ std::optional<EmpiricalEmission> CausalEmpiricalStream::next(bool actions)try{
    retainStartup(batches_.front());batches_.pop_front();
   }
   bootstrap_=empiricalBootstrap(setup_,anchors_,prefix,startup_ranges_,startup_batch_->values);
+  committed_=bootstrap_.numerical.timestamp;
   last_used_imu_=prefix.back().timestamp;for(size_t k=0;k<consumed;++k)imu_.pop_front();
   startup_batch_.reset();startup_ranges_.clear();startup_ranges_.shrink_to_fit();
  }
- if(batches_.empty() || !last_imu_ || *last_imu_<batches_.front().values.timestamp)return std::nullopt;
+ if(batches_.empty() || !last_imu_)return std::nullopt;
+ TimestampNs endpoint=batches_.front().values.timestamp;
+ if(closure_==EmpiricalEpochClosure::ImuWatermark){if(*last_imu_<endpoint)return std::nullopt;}
+ else{
+  // Choose an actually arrived sample as the state time. Original range
+  // stamps remain unchanged and are transported to this time in the common
+  // factor/FD/raw proof. No later IMU can arrive behind the committed state.
+  endpoint=*last_imu_;if(!(committed_<endpoint))return std::nullopt;
+  for(const auto& event:batches_.front().events){const auto measured=event.measurement.timestamp;
+   if(endpoint<measured && uint64_t(measured.value())-uint64_t(endpoint.value())>20000000ULL)return std::nullopt;
+   if(measured<endpoint && uint64_t(endpoint.value())-uint64_t(measured.value())>20000000ULL)
+    throw std::invalid_argument("STREAM_ARRIVED_EPOCH_RANGE_TOO_OLD");
+  }
+ }
  auto batch=std::move(batches_.front());batches_.pop_front();
+ batch.values.timestamp=endpoint;
  Sc6Envelope input;input.epoch=epochs_+1;input.uwb=std::move(batch.values);input.range_events=std::move(batch.events);input.ready=*latest_received_;
  while(!imu_.empty() && !(input.uwb.timestamp<imu_.front().timestamp)){
   last_used_imu_=imu_.front().timestamp;input.imu.push_back(std::move(imu_.front()));imu_.pop_front();
  }
  EmpiricalEmission out;out.batch=input.uwb.id;out.latest_original_used=last_used_imu_;
  if(batch.latest_original_valid_range)out.latest_original_used=std::max(out.latest_original_used,*batch.latest_original_valid_range);
- out.result=bootstrap_.core->step(input,actions);++epochs_;return out;
+ out.result=bootstrap_.core->step(input,actions);committed_=endpoint;++epochs_;return out;
 }catch(...){failed_=true;throw;}
 }

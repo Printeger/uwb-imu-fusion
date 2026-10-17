@@ -39,9 +39,9 @@ UnifiedRollingIntegrityCore::UnifiedRollingIntegrityCore(const YAML::Node& law,c
  if(!sources_ || initial.timestamp!=model.initial_set.timestamp || first.timestamp!=initial.timestamp ||
     sources_->status()!=model.initial_set.status || model.raw_law.gravity!=cfg.imu.gravity_mps2 || sources_->event().id()!=model.initial_set.event_id || sources_->event().coordinates()!=model.initial_set.source_prefix ||
     sources_->event().prefixUpper()!=model.initial_set.risk_upper || model.raw_law.acceleration!=domain.acceleration ||
-    model.raw_law.rate!=domain.rate || model.raw_law.jerk!=domain.jerk)throw std::invalid_argument("GENERALIZED_INITIALIZATION_SOURCE_MISMATCH");
+    model.raw_law.rate!=domain.rate || model.raw_law.jerk!=domain.jerk || model.raw_law.global_speed!=domain.global_speed)throw std::invalid_argument("GENERALIZED_INITIALIZATION_SOURCE_MISMATCH");
  const auto& registered=sources_->law();
- if(registered.accel_adc!=model.raw_law.accel_adc || registered.gyro_adc!=model.raw_law.gyro_adc || registered.accel_rw!=model.raw_law.accel_rw || registered.gyro_rw!=model.raw_law.gyro_rw)
+ if(registered.accel_adc!=model.raw_law.accel_adc || registered.gyro_adc!=model.raw_law.gyro_adc || registered.accel_rw!=model.raw_law.accel_rw || registered.gyro_rw!=model.raw_law.gyro_rw || registered.global_speed!=model.raw_law.global_speed)
   throw std::invalid_argument("GENERALIZED_NOISE_MODEL_MISMATCH");
  proof_.enableGeneralizedJoint(model.raw_law);proof_.enableTagSupport();recovery_.enableNumericalRecovery(true);recovery_.enableActualTime();
  generalized_monitor_=std::make_unique<GeneralizedFaultMonitor>(model.raw_law,domain,model.initial_set,policy_.max_fault_records);
@@ -77,7 +77,7 @@ Sc6Result UnifiedRollingIntegrityCore::step(const Sc6Envelope& input,bool fde)tr
  if(sources_){evidence=sources_->evidence(tx);view=generalized_monitor_->view(tx,sources_->event());
   view.original_time=[this](MeasurementId id){return sources_->originalTime(id);};
   const auto endpoint=rollingPropagate(capsules_.back(),domain_.acceleration,domain_.rate,evidence->evolution);
-  for(const auto& m:tx.uwb_batch.measurements){const double radius=rangeTransportRadius(endpoint,m.timestamp,tx.end,lever_,domain_.acceleration,domain_.rate).upper();
+  for(const auto& m:tx.uwb_batch.measurements){const double radius=rangeTransportRadius(endpoint,m.timestamp,tx.end,lever_,domain_.acceleration,domain_.rate,domain_.global_speed).upper();
    view.range_transport[m.id]=radius;result.max_range_transport=std::max(result.max_range_transport,radius);}
   view.has_range_time_model=true;range_time_history_[tx.proposed_epoch]=view.range_transport;
   result.time_factor_groups=bindRangeTime(tx.uwb_groups,tx.uwb_batch,view.range_transport,lever_);

@@ -20,6 +20,7 @@ struct WireEvent {
 };
 WireEvent parseWireEvent(const YAML::Node&);
 AnchorRegistry wireAnchors(const YAML::Node&,const EmpiricalSetup&);
+EmpiricalEpochClosure wireEpochClosure(const std::string&);
 class CanonicalWireAdapter {
  EmpiricalSetup setup_;
  CausalEmpiricalStream stream_;
@@ -28,7 +29,8 @@ class CanonicalWireAdapter {
  int64_t range_offset_ns_=0;
  bool failed_=false;
  public:
- CanonicalWireAdapter(EmpiricalSetup,AnchorRegistry);
+ CanonicalWireAdapter(EmpiricalSetup,AnchorRegistry,
+   EmpiricalEpochClosure=EmpiricalEpochClosure::ImuWatermark);
  void append(const WireEvent&);
  std::optional<EmpiricalEmission> next(bool actions){if(failed_)throw std::logic_error("WIRE_FAILED_CLOSED");return stream_.next(actions);}
  const CausalEmpiricalStream& stream()const{return stream_;}

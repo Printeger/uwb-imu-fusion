@@ -449,6 +449,12 @@ def score_walk(args):
     output = dict(scope='CAL_ONLY_EMPIRICAL_REFERENCE; no TEST alignment or fit; bias truth NA',
                   model_sha=freeze['model'],scorer_sha=sha(__file__),runs={},pairs={},injection_causality={})
     frames = {}
+    def reference_seconds(stamps,case):
+        if not freeze.get('wire_manifests'):
+            return stamps.to_numpy()/1e9
+        manifest=freeze['wire_manifests'][case]
+        # Subtract original integer ns before converting; never fit TEST clocks.
+        return (stamps.to_numpy(dtype='int64')-manifest['first_imu_stamp_ns'])/1e9+manifest['legacy_first_imu_time_s']
     for case in freeze['cases']:
         walk_name = case.split('-')[0]
         gt_path = CACHE/f'data/ISAS-{walk_name}/gt.csv'
@@ -463,7 +469,7 @@ def score_walk(args):
                 raise RuntimeError('output changed after receipt')
             data = pd.read_csv(csv_path,float_precision='round_trip')
             frames[name]=data
-            time = data.stamp_ns.to_numpy()/1e9
+            time = reference_seconds(data.stamp_ns,case)
             reference_time = time+ref['imu_to_tracker_time_s']
             valid = (reference_time>=gt.t.min()) & (reference_time<=gt.t.max())
             data = data[valid]; time = time[valid]; reference_time=reference_time[valid]
@@ -555,7 +561,7 @@ def score_walk(args):
                   'bridge','repair','rejoined','source_prefix','event_risk','boundary','hpl','vpl']
             # Original message identity avoids classifying the first changed
             # batch as pre-injection when its rounded ns lies <0.5ns below t.
-            before=(common.batch_id.to_numpy()<declared['range_source'][0]['source_message']+1) if fault in ['U','J'] else (common.stamp_ns.to_numpy()<round(first*1e9))
+            before=(common.batch_id.to_numpy()<declared['range_source'][0]['source_message']+1) if fault in ['U','J'] else (reference_seconds(common.stamp_ns,case)<first)
             mismatches=[]
             for col in cols:
                 a=common.loc[before,col+'_base'].reset_index(drop=True)
@@ -588,14 +594,28 @@ def walk(args):
     if set(selected)-{name for name,_ in cases}:
         raise ValueError('unknown case')
     cases = [(name,path) for name,path in cases if name in selected]
+    wire_root=None
+    if args.wire_run_id:
+        if not all(c.isalnum() or c in '-_' for c in args.wire_run_id) or args.profile!='full':
+            raise ValueError('canonical wire evaluation requires a simple input run ID and full profile')
+        wire_root=CACHE/'wire'/args.wire_run_id
+        cases=[(name,wire_root/name) for name,_ in cases]
     model = CACHE/'empirical-model.json'
-    freeze = dict(identity=identity(), runner=sha(BIN/'sc9_dataset_runner'),
+    runner='sc9_wire_runner' if wire_root else 'sc9_dataset_runner'
+    freeze = dict(identity=identity(), runner=sha(BIN/runner),
                   source_diff_sha=hashlib.sha256(subprocess.check_output(['git','diff','HEAD'],cwd=ROOT)).hexdigest(),
                   launcher_sha=sha(__file__),
                   configuration={str(p.relative_to(ROOT)):sha(p) for p in sorted((ROOT/'config').glob('*.yaml'))},
                   model=sha(model), registration=sha(CACHE/'injection-registration.json'),
                   profile=args.profile, cases={name:{file:sha(path/file)
-                  for file in ['imu.csv','uwb.csv','anchors.csv']} for name,path in cases})
+                  for file in (['events.jsonl','anchors.json','manifest.json'] if wire_root else ['imu.csv','uwb.csv','anchors.csv'])} for name,path in cases})
+    if wire_root:
+        freeze['closure']=args.closure
+        freeze['wire_manifests']={name:json.loads((path/'manifest.json').read_text()) for name,path in cases}
+        for name,path in cases:
+            manifest=freeze['wire_manifests'][name]
+            if manifest['identity']['model_sha']!=sha(model) or manifest['events_sha']!=sha(path/'events.jsonl') or manifest['anchors_sha']!=sha(path/'anchors.json'):
+                raise RuntimeError('canonical input differs from frozen model/material')
     manifest = destination/'freeze.json'
     if manifest.exists():
         if json.loads(manifest.read_text()) != freeze:
@@ -616,6 +636,8 @@ def walk(args):
                     continue
                 raise RuntimeError(f'{key}: retained failure/changed output; use a new run ID')
             command = [str(BIN/'sc9_dataset_runner'),str(model),str(path),str(output),mode,limit]
+            if wire_root:
+                command=[str(BIN/runner),str(model),str(path/'anchors.json'),str(path/'events.jsonl'),str(output),mode,args.closure]
             with output.with_suffix('.log').open('w') as log:
                 completed = subprocess.run(command,cwd=ROOT,env=environment(),stdout=log,stderr=subprocess.STDOUT)
             rows = list(csv.DictReader(output.open())) if output.exists() else []
@@ -733,6 +755,8 @@ if __name__ == '__main__':
     parser.add_argument('command', choices=['legacy-freeze', 'legacy-parity', 'check', 'prepare', 'calibrate', 'empirical-model', 'inject', 'walk', 'score', 'wire-prepare'])
     parser.add_argument('--profile',choices=['gate','full'],default='gate')
     parser.add_argument('--run-id')
+    parser.add_argument('--wire-run-id',help='evaluate prepared canonical wire inputs through the same adapter as ROS')
+    parser.add_argument('--closure',choices=['watermark','arrived-imu-20ms'],default='arrived-imu-20ms')
     parser.add_argument('--cases',help='comma-separated Walk2-base, Walk3-base, Walk2-U/A/G/J, Walk3-J names')
     parser.add_argument('--build',action='store_true',help='configure/build all SC9 checks before running check')
     args = parser.parse_args()

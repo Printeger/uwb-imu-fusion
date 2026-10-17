@@ -24,7 +24,12 @@ AnchorRegistry wireAnchors(const YAML::Node& rows,const EmpiricalSetup& setup){
  if(!rows.IsSequence())throw std::invalid_argument("WIRE_ANCHOR_SCHEMA");AnchorRegistry registry;
  for(const auto& row:rows){AnchorRecord a;a.id=AnchorId(row["id"].as<uint64_t>());a.position_world_m=setup.world*vector(row["position"]);a.frame="world";a.map_version=setup.domain.id;registry.declare(a,row["calibration_version"].as<uint64_t>());}return registry;
 }
-CanonicalWireAdapter::CanonicalWireAdapter(EmpiricalSetup setup,AnchorRegistry registry):setup_(std::move(setup)),stream_(setup_,std::move(registry)){
+EmpiricalEpochClosure wireEpochClosure(const std::string& mode){
+ if(mode=="watermark")return EmpiricalEpochClosure::ImuWatermark;
+ if(mode=="arrived-imu-20ms")return EmpiricalEpochClosure::ArrivedImu20ms;
+ throw std::invalid_argument("WIRE_EPOCH_CLOSURE_UNKNOWN");
+}
+CanonicalWireAdapter::CanonicalWireAdapter(EmpiricalSetup setup,AnchorRegistry registry,EmpiricalEpochClosure closure):setup_(std::move(setup)),stream_(setup_,std::move(registry),closure){
  const long double offset=setup_.range_clock_offset*1000000000.L;
  if(!std::isfinite(offset) || offset<INT64_MIN || offset>INT64_MAX)throw std::invalid_argument("WIRE_CLOCK_OFFSET");range_offset_ns_=std::llround(offset);
 }
