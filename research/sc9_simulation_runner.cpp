@@ -3,6 +3,7 @@
 #include "numerical_candidate.hpp"
 #include "sc6_provider.hpp"
 #include "uwb_imu_pl/common/runtime_route_audit.hpp"
+#include "sc9_paced_replay.hpp"
 #include <tbb/global_control.h>
 #include <fstream>
 #include <iomanip>
@@ -64,13 +65,14 @@ struct Generator {
 };
 }
 int main(int argc,char** argv){try{
- if(argc<4 || argc>8)throw std::invalid_argument("usage: sc9_simulation_runner COUNT healthy|U|A|G|J|repeated OUTPUT [FGO_LAG] [INTEGRITY_WINDOW] [EXOGENOUS_SCHEDULE] [original|nondegenerate5]");
+ if(argc<4 || argc>9)throw std::invalid_argument("usage: sc9_simulation_runner COUNT healthy|U|A|G|J|repeated OUTPUT [FGO_LAG] [INTEGRITY_WINDOW] [EXOGENOUS_SCHEDULE|-] [original|nondegenerate5] [paced]");
  const size_t count=std::stoull(argv[1]);const std::string fault=argv[2];require(count>0&&count<=10000,"SIM_COUNT_DOMAIN");
  require(fault=="healthy"||fault=="U"||fault=="A"||fault=="G"||fault=="J"||fault=="repeated","SIM_FAULT_DOMAIN");
  tbb::global_control serial(tbb::global_control::max_allowed_parallelism,1);
  YAML::Node schedule(YAML::NodeType::Undefined);std::vector<int64_t> imu_times;size_t batch_cursor=0,imu_cursor=0,n=12;int64_t initial_ns=500000000;
- const std::string geometry=argc==8?argv[7]:"original";require(geometry=="original"||geometry=="nondegenerate5","SIM_GEOMETRY_ID");
- if(argc>=7){schedule=YAML::LoadFile(argv[6]);require(schedule["schema"].as<std::string>()=="sc9-exogenous-schedule-v1","SIM_SCHEDULE_SCHEMA");
+ const std::string geometry=argc>=8?argv[7]:"original";require(geometry=="original"||geometry=="nondegenerate5","SIM_GEOMETRY_ID");
+ const bool paced=argc==9;require(!paced||std::string(argv[8])=="paced","SIM_PACING_MODE");
+ if(argc>=7&&std::string(argv[6])!="-"){schedule=YAML::LoadFile(argv[6]);require(schedule["schema"].as<std::string>()=="sc9-exogenous-schedule-v1","SIM_SCHEDULE_SCHEMA");
   n=schedule["source_anchor_ids"].size();require(n>=4&&n<=12,"SIM_PROVIDER_GEOMETRY_SCOPE");
   imu_times=schedule["imu_ns"].as<std::vector<int64_t>>();require(!imu_times.empty(),"SIM_EMPTY_IMU");
   for(size_t i=1;i<imu_times.size();++i)require(imu_times[i]>imu_times[i-1]&&imu_times[i]-imu_times[i-1]<=50000000,"SIM_EXTERNAL_IMU_GAP");
@@ -112,8 +114,18 @@ int main(int argc,char** argv){try{
  UnifiedRollingIntegrityCore core(root,cfg,numerical,base.lever,domain,last,std::move(model));core.enableSemanticAudit();
  std::ofstream out(argv[3]);require(bool(out),"SIM_OUTPUT_OPEN");out<<std::setprecision(17);
  out<<"epoch,stamp_ns,status,bound_status,latent_event,contained,imu_alarm,uwb_alarm,excluded_source,bridge,repair,rejoined,first_dependency,updates,generation,boundary,prefix,risk,registered,visible,measurements,hpl,vpl,herror,verror,core_ms,slots,ledger,replay,capsules,rss,source_digest,receipt_digest,boundary_digest,provider_plus_core_ms,period_ms,prepare_ms,candidate_ms,proof_ms,commit_ms,cleanup_ms,finalize_ms\n";
+ std::ofstream sink,delivery;std::unique_ptr<Sc9PacedReleases> releases;
+ if(paced){
+  sink.open(std::string(argv[3])+".sink.csv");delivery.open(std::string(argv[3])+".delivery.csv");require(bool(sink)&&bool(delivery),"SIM_SINK_OPEN");
+  sink<<std::setprecision(17)<<"epoch,generation,status,hpl,vpl,tag_x,tag_y,tag_z,source_digest,receipt_digest,boundary_digest\n";
+  delivery<<std::setprecision(17)<<"epoch,measurement_ns,measurement_target_ns,source_batch_end_ns,release_target_ns,release_actual_ns,decode_start_ns,sink_ns,deadline_ns,core_ms,provider_plus_core_ms,release_lateness_ms,queue_ms,measurement_to_sink_ms,queue_high,timely,timely_spatial\n";
+  std::vector<int64_t> ends;int64_t t=initial_ns;
+  for(size_t epoch=1;epoch<=count;++epoch){t=schedule?schedule["batches"][batch_cursor+epoch-1]["end_ns"].as<int64_t>():t+(epoch%2?47000003:63000007);ends.push_back(t);}
+  releases=std::make_unique<Sc9PacedReleases>(initial_ns,std::move(ends));
+ }
  int64_t previous=initial_ns,onset=-1;size_t bridge=0,repair=0,rejoin=0,exclude=0,covered=0,uwb_remaining=0;double max_ms=0;
- for(size_t epoch=1;epoch<=count;++epoch){const auto provider_start=std::chrono::steady_clock::now();const int64_t end=schedule?schedule["batches"][batch_cursor]["end_ns"].as<int64_t>():previous+(epoch%2?47000003:63000007);require(end>previous,"SIM_EXTERNAL_EPOCH_ORDER");const size_t phase=fault=="repeated"?(epoch-1)%400+1:epoch;
+ for(size_t epoch=1;epoch<=count;++epoch){Sc9PacedReleases::Tick release;if(releases)release=releases->next(epoch);
+  const auto provider_start=std::chrono::steady_clock::now();const int64_t end=schedule?schedule["batches"][batch_cursor]["end_ns"].as<int64_t>():previous+(epoch%2?47000003:63000007);require(end>previous,"SIM_EXTERNAL_EPOCH_ORDER");if(releases)require(end==release.end,"SIM_RELEASE_SOURCE_TIME_MISMATCH");const size_t phase=fault=="repeated"?(epoch-1)%400+1:epoch;
   if(phase==80&&fault!="healthy"){onset=previous+13000000;if(fault=="U"||fault=="J"||fault=="repeated")uwb_remaining=3;}
   const int axis=(fault=="G"?3:0)+(fault=="repeated"?int(((epoch-1)/400)%3):0);const bool imu_fault=fault!="healthy"&&fault!="U";
   Sc6Envelope input;input.epoch=epoch;input.uwb.id=BatchId(epoch+1);input.uwb.timestamp=TimestampNs(origin+end);input.ready=input.uwb.timestamp;
@@ -129,6 +141,18 @@ int main(int argc,char** argv){try{
    if(epoch%4==0)add_range(n-1,end-1500000,(n-1)!=epoch%n&&(n-1)!=(epoch+1)%n);}
   const bool actions=!(fault=="J"||fault=="repeated")||phase<80||phase>=113;
   const auto start=std::chrono::steady_clock::now();const auto r=core.step(input,actions);const auto finished=std::chrono::steady_clock::now();const double elapsed=std::chrono::duration<double,std::milli>(finished-start).count();const double inclusive=std::chrono::duration<double,std::milli>(finished-provider_start).count();max_ms=std::max(max_ms,elapsed);
+  if(releases){
+   require(r.bound.valid&&r.bound.status=="GENERALIZED_CONDITIONAL_RAW_BOUND_VERIFIED"&&r.generation==epoch&&r.backend_updates==1,"SIM_SINK_RECEIPT_REFUSED");
+   require(r.source_digest.size()==64&&r.receipt_digest.size()==64&&r.boundary_digest.size()==64,"SIM_SINK_AUDIT_MISSING");
+   // Deliver the actual estimate/bound/receipt before privileged draw or GT
+   // scoring. The sink clock is sampled only after this complete row flushes.
+   sink<<epoch<<','<<r.generation<<','<<r.bound.status<<','<<r.bound.hpl<<','<<r.bound.pl.z()<<','<<r.tag.x()<<','<<r.tag.y()<<','<<r.tag.z()<<','<<r.source_digest<<','<<r.receipt_digest<<','<<r.boundary_digest<<'\n';sink.flush();if(!sink)throw std::runtime_error("SIM_SINK_WRITE_FAILED_AFTER_COMMIT epoch="+std::to_string(epoch)+" generation="+std::to_string(r.generation));
+   const auto accepted=Sc9PacedReleases::Clock::now();int64_t measured=end;
+   for(const auto& range:input.range_events)measured=std::min(measured,range.measurement.timestamp.value()-origin);
+   auto ms=[](auto delta){return std::chrono::duration<double,std::milli>(delta).count();};
+   const auto deadline=releases->deadline(epoch,measured);const bool timely=elapsed<=40&&accepted<=deadline;
+   delivery<<epoch<<','<<origin+measured<<','<<Sc9PacedReleases::ns(releases->at(measured))<<','<<origin+end<<','<<Sc9PacedReleases::ns(release.target)<<','<<Sc9PacedReleases::ns(release.released)<<','<<Sc9PacedReleases::ns(provider_start)<<','<<Sc9PacedReleases::ns(accepted)<<','<<Sc9PacedReleases::ns(deadline)<<','<<elapsed<<','<<inclusive<<','<<ms(release.released-release.target)<<','<<ms(provider_start-release.released)<<','<<ms(accepted-releases->at(measured))<<','<<release.high_water<<','<<timely<<','<<(timely&&r.bound.hpl<=2&&r.bound.pl.z()<=3)<<'\n';delivery.flush();if(!delivery)throw std::runtime_error("SIM_DELIVERY_LOG_FAILED_AFTER_SINK epoch="+std::to_string(epoch));
+  }
   event&=generator.audit(*sources);const auto truth=sc6D1MotionAtNanoseconds(end);Eigen::Vector3d tag;bool contained=true;
   for(int j=0;j<3;++j){I t=truth.p[j];for(int k=0;k<3;++k)t+=truth.r[j][k]*I(base.lever[k]);tag[j]=mid(t);contained&=r.bound.low[j]<=t.lower()&&t.upper()<=r.bound.high[j];}
   require(r.bound.valid&&r.bound.status=="GENERALIZED_CONDITIONAL_RAW_BOUND_VERIFIED","SIM_BOUND_NOT_VERIFIED");require(!event||contained,"SIM_CONDITIONAL_TRUTH_LOST");

@@ -652,6 +652,8 @@ set_source_files_properties(research/sc9_simulation_runner.cpp PROPERTIES COMPIL
 add_executable(sc9_range_rounding_checks EXCLUDE_FROM_ALL research/sc9_range_rounding_checks.cpp)
 target_link_libraries(sc9_range_rounding_checks fde_research)
 set_source_files_properties(research/sc9_range_rounding_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+add_executable(sc9_paced_checks EXCLUDE_FROM_ALL research/sc9_paced_checks.cpp)
+target_link_libraries(sc9_paced_checks pthread)
 
 add_library(sc9_wire_adapter STATIC EXCLUDE_FROM_ALL research/canonical_wire.cpp)
 target_link_libraries(sc9_wire_adapter fde_research)

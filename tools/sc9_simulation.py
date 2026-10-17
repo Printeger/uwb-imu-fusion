@@ -19,7 +19,7 @@ def matrix(kind,run_id,geometry='original'):
                 elf=sha(binary),dso=sha(BIN.parent/'libuwb_imu_pl.so'),schedule=sha(schedule),cases=cases,
                 registration=sha(ROOT/'.cache/sc9'/('generalized-simulation-registration.json' if geometry=='original' else 'nondegenerate5-simulation-registration.json')),
                 geometry=geometry,
-                timing='unpaced core and inclusive provider+core; not an actual sink-latency award',hardware_qualification=False)
+                timing=('independent absolute virtual-sensor releases; counted seeded decoding/provider/core; actual result file sink before privileged scoring' if kind=='paced' else 'unpaced core and inclusive provider+core; not an actual sink-latency award'),hardware_qualification=False)
     frozen=json.loads(json.dumps(frozen));freeze=destination/'freeze.json'
     if freeze.exists():
         if json.loads(freeze.read_text())!=frozen:raise RuntimeError('frozen identity changed; use a new run ID')
@@ -33,9 +33,13 @@ def matrix(kind,run_id,geometry='original'):
         if receipt.exists():
             r=json.loads(receipt.read_text())
             if not r['pass'] or r['output_sha']!=sha(output):raise RuntimeError('retained failure or changed output: '+name)
+            if kind=='paced' and any(r['delivery'][key]!=sha(str(output)+suffix) for key,suffix in [('sink_sha','.sink.csv'),('timing_sha','.delivery.csv')]):raise RuntimeError('changed paced artifacts: '+name)
             results[name]=r;continue
         command=[str(binary),str(count),fault,str(output),str(lag),str(window)]+([str(schedule)] if external else [])
-        if external and geometry!='original':command.append(geometry)
+        if external and (geometry!='original' or kind=='paced'):command.append(geometry)
+        if kind=='paced':
+            if not external:command.extend(['-','original'])
+            command.append('paced')
         with (destination/(name+'.log')).open('w') as log:
             code=subprocess.run(['/usr/bin/time','-v','-o',str(destination/(name+'.resources'))]+command,cwd=ROOT,env=environment(),stdout=log,stderr=subprocess.STDOUT).returncode
         rows=list(csv.DictReader(output.open())) if output.exists() else []
@@ -54,6 +58,28 @@ def matrix(kind,run_id,geometry='original'):
                timed_spatial_rows=sum(float(x['provider_plus_core_ms'])<=min(50,float(x['period_ms'])) and float(x['core_ms'])<=40 and float(x['hpl'])<=2 and float(x['vpl'])<=3 for x in rows),
                h_exceedances=sum(float(x['herror'])>float(x['hpl']) for x in rows),v_exceedances=sum(float(x['verror'])>float(x['vpl']) for x in rows),
                misses=[int(x['epoch']) for x in rows if float(x['core_ms'])>40 or float(x['provider_plus_core_ms'])>min(50,float(x['period_ms']))])
+        if kind=='paced':
+            delivery_path=Path(str(output)+'.delivery.csv');sink_path=Path(str(output)+'.sink.csv')
+            clocks=list(csv.DictReader(delivery_path.open())) if delivery_path.exists() else []
+            sink=list(csv.DictReader(sink_path.open())) if sink_path.exists() else []
+            parity=len(clocks)==len(sink)==len(rows)==count
+            offsets=set()
+            for expected,actual,timing in zip(rows,sink,clocks):
+                parity &= all(expected[k]==actual[k] for k in ['epoch','generation','hpl','vpl','source_digest','receipt_digest','boundary_digest']) and expected['bound_status']==actual['status'] and expected['epoch']==timing['epoch']
+                parity &= expected['stamp_ns']==timing['source_batch_end_ns'] and int(timing['measurement_target_ns'])<=int(timing['release_target_ns'])<=int(timing['release_actual_ns'])<=int(timing['decode_start_ns'])<=int(timing['sink_ns'])
+                offset=int(timing['release_target_ns'])-int(timing['source_batch_end_ns']);offsets.add(offset)
+                parity &= int(timing['measurement_target_ns'])==int(timing['measurement_ns'])+offset
+                parity &= abs((int(timing['sink_ns'])-int(timing['measurement_target_ns']))/1e6-float(timing['measurement_to_sink_ms']))<1e-9
+            parity &= len(offsets)==1
+            d=dict(rows=len(clocks),same_receipt_and_clock_order=parity,
+                measurement_to_sink_ms=dist([float(x['measurement_to_sink_ms']) for x in clocks]),
+                release_lateness_ms=dist([float(x['release_lateness_ms']) for x in clocks]),queue_ms=dist([float(x['queue_ms']) for x in clocks]),
+                max_queue=max((int(x['queue_high']) for x in clocks),default=0),
+                timely=sum(int(x['timely']) for x in clocks),timely_spatial=sum(int(x['timely_spatial']) for x in clocks),
+                misses=[int(x['epoch']) for x in clocks if x['timely']!='1'],
+                sink_sha=sha(sink_path) if sink_path.exists() else None,timing_sha=sha(delivery_path) if delivery_path.exists() else None)
+            d['realtime_pass']=bool(parity and r['core_ms']['p95']<=40 and d['measurement_to_sink_ms']['p95']<=50 and d['timely']/count>=.95 and d['timely_spatial']/count>=.95)
+            r['delivery']=d;passed &= parity
         r['pass']=passed;receipt.write_text(json.dumps(r,indent=2)+'\n');results[name]=r
         print(name,'pass',passed,'rows',len(rows),'actions',sums,'exclusions',exclusions,flush=True)
         (destination/'summary.json').write_text(json.dumps(results,indent=2)+'\n')
@@ -87,7 +113,7 @@ def prepare(wire,output,count):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(__doc__);p.add_argument('wire',nargs='?');p.add_argument('output',nargs='?');p.add_argument('--epochs',type=int,default=400)
-    p.add_argument('--matrix',choices=['short','long']);p.add_argument('--run-id')
+    p.add_argument('--matrix',choices=['short','long','paced']);p.add_argument('--run-id')
     p.add_argument('--geometry',choices=['original','nondegenerate5'],default='original')
     a=p.parse_args()
     if a.matrix:matrix(a.matrix,a.run_id,a.geometry)
