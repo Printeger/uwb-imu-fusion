@@ -10,9 +10,9 @@ void equal(const RawRangeResult& a,const RawRangeResult& b){
 }
 int main(){try{
  const int original=std::fegetround();size_t cases=0;
- for(size_t n:{0,1,5,12,65}){
+ for(size_t n:{0,1,5,8,12,65}){
   std::fesetround(FE_TONEAREST);UwbBatch batch;std::vector<RawRangeShell> shells;const Eigen::Vector3d truth(.2,-.1,1.);
-  for(size_t k=0;k<n;++k){UwbMeasurement m;m.anchor_id=AnchorId((uint64_t(1)<<49)+k/2);m.anchor_position_m={4*std::cos(double(k/2)),4*std::sin(double(k/2)),double(k/2%3)*2};m.range_m=(truth-m.anchor_position_m).norm();batch.measurements.push_back(m);shells.push_back({m.range_m-.02,m.range_m+.02});}
+  for(size_t k=0;k<n;++k){const size_t source=n==8?k:k/2;UwbMeasurement m;m.anchor_id=AnchorId((uint64_t(1)<<49)+source);m.anchor_position_m={4*std::cos(double(source)),4*std::sin(double(source)),double(source%3)*2};m.range_m=(truth-m.anchor_position_m).norm();batch.measurements.push_back(m);shells.push_back({m.range_m-.02,m.range_m+.02});}
   for(int mode:{FE_TONEAREST,FE_DOWNWARD,FE_UPWARD,FE_TOWARDZERO})for(size_t capacity:{0,1,256})for(bool precondition:{false,true}){
    std::fesetround(mode);RawRangeBudget budget;budget.optimized=true;budget.tight_shell=true;budget.lower_shell=true;budget.retain_support=true;budget.split_depth=2;budget.max_boxes=capacity;budget.linear_precondition=precondition;
    auto a=contractRawRangeBox(Eigen::Vector3d(-2,-2,-2),Eigen::Vector3d(2,2,2),batch,shells,truth,budget);require(std::fegetround()==mode,"reference leaked rounding mode");
