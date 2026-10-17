@@ -153,6 +153,11 @@ def _write_bag(cache: Path, destination: Path, lossless_toa: bool = False):
         normalized_ns = math.floor(value_ns + .5) if value_ns >= 0 else math.ceil(value_ns - .5)
         ns = round(EPOCH_OFFSET_S * 1e9) + normalized_ns
         return rospy.Time(ns // 1000000000, ns % 1000000000)
+    def row_time(row, column, fallback):
+        if column not in row:
+            return fallback
+        ns = int(row[column]) + round(EPOCH_OFFSET_S * 1e9)
+        return rospy.Time(ns // 1000000000, ns % 1000000000)
     with rosbag.Bag(str(destination), "w") as bag:
         anchor_msg = Anchorlist()
         for row in anchors:
@@ -171,7 +176,7 @@ def _write_bag(cache: Path, destination: Path, lossless_toa: bool = False):
             stamp = exact_stamp(map_ready + index * 1e-3)
             bag.write("/EstimationInterface/anchor_list", anchor_msg, stamp)
         for row in imu_rows:
-            stamp = exact_stamp(row["t"])
+            stamp = row_time(row, "_stamp_ns", exact_stamp(row["t"]))
             msg = Imu()
             msg.header.stamp = stamp
             msg.linear_acceleration.x = float(row["ax"])
@@ -180,9 +185,16 @@ def _write_bag(cache: Path, destination: Path, lossless_toa: bool = False):
             msg.angular_velocity.x = float(row["gx"])
             msg.angular_velocity.y = float(row["gy"])
             msg.angular_velocity.z = float(row["gz"])
-            bag.write("/EstimationInterface/imu_ds", msg, stamp)
+            bag.write("/EstimationInterface/imu_ds", msg, row_time(row, "_received_ns", stamp))
         for group in groups:
-            stamp = exact_stamp(group[-1]["t"])
+            stamp = row_time(group[-1], "_stamp_ns", exact_stamp(group[-1]["t"]))
+            received = row_time(group[-1], "_received_ns", stamp)
+            if "_stamp_ns" in group[-1]:
+                # Upstream TOAData has one timestamp per batch. Reject an
+                # unsupported asynchronous batch instead of silently retiming.
+                if any(row_time(r, "_stamp_ns", stamp) != stamp or
+                       row_time(r, "_received_ns", received) != received for r in group):
+                    raise ValueError("SFUISE canonical batch has unequal per-row times")
             msg = RTLSStick()
             msg.header.stamp = stamp
             msg.id = primary
@@ -199,7 +211,7 @@ def _write_bag(cache: Path, destination: Path, lossless_toa: bool = False):
                 msg.ranges.append(item)
             msg.noga = len(msg.ranges)
             msg.nora = sum(int(item.ra != 0) for item in msg.ranges)
-            bag.write("/EstimationInterface/toa_ds", msg, stamp)
+            bag.write("/EstimationInterface/toa_ds", msg, received)
             if lossless_toa:
                 # Official RTLSRange.range is float32, while the frozen raw
                 # simulation and calibrated CSV ranges are doubles. Feed the
@@ -210,12 +222,13 @@ def _write_bag(cache: Path, destination: Path, lossless_toa: bool = False):
                 for row in group:
                     observed = row["range"]
                     payload.extend([float(row["anchor_id"]), float(observed), float(row["valid"])])
-                bag.write("/EstimationInterface/toa_ds64", Float64MultiArray(data=payload), stamp)
+                bag.write("/EstimationInterface/toa_ds64", Float64MultiArray(data=payload), received)
     return {"imu": len(imu_rows), "uwb_messages": len(groups),
             "uwb_ranges": len(range_rows), "anchors": len(anchors),
             "map_ready_sensor_s": map_ready,
             "toa_transport": "FLOAT64_LOSSLESS" if lossless_toa else "OFFICIAL_FLOAT32",
             "toa_calibration": "CANONICAL_RANGE_PREAPPLIED_ONCE" if lossless_toa else "OFFICIAL_NATIVE_OFFSET",
+            "clock_transport": "INTEGER_HEADER_AND_ORIGINAL_RECEIVE" if "_stamp_ns" in imu_rows[0] else "LEGACY_CSV_HEADER_RELEASE",
             "map_ready_policy": "both_sensor_streams_then_25ms; original sensor stamps unchanged"}
 
 
@@ -412,7 +425,7 @@ def run_one(setup: Path, cache: Path, run: Path, playback_rate: float = 2.0,
     result['root_sensor_counts_match'] = count_match
     result['observer_enabled'] = observer
     result['fusion_executable'] = fusion_executable
-    result['source_clock_resolution_s'] = .001
+    result['source_clock_resolution_s'] = 1e-9 if 'sc9_canonical' in manifest else .001
     (run / "run_status.json").write_text(json.dumps(result, indent=2) + "\n")
     return result
 
