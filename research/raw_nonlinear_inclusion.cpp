@@ -135,6 +135,20 @@ Sc6MotionValue sc6MotionAt(int64_t index,const Sc6MotionRecipe& recipe){
  }
  return out;
 }
+Sc6MotionValue sc6D1MotionAtNanoseconds(int64_t ns){
+ if(ns<0 || ns>1000000000000000LL)throw std::invalid_argument("D1_NS_DOMAIN");
+ // Integer is exactly representable in this declared scope. Directed division
+ // retains the actual time; no resampling to the old 200 Hz grid occurs.
+ I t=I(double(ns))/1e9;Sc6MotionValue out;
+ for(int j=0;j<3;++j){I amp(j==0?.8:j==1?.6:.4),f(j==0?.6:j==1?.5:.4);
+  out.p[j]=amp*reducedSine(f*t);out.v[j]=amp*f*reducedSine(f*t+piEnclosure()/2.);out.a[j]=-amp*square(f)*reducedSine(f*t);}
+ out.p[2]+=1.;V e,ed;
+ for(int j=0;j<3;++j){I amplitude(j==0?.3:j==1?.4:.5),f(j==0?.4:j==1?.3:.2);e[j]=amplitude*reducedSine(f*t);ed[j]=amplitude*f*reducedSine(f*t+piEnclosure()/2.);}
+ M rotations[3];for(int j=0;j<3;++j){V angle{I(0),I(0),I(0)};angle[j]=e[j];rotations[j]=rotationExp(angle);}
+ out.r=product(product(rotations[0],rotations[1]),rotations[2]);M yz=product(rotations[1],rotations[2]);
+ for(int j=0;j<3;++j)out.omega[j]=yz[0][j]*ed[0]+rotations[2][1][j]*ed[1]+(j==2?ed[2]:I(0));
+ return out;
+}
 RawRangeLawEvidence certifySc6Ranges(const UwbBatch& batch,const Sc6MotionValue& motion,const Eigen::Vector3d& lever,const std::array<double,8>& draws,const std::array<double,8>& faults){
  RawRangeLawEvidence out;out.batch=batch;if(batch.measurements.size()!=8)return out;
  V tag=motion.p,offset=multiply(motion.r,fixed(lever));for(int j=0;j<3;++j)tag[j]+=offset[j];

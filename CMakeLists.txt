@@ -646,6 +646,9 @@ set_source_files_properties(research/sc9_stream_checks.cpp PROPERTIES COMPILE_OP
 
 add_executable(sc9_native_time_checks EXCLUDE_FROM_ALL research/sc9_native_time_checks.cpp)
 target_link_libraries(sc9_native_time_checks fde_research tbb)
+add_executable(sc9_simulation_runner EXCLUDE_FROM_ALL research/sc9_simulation_runner.cpp)
+target_link_libraries(sc9_simulation_runner fde_research tbb)
+set_source_files_properties(research/sc9_simulation_runner.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
 
 add_library(sc9_wire_adapter STATIC EXCLUDE_FROM_ALL research/canonical_wire.cpp)
 target_link_libraries(sc9_wire_adapter fde_research)
