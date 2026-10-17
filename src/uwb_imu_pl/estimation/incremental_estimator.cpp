@@ -1,5 +1,6 @@
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include "uwb_imu_pl/common/runtime_route_audit.hpp"
+#include "uwb_imu_pl/common/timestamp_delta.hpp"
 
 #include <gtsam/inference/Ordering.h>
 #include <gtsam/inference/Symbol.h>
@@ -64,6 +65,46 @@ class FixedLagBackend final : public gtsam::IncrementalFixedLagSmoother {
             std::make_shared<const std::uint64_t>(0x503130332d523039ULL)) {}
 
   const gtsam::ISAM2& isam() const { return isam_; }
+  // Opt-in fixed-lag ordering closure for generalized sensor graphs. GTSAM's
+  // default smoother marks children of retiring keys, but can leave a mixed
+  // clique unmarked when a retained frontal precedes a retiring frontal.
+  // marginalizeLeaves then only trims a prefix and leaves dangling keys.
+  void updateGeneralizedResearchV1(
+      const gtsam::NonlinearFactorGraph& graph,const gtsam::Values& values,
+      const KeyTimestampMap& timestamps,const gtsam::FactorIndices& removals) {
+    updateKeyTimestampMap(timestamps);
+    const auto retiring=findKeysBefore(getCurrentTimestamp()-smootherLag_);
+    boost::optional<gtsam::FastMap<gtsam::Key,int>> constraints=boost::none;
+    createOrderingConstraints(retiring,constraints);
+    std::set<gtsam::Key> marked;
+    std::set<const gtsam::ISAM2Clique*> visited;
+    std::vector<gtsam::ISAM2Clique::shared_ptr> pending;
+    for(auto key:retiring)pending.push_back(isam_[key]);
+    while(!pending.empty()){
+      auto clique=pending.back();pending.pop_back();
+      if(!visited.insert(clique.get()).second)continue;
+      for(auto key:clique->conditional()->frontals())marked.insert(key);
+      for(const auto& child:clique->children)pending.push_back(child);
+    }
+    const gtsam::KeyList extra(marked.begin(),marked.end());
+    isamResult_=isam_.update(graph,values,removals,constraints,boost::none,extra);
+    if(!retiring.empty()){
+      const std::set<gtsam::Key> retired(retiring.begin(),retiring.end());
+      for(auto key:retiring){
+        bool retained_seen=false;
+        for(auto frontal:isam_[key]->conditional()->frontals()){
+          if(!retired.count(frontal))retained_seen=true;
+          else if(retained_seen)throw std::logic_error("GENERALIZED_MARGINAL_FRONTALS_NOT_PREFIX");
+        }
+      }
+      isam_.marginalizeLeaves(gtsam::FastList<gtsam::Key>(retiring.begin(),retiring.end()));
+    }
+    eraseKeyTimestampMap(retiring);
+    const auto& theta=isam_.getLinearizationPoint();
+    for(const auto& factor:gtsam::GaussianFactorGraph(isam_))if(factor)
+      for(auto key:factor->keys())if(!theta.exists(key))
+        throw std::logic_error("GENERALIZED_MARGINAL_DANGLING_TREE_KEY");
+  }
   HistoryFaultSummary updateHistoryRoot(
       HistoryRootCacheRequest request,
       HistoryCarrierRankCertificate* carrier_rank,
@@ -131,6 +172,7 @@ struct EstimationRuntimeV1 {
   const gtsam::VectorValues* accepted_delta = nullptr;
   std::uint64_t accepted_delta_version = 0;
   bool generalized_group_identity = false;
+  bool physical_time_differences = false;
   std::uint64_t next_generalized_group = 0;
 };
 std::mutex estimation_runtime_mutex;
@@ -895,7 +937,9 @@ IncrementalUwbImuEstimator::backendUpdate(
     timestamps.emplace(biasKey(timestamp_epoch), logical_timestamp);
   }
   const std::size_t before = fixed_lag_backend_->timestamps().size();
-  fixed_lag_backend_->update(graph, values, timestamps, removals);
+  if(readEstimationRuntime(this).generalized_group_identity)
+    fixed_lag_backend_->updateGeneralizedResearchV1(graph,values,timestamps,removals);
+  else fixed_lag_backend_->update(graph, values, timestamps, removals);
   const auto& isam_result = fixed_lag_backend_->getISAM2Result();
   audit.new_factor_slots.assign(isam_result.newFactorsIndices.begin(),
                                 isam_result.newFactorsIndices.end());
@@ -1094,6 +1138,7 @@ void IncrementalUwbImuEstimator::validateUwbBatch(const UwbBatch& batch) const {
     throw std::invalid_argument("UWB batch timestamp must increase");
   }
   std::set<std::uint64_t> configured;
+  const bool physical_time=readEstimationRuntime(this).physical_time_differences;
   for (const auto& anchor : config_.anchors)
     configured.insert(anchor.id.value());
   std::set<std::uint64_t> measurement_ids;
@@ -1119,13 +1164,14 @@ void IncrementalUwbImuEstimator::validateUwbBatch(const UwbBatch& batch) const {
     }
     if (measurement.timestamp < earliest) earliest = measurement.timestamp;
     if (latest < measurement.timestamp) latest = measurement.timestamp;
-    const double skew =
-        std::abs(measurement.timestamp.seconds() - batch.timestamp.seconds());
+    const double skew = std::abs(physical_time?
+        timestampDifferenceSecondsV1(measurement.timestamp,batch.timestamp):
+        measurement.timestamp.seconds()-batch.timestamp.seconds());
     if (skew > config_.incremental.max_time_skew_s + 1e-12) {
       throw std::invalid_argument("UWB batch member exceeds max_time_skew_s");
     }
   }
-  if (latest.seconds() - earliest.seconds() >
+  if ((physical_time?timestampDifferenceSecondsV1(latest,earliest):latest.seconds()-earliest.seconds()) >
       config_.incremental.epoch_bin_s + 1e-12) {
     throw std::invalid_argument("UWB batch span exceeds epoch_bin_s");
   }
@@ -1157,6 +1203,7 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
 
   const auto start = std::chrono::steady_clock::now();
   const auto preintegration_start = start;
+  const bool physical_time=readEstimationRuntime(this).physical_time_differences;
   const auto previous_bias = toGtsamBias(current_state_);
   gtsam::PreintegratedCombinedMeasurements proposed(imu_params_, previous_bias);
   TimestampNs previous_time = state_timestamp_;
@@ -1168,7 +1215,7 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
       throw std::runtime_error(
           "duplicate or reversed IMU sample in prediction interval");
     }
-    const double dt = measurement.timestamp.seconds() - previous_time.seconds();
+    const double dt = physical_time?timestampDifferenceSecondsV1(measurement.timestamp,previous_time):measurement.timestamp.seconds()-previous_time.seconds();
     if (!std::isfinite(dt) || dt > config_.imu.max_gap_s + 1e-12) {
       throw std::runtime_error("IMU gap exceeds imu.max_gap_s");
     }
@@ -1183,7 +1230,7 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
     ++consume_count;
   }
   if (previous_time < timestamp) {
-    const double dt = timestamp.seconds() - previous_time.seconds();
+    const double dt = physical_time?timestampDifferenceSecondsV1(timestamp,previous_time):timestamp.seconds()-previous_time.seconds();
     if (!std::isfinite(dt) || dt > config_.imu.max_gap_s + 1e-12) {
       throw std::runtime_error("causal IMU hold exceeds imu.max_gap_s");
     }
@@ -1220,7 +1267,7 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
   tx.cv_predicted_state = current_state_;
   tx.cv_predicted_state.id = StateId(next_epoch);
   tx.cv_predicted_state.timestamp = timestamp;
-  const double prediction_dt = timestamp.seconds() - state_timestamp_.seconds();
+  const double prediction_dt = physical_time?timestampDifferenceSecondsV1(timestamp,state_timestamp_):timestamp.seconds()-state_timestamp_.seconds();
   tx.cv_predicted_state.position_world_m +=
       current_state_.velocity_world_mps * prediction_dt;
   tx.preintegration =
@@ -1252,7 +1299,8 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
   if (options.build_imu_recovery_material) {
     tx.generic_bridge_group.id = groupIdentity(this,tx.id.value() * 1000 + 3);
     tx.generic_bias_continuity_group.id = groupIdentity(this,tx.id.value() * 1000 + 4);
-    tx.generic_bridge_group =
+    tx.generic_bridge_group = physical_time?
+        BridgeFactory().makeGenericPhysicalTimeResearchV1(tx,config_.bridge.generic):
         BridgeFactory().makeGeneric(tx, config_.bridge.generic);
     tx.generic_bias_continuity_group =
         BridgeFactory().makeBiasContinuity(tx, config_.bridge.generic);
@@ -1570,6 +1618,12 @@ void IncrementalUwbImuEstimator::enableGeneralizedGroupIdentityResearchV2() {
     throw std::logic_error("generalized group identity must be enabled immediately after initialization");
   std::lock_guard<std::mutex> lock(estimation_runtime_mutex);
   estimation_runtime.at(this).generalized_group_identity=true;
+}
+void IncrementalUwbImuEstimator::enablePhysicalTimeResearchV1() {
+  if(!initialized_ || epoch_!=0 || pending_epoch_)
+    throw std::logic_error("physical time must be enabled immediately after initialization");
+  std::lock_guard<std::mutex> lock(estimation_runtime_mutex);
+  estimation_runtime.at(this).physical_time_differences=true;
 }
 
 EpochTransaction IncrementalUwbImuEstimator::prepareEmptyEpochResearchV1(const UwbBatch& empty_batch) {

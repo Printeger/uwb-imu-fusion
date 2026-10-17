@@ -46,7 +46,7 @@ UnifiedRollingIntegrityCore::UnifiedRollingIntegrityCore(const YAML::Node& law,c
  proof_.enableGeneralizedJoint(model.raw_law);proof_.enableTagSupport();recovery_.enableNumericalRecovery(true);recovery_.enableActualTime();
  generalized_monitor_=std::make_unique<GeneralizedFaultMonitor>(model.raw_law,domain,model.initial_set,policy_.max_fault_records);
  sources_->append(first);generalized_monitor_->append(first,sources_->event(),sources_->sensor());
- backend_.initialize(initial,cfg.realtime.prior_sigmas);backend_.enableGeneralizedGroupIdentityResearchV2();backend_.ingestImu(first);
+ backend_.initialize(initial,cfg.realtime.prior_sigmas);backend_.enableGeneralizedGroupIdentityResearchV2();backend_.enablePhysicalTimeResearchV1();backend_.ingestImu(first);
  reference_bias_=proof_.certificate().separator.bias;replay_.push_back(first);capsules_.push_back(proof_.certificate().separator);
 }
 Sc6Result UnifiedRollingIntegrityCore::step(const Sc6Envelope& input,bool fde)try{

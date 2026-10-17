@@ -1,6 +1,7 @@
 #include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
 
 #include "uwb_imu_pl/factors/realtime_factors.hpp"
+#include "uwb_imu_pl/common/timestamp_delta.hpp"
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
@@ -25,8 +26,15 @@ void positive(double value, const char* name) {
 
 PendingFactorGroup BridgeFactory::makeGeneric(
     const EpochTransaction& tx, const GenericBridgeSpec& config) const {
+  return makeGenericWithDt(tx,config,tx.end.seconds()-tx.begin.seconds());
+}
+PendingFactorGroup BridgeFactory::makeGenericPhysicalTimeResearchV1(
+    const EpochTransaction& tx,const GenericBridgeSpec& config) const {
+  return makeGenericWithDt(tx,config,timestampDifferenceSecondsV1(tx.end,tx.begin));
+}
+PendingFactorGroup BridgeFactory::makeGenericWithDt(
+    const EpochTransaction& tx,const GenericBridgeSpec& config,double dt) const {
   if (!config.enabled) throw std::invalid_argument("generic bridge is disabled");
-  const double dt = tx.end.seconds() - tx.begin.seconds();
   positive(dt, "bridge dt");
   positive(config.optimization_sigma_rotation_rad, "rotation sigma");
   positive(config.optimization_sigma_position_m, "position sigma");

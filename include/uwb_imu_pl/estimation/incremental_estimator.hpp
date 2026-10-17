@@ -177,6 +177,9 @@ class IncrementalUwbImuEstimator {
   // Explicit research epoch with no range observations; no synthetic factor.
   EpochTransaction prepareEmptyEpochResearchV1(const UwbBatch& empty_batch);
   void enableGeneralizedGroupIdentityResearchV2();
+  // Opt-in integer-nanosecond differences for native PIM/CV/bridge/skew.
+  // Enable immediately after initialize; legacy arithmetic remains unchanged.
+  void enablePhysicalTimeResearchV1();
   LinearizedIntegrityWindow buildIntegrityWindow(
       const EpochTransaction& transaction,
       const IntegrityWindowRequest& request) const;

@@ -24,6 +24,8 @@ class BridgeFactory {
  public:
   PendingFactorGroup makeGeneric(const EpochTransaction& transaction,
                                  const GenericBridgeSpec& config) const;
+  PendingFactorGroup makeGenericPhysicalTimeResearchV1(
+      const EpochTransaction& transaction,const GenericBridgeSpec& config) const;
   PendingFactorGroup makeBiasContinuity(
       const EpochTransaction& transaction,
       const GenericBridgeSpec& config) const;
@@ -33,6 +35,9 @@ class BridgeFactory {
       const Eigen::Matrix<double, 3, Eigen::Dynamic>& protected_map,
       const Eigen::MatrixXd& bridge_error_gain,
       const Eigen::VectorXd& box_bound) const;
+ private:
+  PendingFactorGroup makeGenericWithDt(const EpochTransaction&,
+      const GenericBridgeSpec&,double dt) const;
 };
 
 }  // namespace uwb_imu_pl
