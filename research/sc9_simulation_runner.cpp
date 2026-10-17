@@ -63,11 +63,24 @@ struct Generator {
 };
 }
 int main(int argc,char** argv){try{
- if(argc<4 || argc>6)throw std::invalid_argument("usage: sc9_simulation_runner COUNT healthy|U|A|G|J|repeated OUTPUT [FGO_LAG] [INTEGRITY_WINDOW]");
+ if(argc<4 || argc>7)throw std::invalid_argument("usage: sc9_simulation_runner COUNT healthy|U|A|G|J|repeated OUTPUT [FGO_LAG] [INTEGRITY_WINDOW] [EXOGENOUS_SCHEDULE]");
  const size_t count=std::stoull(argv[1]);const std::string fault=argv[2];require(count>0&&count<=10000,"SIM_COUNT_DOMAIN");
  require(fault=="healthy"||fault=="U"||fault=="A"||fault=="G"||fault=="J"||fault=="repeated","SIM_FAULT_DOMAIN");
  tbb::global_control serial(tbb::global_control::max_allowed_parallelism,1);
+ YAML::Node schedule(YAML::NodeType::Undefined);std::vector<int64_t> imu_times;size_t batch_cursor=0,imu_cursor=0,n=12;int64_t initial_ns=500000000;
+ if(argc==7){schedule=YAML::LoadFile(argv[6]);require(schedule["schema"].as<std::string>()=="sc9-exogenous-schedule-v1","SIM_SCHEDULE_SCHEMA");
+  n=schedule["source_anchor_ids"].size();require(n>=4&&n<=12,"SIM_PROVIDER_GEOMETRY_SCOPE");
+  imu_times=schedule["imu_ns"].as<std::vector<int64_t>>();require(!imu_times.empty(),"SIM_EMPTY_IMU");
+  for(size_t i=1;i<imu_times.size();++i)require(imu_times[i]>imu_times[i-1]&&imu_times[i]-imu_times[i-1]<=50000000,"SIM_EXTERNAL_IMU_GAP");
+  const auto batches=schedule["batches"];bool found=false;
+  for(;batch_cursor<batches.size();++batch_cursor){size_t visible=0;for(const auto& r:batches[batch_cursor]["ranges"])visible+=r["valid"].as<bool>();
+   if(batches[batch_cursor]["end_ns"].as<int64_t>()>=500000000&&visible>=4){found=true;break;}}
+  require(found,"SIM_EXTERNAL_BOOTSTRAP_MISSING");const auto end=batches[batch_cursor]["end_ns"].as<int64_t>();
+  const auto it=std::lower_bound(imu_times.begin(),imu_times.end(),end);require(it!=imu_times.end(),"SIM_EXTERNAL_BOOTSTRAP_IMU_MISSING");initial_ns=*it;
+  require(batch_cursor+count<batches.size(),"SIM_EXTERNAL_SCHEDULE_TOO_SHORT");
+ }
  Sc6Provider base("config/sc7.yaml","S0",20261010,1);auto cfg=base.cfg;auto root=YAML::Clone(base.law);cfg.anchors.clear();cfg.imu.max_gap_s=.025;cfg.incremental.max_time_skew_s=.02;cfg.realtime.prior_sigmas.setConstant(.1);
+ if(schedule)cfg.imu.max_gap_s=.05;
  const int lag=argc>4?std::stoi(argv[4]):30,window=argc>5?std::stoi(argv[5]):lag;root["fixed_lag_epochs"]=lag;
  if(window!=lag){root["rolling_integrity"]["window_mode"]="explicit";root["rolling_integrity"]["explicit_epochs"]=window;}
  const auto policy=resolveRollingPolicy(root,cfg);Sc6MotionDomain domain;domain.id="D1-continuous-ns-v1";domain.acceleration=1;domain.rate=1;domain.jerk=2;domain.alpha=2;domain.global_speed=1;
@@ -76,10 +89,15 @@ int main(int argc,char** argv){try{
  cfg.bridge.generic.acceleration_bound_mps2=1;cfg.bridge.generic.angular_rate_bound_radps=1;cfg.bridge.generic.angular_acceleration_bound_radps2=2;cfg.bridge.generic.calibration_id=domain.id;
  Generator generator(law,base.lever);GeneralizedCoreInitialization model;model.raw_law=law;
  model.sources=std::make_unique<GeneralizedSourceLedger>(policy.budget,law,ModelEvidenceStatus::VerifiedForDeclaredModel);
- auto* sources=model.sources.get();ImuMeasurement last;for(int64_t ns=0;ns<=500000000;ns+=10000000){last=generator.imu(ns,-1,0);sources->append(last);}
- for(size_t k=0;k<12;++k){AnchorRecord a;a.id=generator.aid(k);a.position_world_m=generator.anchors[k];a.covariance_m2.setZero();a.frame="world";a.map_version="sc9-synthetic-dynamic-v1";model.anchors.declare(a,1);}
+ auto* sources=model.sources.get();ImuMeasurement last;
+ if(schedule){while(imu_cursor<imu_times.size()&&imu_times[imu_cursor]<=initial_ns){last=generator.imu(imu_times[imu_cursor++],-1,0);sources->append(last);}}
+ else for(int64_t ns=0;ns<=initial_ns;ns+=10000000){last=generator.imu(ns,-1,0);sources->append(last);}
+ for(size_t k=0;k<n;++k){AnchorRecord a;a.id=generator.aid(k);a.position_world_m=generator.anchors[k];a.covariance_m2.setZero();a.frame="world";a.map_version="sc9-synthetic-dynamic-v1";model.anchors.declare(a,1);}
  UwbBatch startup;startup.id=BatchId(1);startup.timestamp=last.timestamp;
- for(size_t k=0;k<12;++k){auto e=generator.range(0,k,500000000,true,0);sources->registerPotentialRange(e);startup.measurements.push_back(e.measurement);}
+ if(schedule){for(size_t b=0;b<=batch_cursor;++b)for(const auto& row:schedule["batches"][b]["ranges"]){const auto k=row["anchor"].as<size_t>();require(k<n,"SIM_EXTERNAL_ANCHOR");
+   auto e=generator.range(0,k,row["stamp_ns"].as<int64_t>(),row["valid"].as<bool>(),0);sources->registerPotentialRange(e);if(b==batch_cursor&&e.valid)startup.measurements.push_back(e.measurement);}
+  ++batch_cursor;
+ }else for(size_t k=0;k<n;++k){auto e=generator.range(0,k,initial_ns,true,0);sources->registerPotentialRange(e);startup.measurements.push_back(e.measurement);}
  bool event=generator.audit(*sources);
  // Initial bias is not an independent draw. The original zero bias plus
  // every startup RW latent coordinate must fit the registered initial box
@@ -90,29 +108,32 @@ int main(int argc,char** argv){try{
  NavigationState numerical;numerical.timestamp=startup.timestamp;numerical.position_world_m=numericalUwbCandidate(startup,-1).functional.tag-base.lever;
  UnifiedRollingIntegrityCore core(root,cfg,numerical,base.lever,domain,last,std::move(model));core.enableSemanticAudit();
  std::ofstream out(argv[3]);require(bool(out),"SIM_OUTPUT_OPEN");out<<std::setprecision(17);
- out<<"epoch,stamp_ns,status,bound_status,latent_event,contained,imu_alarm,uwb_alarm,excluded_source,bridge,repair,rejoined,first_dependency,updates,generation,boundary,prefix,risk,registered,visible,measurements,hpl,vpl,herror,verror,core_ms,slots,ledger,replay,capsules,rss,source_digest,receipt_digest,boundary_digest\n";
- int64_t previous=500000000,onset=-1;size_t bridge=0,repair=0,rejoin=0,exclude=0,covered=0,uwb_remaining=0;double max_ms=0;
- for(size_t epoch=1;epoch<=count;++epoch){const int64_t end=previous+(epoch%2?47000003:63000007);const size_t phase=fault=="repeated"?(epoch-1)%400+1:epoch;
+ out<<"epoch,stamp_ns,status,bound_status,latent_event,contained,imu_alarm,uwb_alarm,excluded_source,bridge,repair,rejoined,first_dependency,updates,generation,boundary,prefix,risk,registered,visible,measurements,hpl,vpl,herror,verror,core_ms,slots,ledger,replay,capsules,rss,source_digest,receipt_digest,boundary_digest,provider_plus_core_ms,period_ms\n";
+ int64_t previous=initial_ns,onset=-1;size_t bridge=0,repair=0,rejoin=0,exclude=0,covered=0,uwb_remaining=0;double max_ms=0;
+ for(size_t epoch=1;epoch<=count;++epoch){const auto provider_start=std::chrono::steady_clock::now();const int64_t end=schedule?schedule["batches"][batch_cursor]["end_ns"].as<int64_t>():previous+(epoch%2?47000003:63000007);require(end>previous,"SIM_EXTERNAL_EPOCH_ORDER");const size_t phase=fault=="repeated"?(epoch-1)%400+1:epoch;
   if(phase==80&&fault!="healthy"){onset=previous+13000000;if(fault=="U"||fault=="J"||fault=="repeated")uwb_remaining=3;}
   const int axis=(fault=="G"?3:0)+(fault=="repeated"?int(((epoch-1)/400)%3):0);const bool imu_fault=fault!="healthy"&&fault!="U";
   Sc6Envelope input;input.epoch=epoch;input.uwb.id=BatchId(epoch+1);input.uwb.timestamp=TimestampNs(origin+end);input.ready=input.uwb.timestamp;
   const int64_t step=((epoch-1)/10)%2?2500000:10000000;
-  while(generator.last_ns+step<=end){const int64_t ns=generator.last_ns+step;const bool active=imu_fault&&onset>=0&&ns>=onset&&ns<onset+500000000;
+  while(schedule?(imu_cursor<imu_times.size()&&imu_times[imu_cursor]<=end):generator.last_ns+step<=end){const int64_t ns=schedule?imu_times[imu_cursor++]:generator.last_ns+step;const bool active=imu_fault&&onset>=0&&ns>=onset&&ns<onset+500000000;
    last=generator.imu(ns,axis,active?(fault=="G"?1.:20.):0.);input.imu.push_back(last);}
-  for(size_t k=0;k<12;++k){const bool valid=k!=epoch%12&&k!=(epoch+1)%12;
+  auto add_range=[&](size_t k,int64_t ns,bool valid){require(k<n,"SIM_EXTERNAL_ANCHOR");
    const bool bad=uwb_remaining&&k==0&&valid;if(bad)--uwb_remaining;
-   auto e=generator.range(epoch,k,end-int64_t(k%3)*1000000,valid,bad?2.25:0);e.received=input.ready;input.range_events.push_back(e);if(valid)input.uwb.measurements.push_back(e.measurement);
-  }
+   auto e=generator.range(epoch,k,ns,valid,bad?2.25:0);e.received=input.ready;input.range_events.push_back(e);if(valid)input.uwb.measurements.push_back(e.measurement);
+  };
+  if(schedule){for(const auto& row:schedule["batches"][batch_cursor++]["ranges"])add_range(row["anchor"].as<size_t>(),row["stamp_ns"].as<int64_t>(),row["valid"].as<bool>());}
+  else{for(size_t k=0;k<n;++k)add_range(k,end-int64_t(k%3)*1000000,k!=epoch%n&&k!=(epoch+1)%n);
+   if(epoch%4==0)add_range(n-1,end-1500000,(n-1)!=epoch%n&&(n-1)!=(epoch+1)%n);}
   const bool actions=!(fault=="J"||fault=="repeated")||phase<80||phase>=113;
-  const auto start=std::chrono::steady_clock::now();const auto r=core.step(input,actions);const double elapsed=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();max_ms=std::max(max_ms,elapsed);
+  const auto start=std::chrono::steady_clock::now();const auto r=core.step(input,actions);const auto finished=std::chrono::steady_clock::now();const double elapsed=std::chrono::duration<double,std::milli>(finished-start).count();const double inclusive=std::chrono::duration<double,std::milli>(finished-provider_start).count();max_ms=std::max(max_ms,elapsed);
   event&=generator.audit(*sources);const auto truth=sc6D1MotionAtNanoseconds(end);Eigen::Vector3d tag;bool contained=true;
   for(int j=0;j<3;++j){I t=truth.p[j];for(int k=0;k<3;++k)t+=truth.r[j][k]*I(base.lever[k]);tag[j]=mid(t);contained&=r.bound.low[j]<=t.lower()&&t.upper()<=r.bound.high[j];}
   require(r.bound.valid&&r.bound.status=="GENERALIZED_CONDITIONAL_RAW_BOUND_VERIFIED","SIM_BOUND_NOT_VERIFIED");require(!event||contained,"SIM_CONDITIONAL_TRUTH_LOST");
   require(r.generation==epoch&&r.backend_updates==1&&core.updateCount()==epoch+1,"SIM_COMMIT_DISCONTINUITY");
   const auto route=runtimeRouteAuditV1();require(route.old_engine_calls==0&&route.old_pipeline_constructions==0&&route.old_fde_calls==0&&route.incremental_backend_constructions==1,"SIM_RUNTIME_ROUTE");
   const Eigen::Vector3d error=r.tag-tag;covered+=contained;bridge+=r.action.current_bridge;repair+=r.action.boundary_repair;rejoin+=r.action.rejoined;exclude+=r.action.excluded_source.has_value();
-  out<<epoch<<','<<r.state.timestamp.value()<<','<<r.action.status<<','<<r.bound.status<<','<<event<<','<<contained<<','<<r.imu_alarm<<','<<r.action.uwb_alarm<<','<<(r.action.excluded_source?std::to_string(r.action.excluded_source->value()):"")<<','<<r.action.current_bridge<<','<<r.action.boundary_repair<<','<<r.action.rejoined<<','<<r.action.first_dependency<<','<<r.backend_updates<<','<<r.generation<<','<<r.boundary<<','<<r.source_prefix<<','<<r.bound.event_risk<<','<<r.input_counts.registered<<','<<r.input_counts.visible<<','<<r.input_counts.measurements<<','<<r.bound.hpl<<','<<r.bound.pl.z()<<','<<error.head<2>().norm()<<','<<std::abs(error.z())<<','<<elapsed<<','<<r.slots<<','<<r.ledger<<','<<r.replay<<','<<r.capsules<<','<<r.rss<<','<<r.source_digest<<','<<r.receipt_digest<<','<<r.boundary_digest<<'\n';out.flush();previous=end;
+  out<<epoch<<','<<r.state.timestamp.value()<<','<<r.action.status<<','<<r.bound.status<<','<<event<<','<<contained<<','<<r.imu_alarm<<','<<r.action.uwb_alarm<<','<<(r.action.excluded_source?std::to_string(r.action.excluded_source->value()):"")<<','<<r.action.current_bridge<<','<<r.action.boundary_repair<<','<<r.action.rejoined<<','<<r.action.first_dependency<<','<<r.backend_updates<<','<<r.generation<<','<<r.boundary<<','<<r.source_prefix<<','<<r.bound.event_risk<<','<<r.input_counts.registered<<','<<r.input_counts.visible<<','<<r.input_counts.measurements<<','<<r.bound.hpl<<','<<r.bound.pl.z()<<','<<error.head<2>().norm()<<','<<std::abs(error.z())<<','<<elapsed<<','<<r.slots<<','<<r.ledger<<','<<r.replay<<','<<r.capsules<<','<<r.rss<<','<<r.source_digest<<','<<r.receipt_digest<<','<<r.boundary_digest<<','<<inclusive<<','<<double(end-previous)/1e6<<'\n';out.flush();previous=end;
  }
- std::cout<<"B3 count="<<count<<" event="<<event<<" contained="<<covered<<" bridge="<<bridge<<" repair="<<repair<<" rejoin="<<rejoin<<" exclusions="<<exclude<<" numerical_residue="<<generator.residue<<" max_core_ms="<<max_ms<<'\n';
+ std::cout<<(schedule?"B2":"B3")<<" count="<<count<<" event="<<event<<" contained="<<covered<<" bridge="<<bridge<<" repair="<<repair<<" rejoin="<<rejoin<<" exclusions="<<exclude<<" numerical_residue="<<generator.residue<<" max_core_ms="<<max_ms<<'\n';
  return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
