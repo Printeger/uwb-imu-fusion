@@ -33,6 +33,9 @@ add_message_files(
   IntegrityStatus.msg
   NavigationIntegrity.msg
   FaultTruth.msg
+  CanonicalRange.msg
+  CanonicalSensorEvent.msg
+  UnifiedRollingOutput.msg
 )
 
 generate_messages(
@@ -643,3 +646,12 @@ set_source_files_properties(research/sc9_stream_checks.cpp PROPERTIES COMPILE_OP
 
 add_executable(sc9_native_time_checks EXCLUDE_FROM_ALL research/sc9_native_time_checks.cpp)
 target_link_libraries(sc9_native_time_checks fde_research tbb)
+
+add_library(sc9_wire_adapter STATIC EXCLUDE_FROM_ALL research/canonical_wire.cpp)
+target_link_libraries(sc9_wire_adapter fde_research)
+set_source_files_properties(research/canonical_wire.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+add_executable(sc9_wire_runner EXCLUDE_FROM_ALL research/sc9_wire_runner.cpp)
+target_link_libraries(sc9_wire_runner sc9_wire_adapter tbb)
+add_executable(sc9_ros_node EXCLUDE_FROM_ALL research/sc9_ros_node.cpp)
+target_link_libraries(sc9_ros_node sc9_wire_adapter tbb ${catkin_LIBRARIES})
+add_dependencies(sc9_ros_node ${PROJECT_NAME}_generate_messages_cpp ${PROJECT_NAME}_generate_messages_py)
