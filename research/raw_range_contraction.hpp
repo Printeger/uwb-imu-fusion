@@ -47,7 +47,7 @@ struct AttributionSnapshot {
  std::string extremum_class="OUTER_ENDPOINT_NO_FEASIBILITY_WITNESS";
 };
 struct TagSupportEvidence;
-struct RawRangeBudget { size_t max_boxes=256;unsigned passes=8,split_depth=0;bool all_ranges_healthy=false;bool tight_shell=false;bool optimized=false;bool retain_support=false;bool lower_shell=false;bool scoped_rounding=false; };
+struct RawRangeBudget { size_t max_boxes=256;unsigned passes=8,split_depth=0;bool all_ranges_healthy=false;bool tight_shell=false;bool optimized=false;bool retain_support=false;bool lower_shell=false;bool scoped_rounding=false;bool linear_precondition=false; };
 struct RawRangeResult {
  std::string bound_method="coordinate-box-v1";
  std::string status="EVIDENCE_REFUSED",reason,source="raw-imu-uwb-contracted-v1";

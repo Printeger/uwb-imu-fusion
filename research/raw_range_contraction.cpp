@@ -43,15 +43,45 @@ void bounds(RawRangeResult& r,const Eigen::Vector3d& actual){
  for(int j=0;j<3;++j)r.pl(j)=abs(I(r.low(j),r.high(j))-I(actual(j))).upper();
  r.hpl=sqrt(square(I(r.pl.x()))+square(I(r.pl.y()))).upper();
 }
+template<class T>std::array<T,3> cross(const std::array<T,3>& a,const std::array<T,3>& b){
+ return {a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]};
+}
+template<class T>T dot(const std::array<T,3>& a,const std::array<T,3>& b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+template<class T>T determinant(const std::array<std::array<T,3>,3>& a){return dot(a[0],cross(a[1],a[2]));}
+template<class T>bool linearContract(std::array<T,3>& box,const std::vector<std::array<T,3>>& rows,const std::vector<T>& rhs,const std::vector<size_t>& eligible){
+ if(eligible.size()<3)return true;
+ // Pivot selection affects strength only. All chosen equations remain exact
+ // necessary squared-range differences; no floating inverse is trusted.
+ size_t first=eligible.front(),second=first,third=first;double best=0;
+ for(auto i:eligible){const auto q=dot(rows[i],rows[i]);checkFinite(q);if(q.lower()>best){best=q.lower();first=i;}}
+ if(best<=0)return true;best=0;
+ for(auto i:eligible)if(i!=first){auto c=cross(rows[first],rows[i]);const auto q=dot(c,c);checkFinite(q);if(q.lower()>best){best=q.lower();second=i;}}
+ if(best<=0)return true;best=0;
+ for(auto i:eligible)if(i!=first&&i!=second){const auto q=abs(dot(rows[first],cross(rows[second],rows[i])));checkFinite(q);if(q.lower()>best){best=q.lower();third=i;}}
+ if(best<=0)return true;
+ const std::array<std::array<T,3>,3> matrix{rows[first],rows[second],rows[third]};
+ const T denominator=determinant(matrix);checkFinite(denominator);
+ if(denominator.lower()<=0&&denominator.upper()>=0)return true;
+ const std::array<T,3> values{rhs[first],rhs[second],rhs[third]};
+ // Cramer's rule evaluated entirely with outward intervals encloses the
+ // solution for every admitted range/geometry value. Rank-uncertain cases
+ // keep the original box and still run the existing spherical contractor.
+ for(int j=0;j<3;++j){auto numerator=matrix;for(int k=0;k<3;++k)numerator[k][j]=values[k];
+  if(!intersect(box[j],determinant(numerator)/denominator))return false;
+ }
+ return true;
+}
 // Every update is a necessary condition; interval dependency only weakens it.
-template<class T>bool propagateImpl(std::array<T,3>& box,const UwbBatch& b,const std::vector<RawRangeShell>& shells,int omitted,unsigned passes,bool tight_shell,bool optimized,bool lower_shell){
+template<class T>bool propagateImpl(std::array<T,3>& box,const UwbBatch& b,const std::vector<RawRangeShell>& shells,int omitted,unsigned passes,bool tight_shell,bool optimized,bool lower_shell,bool precondition){
  using I=T;using Box=std::array<I,3>;
  auto retained=[&](size_t i){return omitted<0 || b.measurements[i].anchor_id!=b.measurements.at(omitted).anchor_id;};
  size_t ref=0;while(ref<b.measurements.size() && !retained(ref))++ref;
  if(ref==b.measurements.size())return true; // Zero constraints: keep the entire prior domain.
  for(size_t i=0;i<b.measurements.size();++i)if(retained(i) && shells[i].high<shells[i].low)return false;
  std::vector<I> shell_squared(shells.size()),upper_squared(shells.size()),linear_rhs(shells.size());std::vector<std::array<I,3>> coefficients(shells.size());
- if(optimized)for(int i=0;i<b.measurements.size();++i){if(!retained(i))continue;shell_squared[i]=square(I(shells[i].low,shells[i].high));upper_squared[i]=square(I(shells[i].high));const auto& a=b.measurements[i].anchor_position_m;const auto& a0=b.measurements[ref].anchor_position_m;for(int j=0;j<3;++j)coefficients[i][j]=2.*(I(a(j))-I(a0(j)));linear_rhs[i]=squaredNorm<I>(a)-squaredNorm<I>(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));}
+ if(optimized||precondition)for(int i=0;i<b.measurements.size();++i){if(!retained(i))continue;shell_squared[i]=square(I(shells[i].low,shells[i].high));upper_squared[i]=square(I(shells[i].high));const auto& a=b.measurements[i].anchor_position_m;const auto& a0=b.measurements[ref].anchor_position_m;for(int j=0;j<3;++j)coefficients[i][j]=2.*(I(a(j))-I(a0(j)));linear_rhs[i]=squaredNorm<I>(a)-squaredNorm<I>(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));}
+ if(precondition){std::vector<size_t> eligible;for(size_t i=0;i<b.measurements.size();++i)if(i!=ref&&retained(i))eligible.push_back(i);
+  if(!linearContract(box,coefficients,linear_rhs,eligible))return false;}
  for(unsigned pass=0;pass<passes;++pass){Box previous=box;
   for(size_t i=0;i<b.measurements.size();++i)if(retained(i)){
    const auto& a=b.measurements[i].anchor_position_m;
@@ -88,14 +118,14 @@ template<class T>bool propagateImpl(std::array<T,3>& box,const UwbBatch& b,const
  return true;
 }
 bool propagate(Box& box,const UwbBatch& b,const std::vector<RawRangeShell>& shells,int omitted,const RawRangeBudget& budget){
- if(!budget.scoped_rounding)return propagateImpl(box,b,shells,omitted,budget.passes,budget.tight_shell,budget.optimized,budget.lower_shell);
+ if(!budget.scoped_rounding)return propagateImpl(box,b,shells,omitted,budget.passes,budget.tight_shell,budget.optimized,budget.lower_shell,budget.linear_precondition);
  // Exactly the same directed operations, with one exception-safe rounding
  // guard around this pure interval kernel. No split/center/Eigen arithmetic
  // runs inside it; the caller's original mode is restored on every exit.
  I::traits_type::rounding guard;
  using U=boost::numeric::interval_lib::unprotect<I>::type;
  std::array<U,3> local;for(int j=0;j<3;++j)local[j]=U(box[j].lower(),box[j].upper());
- const bool result=propagateImpl(local,b,shells,omitted,budget.passes,budget.tight_shell,budget.optimized,budget.lower_shell);
+ const bool result=propagateImpl(local,b,shells,omitted,budget.passes,budget.tight_shell,budget.optimized,budget.lower_shell,budget.linear_precondition);
  if(result)for(int j=0;j<3;++j)box[j]=I(local[j].lower(),local[j].upper());
  return result;
 }
