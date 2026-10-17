@@ -46,6 +46,28 @@ int main(){try{
  require(held.bias_radius[0].upper()==0 && held.duration.lower()>0,"hold minted random source");
  refuses([&]{rawTimeStep(TimestampNs(0),TimestampNs(100),TimestampNs(0),{TimestampNs(50),TimestampNs(50)},{q,q},.01,.001);});
  refuses([&]{rawTimeStep(TimestampNs(0),TimestampNs(100),TimestampNs(1),{},{},.01,.001);});
+ // Independent analytic body trajectories obey a global speed below .8 for
+ // the entire interval. Wide endpoint boxes must contract without using an
+ // estimated velocity as evidence; absence of the law is an exact no-op.
+ for(int64_t ns:{1LL,7123456LL,50321098LL,141123456LL,2000000000LL}){
+  const I dt=durationSeconds(TimestampNs(0),TimestampNs(ns));const long double h=(long double)ns/1e9L;
+  const std::array<double,3> v{.25,-.5,.125},a{.125,.0625,-.0625};
+  RollingRawState first,last;
+  for(int j=0;j<3;++j){first.p[j]=I(j);first.v[j]=I(-50,50);last.p[j]=I(-100,100);last.v[j]=I(-50,50);}
+  auto open_first=first,open_last=last;require(contractGlobalSpeedRelation(open_first,open_last,INFINITY,dt),"absent speed law refused");
+  for(int j=0;j<3;++j)require(open_first.v[j].lower()==-50&&open_last.v[j].upper()==50&&open_last.p[j].lower()==-100&&open_last.p[j].upper()==100,"absent speed law changed state");
+  require(contractGlobalSpeedRelation(first,last,.8,dt),"global speed relation rejected feasible history");
+  for(int j=0;j<3;++j){const long double p=j+v[j]*h+a[j]*h*h/2,velocity=v[j]+a[j]*h;
+   require(contains(last.p[j],p)&&contains(last.v[j],velocity),"global speed relation removed analytic truth");
+   require(last.v[j].lower()==-.8&&last.v[j].upper()==.8,"global speed velocity cap unused");
+   last.p[j]=I(j)+I(v[j])*dt+I(a[j])*square(dt)/2.;first.p[j]=I(-100,100);
+  }
+  require(contractGlobalSpeedRelation(first,last,.8,dt),"reverse global speed relation failed");
+  for(int j=0;j<3;++j)require(contains(first.p[j],j)&&first.p[j].upper()-first.p[j].lower()<4,"reverse displacement cap unused or unsafe");
+  auto bad=last;bad.p[0]=I(100);first.p[0]=I(0);require(!contractGlobalSpeedRelation(first,bad,.8,dt),"inconsistent displacement accepted");
+  refuses([&]{contractGlobalSpeedRelation(first,last,-1,dt);});
+  refuses([&]{contractGlobalSpeedRelation(first,last,.8,I(0));});
+ }
  // Independent rotating-lever range-transport oracle. Evaluate real points
  // at each measurement's time; endpoint v support is supplied, never assumed.
  RollingRawState endpoint;for(auto& v:endpoint.v)v=I(-2,2);
@@ -67,5 +89,5 @@ int main(){try{
   require(range_change<=capped.upper() && capped.upper()<uncapped.upper(),"registered global speed transport removed truth or was unused");
   refuses([&]{rangeTransportRadius(wide,TimestampNs(1),TimestampNs(2),lever,1.,.4,-1.);});
  }
- std::cout<<"SC9 time PASS actual ns/overflow, nonuniform dynamics/RW, shared/hold source, analytic trajectories and asynchronous rotating lever oracle\n";return 0;
+ std::cout<<"SC9 time PASS actual ns/overflow, nonuniform dynamics/RW, shared/hold source, analytic global-speed state/displacement and asynchronous rotating lever oracles\n";return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

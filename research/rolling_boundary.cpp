@@ -102,17 +102,21 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
  out.explicit_material.push_back({tx.uwb_batch,source,out.material.raw_first,out.material.raw_last,tx.raw_imu_slice,tx.proposed_epoch,
   generalized?std::make_shared<const GeneralizedRawEvidence>(*generalized):nullptr});
  std::vector<RollingRawState> states{certificate_.separator};
+ auto speedRelation=[](RollingRawState& a,RollingRawState& b,const RollingRawMaterial& m){
+  return !m.generalized||contractGlobalSpeedRelation(a,b,m.generalized->global_speed,m.generalized->evolution.duration);};
  size_t expected=certificate_.separator.epoch+1;
  for(const auto& m:out.explicit_material){
   if(m.epoch!=expected++)throw std::invalid_argument("EXPLICIT_WINDOW_SOURCE_GAP");
+  if(m.generalized&&!contractGlobalSpeedDomain(states.back(),m.generalized->global_speed))throw std::invalid_argument("RAW_GLOBAL_SPEED_DOMAIN_INCONSISTENT");
   auto s=m.generalized?rollingPropagate(states.back(),acceleration_,rate_,m.generalized->evolution):rollingPropagate(states.back(),acceleration_,rate_,accel_rw_,gyro_rw_,event_.radius(states.back().epoch+1));
+  if(!speedRelation(states.back(),s,m))throw std::invalid_argument("RAW_GLOBAL_SPEED_RELATION_INCONSISTENT");
   snapshot("propagated",s);contracted(s,m,event_,lever_,out.physical_branches,tight_,optimized_,acceleration_,rate_,capture?&out.attribution:nullptr);snapshot("tag_lever_contracted",s);states.push_back(std::move(s));
  }
  // Registered bounded number of forward/backward necessary-constraint passes.
  for(int pass=0;pass<2;++pass){
-  for(size_t j=states.size()-1;j>0;--j)if(!rollingContractDynamics(states[j-1],states[j],acceleration_,out.explicit_material[j-1].generalized?out.explicit_material[j-1].generalized->evolution.duration:I(1)/20.) || (tight_ && !rollingContractCoupledDynamics(states[j-1],states[j],acceleration_,out.explicit_material[j-1].generalized?out.explicit_material[j-1].generalized->evolution.duration:I(1)/20.)))throw std::invalid_argument("RAW_BACKWARD_RELATION_INCONSISTENT");
+  for(size_t j=states.size()-1;j>0;--j)if(!rollingContractDynamics(states[j-1],states[j],acceleration_,out.explicit_material[j-1].generalized?out.explicit_material[j-1].generalized->evolution.duration:I(1)/20.) || (tight_ && !rollingContractCoupledDynamics(states[j-1],states[j],acceleration_,out.explicit_material[j-1].generalized?out.explicit_material[j-1].generalized->evolution.duration:I(1)/20.)) || !speedRelation(states[j-1],states[j],out.explicit_material[j-1]))throw std::invalid_argument("RAW_BACKWARD_RELATION_INCONSISTENT");
   for(size_t j=1;j<states.size();++j){
-   if(!rollingContractDynamics(states[j-1],states[j],acceleration_,out.explicit_material[j-1].generalized?out.explicit_material[j-1].generalized->evolution.duration:I(1)/20.) || (tight_ && !rollingContractCoupledDynamics(states[j-1],states[j],acceleration_,out.explicit_material[j-1].generalized?out.explicit_material[j-1].generalized->evolution.duration:I(1)/20.)))throw std::invalid_argument("RAW_FORWARD_RELATION_INCONSISTENT");
+   if(!rollingContractDynamics(states[j-1],states[j],acceleration_,out.explicit_material[j-1].generalized?out.explicit_material[j-1].generalized->evolution.duration:I(1)/20.) || (tight_ && !rollingContractCoupledDynamics(states[j-1],states[j],acceleration_,out.explicit_material[j-1].generalized?out.explicit_material[j-1].generalized->evolution.duration:I(1)/20.)) || !speedRelation(states[j-1],states[j],out.explicit_material[j-1]))throw std::invalid_argument("RAW_FORWARD_RELATION_INCONSISTENT");
    snapshot("time_contracted",states[j]);if(joint_ && pass>=2-int(joint_sweeps_)){const auto& m=out.explicit_material[j-1];
     out.joint=m.generalized?jointContract(states[j-1],states[j],m.generalized->begin,m.generalized->end,m.generalized->joint_samples,joint_law_):jointContract(states[j-1],states[j],m.imu,joint_law_,TimeUniformEvent(policy_.budget));
    }

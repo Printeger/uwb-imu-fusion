@@ -47,6 +47,28 @@ inline RawTimeStep rawTimeStep(TimestampNs begin,TimestampNs end,TimestampNs pre
 // Rotation of the
 // fixed lever contributes <= |lever|*Omega*h. Reverse triangle inequality
 // transports the range shell without asserting another Gaussian draw.
+// Necessary consequences of an explicitly registered GLOBAL body-speed law.
+// This never derives a speed cap from an estimated/initial velocity. Infinity
+// means no such law and leaves every interval exactly unchanged.
+inline bool contractGlobalSpeedDomain(RollingRawState& state,double speed){
+ if(std::isnan(speed)||speed<0)throw std::invalid_argument("GLOBAL_SPEED_DOMAIN_INVALID");
+ if(!std::isfinite(speed))return true;
+ for(auto& v:state.v){const double low=std::max(v.lower(),-speed),high=std::min(v.upper(),speed);
+  if(low>high)return false;v=RollingInterval(low,high);}
+ return true;
+}
+inline bool contractGlobalSpeedRelation(RollingRawState& previous,RollingRawState& next,double speed,RollingInterval duration){
+ if(!std::isfinite(duration.lower())||!std::isfinite(duration.upper())||duration.lower()<=0)
+  throw std::invalid_argument("GLOBAL_SPEED_DURATION_INVALID");
+ if(!contractGlobalSpeedDomain(previous,speed)||!contractGlobalSpeedDomain(next,speed))return false;
+ if(!std::isfinite(speed))return true;
+ using I=RollingInterval;const I distance=I(speed)*duration;
+ if(!std::isfinite(distance.upper()))throw std::overflow_error("GLOBAL_SPEED_DISPLACEMENT_OVERFLOW");
+ const I displacement(-distance.upper(),distance.upper());
+ auto meet=[](I& a,I b){const double lo=std::max(a.lower(),b.lower()),hi=std::min(a.upper(),b.upper());if(lo>hi)return false;a=I(lo,hi);return true;};
+ for(int j=0;j<3;++j)if(!meet(next.p[j],previous.p[j]+displacement)||!meet(previous.p[j],next.p[j]+displacement))return false;
+ return true;
+}
 inline RollingInterval rangeTransportRadius(const RollingRawState& endpoint,
  TimestampNs measured,TimestampNs epoch,const Eigen::Vector3d& lever,double acceleration,double angular_rate,
  double global_speed=INFINITY){
