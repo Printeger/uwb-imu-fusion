@@ -291,3 +291,16 @@ Full Walk2-J/Walk3-J functional comparisons match1232/1330 rows exactly; their c
 ## SFUISE canonical comparison preparation
 
 `tools/sc9_sfuise.py` reuses the pinned, insertion-only SFUISE observer and official estimator configuration. Its sensor-only input preparation preserves all original integer header/receive intervals under one constant clock-origin translation; the legacy CSV origin is rounded once to a nanosecond, without TEST fitting. Optional integer timestamp columns in the existing baseline bag writer leave legacy inputs unchanged and reject unequal per-row times unsupported by SFUISE's batch interface. Walk2/Walk3 prepared bags independently match7470/8023 canonical events in values, headers, receive times and order, including invalid ranges; no GT topic/file is supplied. This is input parity, not yet a completed SFUISE trajectory/accuracy result.
+
+## Final safety rebuild and SFUISE original recordings
+
+The14 current core checks all pass after rebuilding their actual executables: dynamic input/event/time/joint/recovery/boundary/core/bootstrap/time-factor/topology/route/stream/native-time/scoped-rounding. Their ELF/log/DSO identities are retained in `.cache/sc9/final-core-checks-identity.json`. This is functional safety validation, not timing evidence. The current ROS node is also rebuilt; its new timed profiles are still pending.
+
+Pinned SFUISE `75bf5a32` now completes both original recordings at1× original receive timing, with official initialization/UWB rejection and no estimator/source modifications beyond the existing sealed observation/lossless input adapter. Walk2 receives6229 IMU/1241 batches, Walk3 receives6684/1339, exactly matching expected counts and the independently decoded bag. The sensor-only inputs contain no GT. `.cache/sc9/sfuise/runs/canonical-v1` contains frozen executables/source hashes, per-input parity, online/final trajectories, full observer costs and scores.
+
+| SFUISE original | First-online samples | Online APE m / ARE deg | Final-history samples | Final APE m / ARE deg | Active-service P95 ms | Peak solver RSS KiB |
+|---|---:|---:|---:|---:|---:|---:|
+| Walk2 | 760 | 0.2572 / 45.93 | 1240 | 0.1389 / 15.66 | 41.81 | 31760 |
+| Walk3 | 816 | 0.3549 / 47.62 | 1338 | 0.1517 / 18.33 | 44.20 | 32284 |
+
+All exported samples have valid CAL-limited reference support. Scores use the same frozen Walk1 world/mount/time reference as Ours, with no TEST alignment;0.5/1s body-frame RPE and full H/V statistics are retained. Each method's native output counts/time support are disclosed, so these full-run summaries are not a shared-grid accuracy ranking. Final-history accuracy is retrospective and is not paired with online cost for ranking. Observer active-service time includes all callback/update/maintenance work between publications but excludes idle waits; it is not actual measurement-to-sink latency. SFUISE has no qualified raw PL claim.

@@ -139,13 +139,82 @@ def run(case, run_id):
     print(result, flush=True)
 
 
+def score(case, run_id):
+    """Post-run fixed CAL reference; no alignment or parameter selection."""
+    import numpy as np
+    import pandas as pd
+    from scipy.interpolate import CubicSpline
+    from scipy.spatial.transform import Rotation, Slerp
+    destination = CACHE/'runs'/run_id/case
+    freeze = json.loads((destination/'freeze.json').read_text())
+    model_path = ROOT/'.cache/sc9/empirical-model.json'
+    assert sha(model_path) == freeze['model']
+    model = json.loads(model_path.read_text()); ref = model['reference']
+    assert sha(ROOT/'.cache/sc9/calibration-diagnostic.json') == model['calibration_sha']
+    gt_path = ROOT/'.cache/sc9/data'/('ISAS-'+case)/'gt.csv'
+    gt = pd.read_csv(gt_path, float_precision='round_trip').drop_duplicates('t')
+    position = CubicSpline(gt.t, gt[['px', 'py', 'pz']])
+    rotation = Slerp(gt.t, Rotation.from_quat(gt[['qx', 'qy', 'qz', 'qw']]))
+    world = Rotation.from_matrix(model['R_model_from_anchor_world'])
+    external = Rotation.from_matrix(ref['R_anchor_from_tracker_world'])
+    mount = Rotation.from_matrix(ref['R_tracker_from_imu'])
+    def reference(t, offset):
+        tr = t + ref['imu_to_tracker_time_s']
+        return world.apply(external.apply(position(tr)+rotation(tr).apply(offset))+
+                           np.asarray(ref['t_anchor_from_tracker_world_m']))
+    def attitude(t):
+        return world*external*rotation(t+ref['imu_to_tracker_time_s'])*mount
+    def stats(v):
+        v = np.sort(np.asarray(v))
+        if not len(v): return dict(n=0)
+        return dict(n=len(v), rmse=float(np.sqrt(np.mean(v*v))),
+                    p50=float(v[int(np.ceil(.5*len(v)))-1]),
+                    p95=float(v[int(np.ceil(.95*len(v)))-1]),
+                    p99=float(v[int(np.ceil(.99*len(v)))-1]), maximum=float(v[-1]))
+    output = dict(scope='CAL_ONLY_EMPIRICAL_REFERENCE; no TEST fit; bias truth NA; final history is retrospective',
+                  model_sha=sha(model_path), reference_sha=sha(gt_path), scorer_sha=sha(__file__), views={})
+    for view, filename in [('online', 'trajectory.tum.online.tum'), ('final', 'trajectory.tum')]:
+        path = destination/filename
+        data = np.loadtxt(path, ndmin=2)
+        assert data.shape[1] == 8 and np.all(np.diff(data[:, 0]) > 0)
+        t = data[:, 0]; tr = t+ref['imu_to_tracker_time_s']
+        valid = (tr >= gt.t.min()) & (tr <= gt.t.max())
+        total = len(t); data = data[valid]; t = t[valid]
+        tag = world.apply(data[:, 1:4]); orientation = world*Rotation.from_quat(data[:, 4:8])
+        error = tag-reference(t, ref['tracker_to_tag_m'])
+        angle = (attitude(t).inv()*orientation).magnitude()*180/np.pi
+        result = dict(sha=sha(path), samples=total, reference_matched=len(t), reference_missing=total-len(t),
+            time_support_s=[float(t[0]),float(t[-1])], ape_m=stats(np.linalg.norm(error, axis=1)),
+            horizontal_m=stats(np.linalg.norm(error[:, :2], axis=1)), vertical_m=stats(np.abs(error[:, 2])),
+            are_deg=stats(angle), rpe={})
+        # Adapter exports tag coordinates. Recover the body point solely with
+        # its fixed input lever, using the estimator's own attitude.
+        lever_rows = list(csv.DictReader((CACHE/'inputs'/case/'uwb.csv').open()))
+        lever = [float(lever_rows[0]['lever_'+a]) for a in 'xyz']
+        body = tag-orientation.apply(lever)
+        ep = CubicSpline(t, body); er = Slerp(t, orientation)
+        for interval in [.5, 1.]:
+            start = t[t+interval <= t[-1]]; end = start+interval
+            a, b = er(start), er(end); ra, rb = attitude(start), attitude(end)
+            delta = a.inv().apply(ep(end)-ep(start))-ra.inv().apply(reference(end, ref['tracker_to_imu_m'])-reference(start, ref['tracker_to_imu_m']))
+            result['rpe'][str(interval)] = dict(position_m=stats(np.linalg.norm(delta, axis=1)),
+                angle_deg=stats(((ra.inv()*rb).inv()*(a.inv()*b)).magnitude()*180/np.pi))
+        output['views'][view] = result
+    observer = pd.read_csv(destination/'observer.csv', float_precision='round_trip')
+    output['active_service_ms'] = stats(observer.core_ms)
+    output['timing_scope'] = 'all active solver work between publications; no final-history cost ranking and no actual-sink deadline award'
+    (destination/'scores.json').write_text(json.dumps(output, indent=2)+'\n')
+    print(json.dumps(output, indent=2), flush=True)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument('action', choices=['prepare', 'build', 'run', 'verify-bag'])
+    parser.add_argument('action', choices=['prepare', 'build', 'run', 'verify-bag', 'score'])
     parser.add_argument('--case', choices=['Walk2', 'Walk3'], default='Walk2')
     parser.add_argument('--run-id'); parser.add_argument('--bag', type=Path)
     args = parser.parse_args()
     if args.action == 'prepare': prepare(args.case)
     elif args.action == 'build': build()
     elif args.action == 'verify-bag': verify_bag(args.case, args.bag)
+    elif args.action == 'score': score(args.case, args.run_id)
     else: run(args.case, args.run_id)
