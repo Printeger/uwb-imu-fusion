@@ -1,0 +1,187 @@
+{
+  "model_id": "sc9-walk1-cal-empirical-v1",
+  "status": "DECLARED_EMPIRICAL",
+  "statistical_qualified": false,
+  "publication_protected": false,
+  "source_sha": {
+    "imu.csv": "64e0cf52190e3c1b810ed508a4721a7c736f3e21362adbafa13721f3f9204d89",
+    "uwb.csv": "56d75728fb31fa9019c47f4d0198859ef75fabede4a4b70b3f695ed4942e3a91",
+    "gt.csv": "2c6ec19b2c5bcff5b14e62e7206ffcc39398c6fb20a7321adc11867b24ce7a6b",
+    "anchors.csv": "2ed105d802ad985a0bef02b8312b7e8a4f632abfb8546da0246f10781fcc87c5"
+  },
+  "calibration_sha": "8df997fcc791cc96e0f30baa8bca528fe832abbd8540a091991cbc85dee42338",
+  "R_model_from_anchor_world": [
+    [
+      0.6178694901884605,
+      -0.7853575201612909,
+      -0.03809013809845761
+    ],
+    [
+      -0.7853575201612909,
+      -0.6140727281317613,
+      -0.07828314052798102
+    ],
+    [
+      0.03809013809845761,
+      0.07828314052798102,
+      -0.9962032379433008
+    ]
+  ],
+  "gravity_mps2": 9.911114685972144,
+  "reference": {
+    "R_anchor_from_tracker_world": [
+      [
+        0.9655742268837322,
+        -0.219576143688505,
+        0.1394730422008772
+      ],
+      [
+        0.1939561588037628,
+        0.9650066855328605,
+        0.17647409254327487
+      ],
+      [
+        -0.17334191887703393,
+        -0.14334717995052362,
+        0.9743737297157903
+      ]
+    ],
+    "t_anchor_from_tracker_world_m": [
+      1.4499022168934352,
+      0.8812822774831034,
+      1.597692094289811
+    ],
+    "tracker_to_tag_m": [
+      -0.054654245263108595,
+      -0.08015751517794857,
+      0.06611453897243007
+    ],
+    "R_tracker_from_imu": [
+      [
+        -0.9998835131479282,
+        -0.004773040665850425,
+        -0.014497524538998384
+      ],
+      [
+        -0.004452929785290287,
+        0.9997473278262435,
+        -0.022032973485491887
+      ],
+      [
+        0.01459902569639515,
+        -0.021965850474935707,
+        -0.9996521244221052
+      ]
+    ],
+    "tracker_to_imu_m": [
+      0.04521478003503797,
+      -0.05471853900376345,
+      0.06410549014091715
+    ],
+    "range_to_tracker_time_s": -0.01997029311809459,
+    "imu_to_tracker_time_s": -0.03833473389681467
+  },
+  "range_to_imu_time_s": 0.018364440778720077,
+  "accel_bias_mps2": [
+    -0.10083959491870442,
+    -0.38936625880142917,
+    0.03447141349489518
+  ],
+  "gyro_bias_radps": [
+    -0.011642299485768072,
+    -0.005116376518603987,
+    -0.0044873114741292896
+  ],
+  "initial_bias_radius": [
+    2.287853156338739,
+    1.1776064491336764,
+    1.6141212042587343,
+    0.35905800662112075,
+    0.31670885195625925,
+    1.0118641471541392
+  ],
+  "initial_velocity_radius": 1.3004959397762916,
+  "initial_rotation_domain": "FULL_SO3_OUTER_BOX; numeric tilt/yaw is not a healthy prior",
+  "motion": {
+    "speed": 1.3004959397762916,
+    "acceleration": 2.4452660626078813,
+    "jerk": 13.56533314243513,
+    "rate": 1.4113312896359087,
+    "alpha": 6.968234550230321
+  },
+  "range_sigma_m": 0.15,
+  "accel_adc_sigma": 0.023918909423333596,
+  "gyro_adc_sigma": 0.00749546810457072,
+  "accel_rw_sigma": 0.001,
+  "gyro_rw_sigma": 0.0001,
+  "adc_diagnostic": {
+    "method": "1.5*MAD(second difference)/sqrt(6), CAL training only; irregular time/motion and correlated noise remain empirical",
+    "axis_scales": [
+      0.02174446311212111,
+      0.023918909423333596,
+      0.023918909423332788,
+      0.007011889517179026,
+      0.007495468104570682,
+      0.00749546810457072
+    ]
+  },
+  "motion_diagnostic": [
+    {
+      "smoothing_samples": 21,
+      "train_max": {
+        "speed": 0.8669972931841945,
+        "acceleration": 1.6301773750719208,
+        "jerk": 9.043555428290086,
+        "rate": 0.9408875264239391,
+        "alpha": 4.645489700153547
+      },
+      "hold_max": {
+        "speed": 0.8900266645573185,
+        "acceleration": 1.3263997847128264,
+        "jerk": 8.43800281686598,
+        "rate": 0.8484319671827123,
+        "alpha": 3.626533589039946
+      }
+    },
+    {
+      "smoothing_samples": 31,
+      "train_max": {
+        "speed": 0.8561700955709595,
+        "acceleration": 1.441054873500881,
+        "jerk": 6.142740926929378,
+        "rate": 0.9408875264239391,
+        "alpha": 3.4389053474722906
+      },
+      "hold_max": {
+        "speed": 0.8812542799033594,
+        "acceleration": 1.3653034710536573,
+        "jerk": 5.332334615721676,
+        "rate": 0.8484319671827123,
+        "alpha": 2.848699816166824
+      }
+    },
+    {
+      "smoothing_samples": 41,
+      "train_max": {
+        "speed": 0.8462152654487536,
+        "acceleration": 1.2873384913709525,
+        "jerk": 4.488505892482968,
+        "rate": 0.9408875264239391,
+        "alpha": 2.7886259300461798
+      },
+      "hold_max": {
+        "speed": 0.8705063303430335,
+        "acceleration": 1.2858270348082403,
+        "jerk": 4.193787243720068,
+        "rate": 0.8484319671827123,
+        "alpha": 2.210297860545183
+      }
+    }
+  ],
+  "caveats": [
+    "No hardware marginal-tail qualification",
+    "CAL reference/time/mounting uncertainty is material",
+    "Full rotation and declared velocity/bias domains; no independent bootstrap covariance",
+    "Domain/ADC margins are declared before SC9 TEST runs; hold metrics are descriptive CAL checks"
+  ]
+}

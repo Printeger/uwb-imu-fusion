@@ -1,0 +1,81 @@
+{
+  "ISAS-Walk2": {
+    "selection": "earliest>=20s three consecutive valid records of a physical anchor; tie by anchor ID; no GT/residual/detection",
+    "sensor_hash": {
+      "imu.csv": "b2c7a2baff2b546559cdc4c9bb8cf12899b4bb072c5db13b5d682e27953ef349",
+      "uwb.csv": "0b0ad442db969437710f7776955b43c16900ef59bed3b20e949e0a3498fe23c6",
+      "anchors.csv": "2ed105d802ad985a0bef02b8312b7e8a4f632abfb8546da0246f10781fcc87c5"
+    },
+    "anchor_id": 7475,
+    "range_source": [
+      {
+        "source_message": 287,
+        "source_range": 0
+      },
+      {
+        "source_message": 288,
+        "source_range": 0
+      },
+      {
+        "source_message": 289,
+        "source_range": 0
+      }
+    ],
+    "range_times_s": [
+      20.06214141845703,
+      20.11268186569214,
+      20.187336444854736
+    ],
+    "imu_begin_s": 20.24214141845703,
+    "imu_end_s": 20.74214141845703,
+    "imu_samples": 41,
+    "range_add_m": 2.25,
+    "accel_add_mps2": 20.0,
+    "gyro_add_radps": 1.0,
+    "axis": "original_sensor_x",
+    "cases": [
+      "U",
+      "A",
+      "G",
+      "J"
+    ]
+  },
+  "ISAS-Walk3": {
+    "selection": "earliest>=20s three consecutive valid records of a physical anchor; tie by anchor ID; no GT/residual/detection",
+    "sensor_hash": {
+      "imu.csv": "b20c33ef07e068643c6e14919b2b6ca392e82982e15f5bccaef918be46df3d51",
+      "uwb.csv": "0b4d410e936f6993e27c2604683f0fe54e3d385cf7a93843330d103fc5874050",
+      "anchors.csv": "2ed105d802ad985a0bef02b8312b7e8a4f632abfb8546da0246f10781fcc87c5"
+    },
+    "anchor_id": 7475,
+    "range_source": [
+      {
+        "source_message": 287,
+        "source_range": 0
+      },
+      {
+        "source_message": 288,
+        "source_range": 0
+      },
+      {
+        "source_message": 289,
+        "source_range": 0
+      }
+    ],
+    "range_times_s": [
+      20.000852823257446,
+      20.07584238052368,
+      20.127145290374756
+    ],
+    "imu_begin_s": 20.180852823257446,
+    "imu_end_s": 20.680852823257446,
+    "imu_samples": 41,
+    "range_add_m": 2.25,
+    "accel_add_mps2": 20.0,
+    "gyro_add_radps": 1.0,
+    "axis": "original_sensor_x",
+    "cases": [
+      "J"
+    ]
+  }
+}

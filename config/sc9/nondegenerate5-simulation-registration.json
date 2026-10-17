@@ -1,0 +1,131 @@
+{
+  "schema": "sc9-generalized-moving-nondegenerate5-v1",
+  "seed": 20261017,
+  "motion": "D1 M2: sinusoidal p amplitudes [.8,.6,.4], frequencies [.6,.5,.4]; Rx Ry Rz sinusoidal angles amplitudes [.3,.4,.5], frequencies [.4,.3,.2]",
+  "domain": {
+    "acceleration": 1,
+    "rate": 1,
+    "jerk": 2,
+    "alpha": 2,
+    "speed": 1
+  },
+  "noise": {
+    "independent_latent_standard_normals": true,
+    "adc_accel_sigma": 0.01,
+    "adc_gyro_sigma": 0.0005,
+    "bias_accel_rw_sigma": 0.0005,
+    "bias_gyro_rw_sigma": 5e-05,
+    "range_sigma": 0.01,
+    "registered_dominating_proxy_factor": 2,
+    "roundoff_witness_required": true,
+    "scope": "Latent Gaussian event plus independently checked numerical implementation residue must imply each declared proxy enclosure; no test-data residual tuning"
+  },
+  "bootstrap": "Measured ranges, full SO(3), velocity [-1,1]^3 and bias [-.02,.02]^6; numerical seed from arrived sensors only; no independent initial Gaussian",
+  "B2": {
+    "anchors": 5,
+    "schedule": "original Walk2 integer IMU/UWB times and validity; immutable time/valid metadata only",
+    "source_sha": "dbef64e11624944be752de0851a99d5f68e0fb1963a182588817ace5574dbc26",
+    "epochs": 400,
+    "geometry": {
+      "id": "nondegenerate5",
+      "anchors": [
+        [
+          4,
+          0,
+          0
+        ],
+        [
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          4
+        ],
+        [
+          -4,
+          -4,
+          -4
+        ],
+        [
+          4,
+          4,
+          4
+        ]
+      ],
+      "all_four_anchor_integer_determinants": {
+        "0,1,2,3": -256,
+        "0,1,2,4": 128,
+        "0,1,3,4": 128,
+        "0,2,3,4": -128,
+        "1,2,3,4": 128
+      },
+      "reason": "Original source0/1/2/4 are coplanar x+y+z=4 and have an independent retained mirror counterexample; new separately named geometry meets nondegenerate positive-case scope. No original result is replaced."
+    }
+  },
+  "B3": {
+    "anchors": 12,
+    "imu_hz": [
+      100,
+      400
+    ],
+    "epoch_ns": [
+      47000003,
+      63000007
+    ],
+    "epochs": 400,
+    "topology": "cyclic visible subset, repeated source rows, loss and return"
+  },
+  "faults": {
+    "range_m": 2.25,
+    "accel_mps2": 20,
+    "gyro_radps": 1,
+    "imu_duration_s": 0.5,
+    "early_epoch": 80,
+    "delayed_action_epoch": 113,
+    "source_index": 0,
+    "classes": [
+      "U",
+      "A",
+      "G",
+      "J"
+    ]
+  },
+  "long": {
+    "healthy_epochs": 5000,
+    "repeated_fault_epochs": 10000,
+    "cycle_epochs": 400,
+    "fault_epoch_in_cycle": 80,
+    "alternating_imu_axes": true,
+    "default_window": [
+      30,
+      30
+    ]
+  },
+  "short_windows": [
+    [
+      20,
+      20
+    ],
+    [
+      40,
+      40
+    ],
+    [
+      30,
+      10
+    ]
+  ],
+  "constraints": [
+    "no GT enters core",
+    "conditional raw containment checked every commit",
+    "no unprocessed suffix omitted",
+    "one native backend and commit",
+    "full source risk/history preserved",
+    "published protection remains false",
+    "Same seeds, noise proxies, time/valid schedule, motion domains, faults and AL as parent; changed only explicit provider geometry; registration precedes native trajectory evaluation"
+  ],
+  "parent_sha": "169ccacaaf4a6e8fda7ab77ff8535d8004e0f872d332f43da8907e68b2e57f0e"
+}
