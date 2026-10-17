@@ -222,9 +222,10 @@ compile_commands.json
 /sc6-*/
 /sc7-*/
 /sc8-*/
-/sc[1-8]*.csv
-/sc[1-8]*.json
-/sc[1-8]*.xml
+/sc9-*/
+/sc[1-9]*.csv
+/sc[1-9]*.json
+/sc[1-9]*.xml
 /sc6*.log
 
 # Open rolling direct-run outputs; default .cache/sc5-open/ is covered above.
@@ -242,3 +243,12 @@ compile_commands.json
 # Formal SC8 advisor presentation contract; build previews stay in /.cache/.
 !/docs/requirements/sc8_advisor_slides/
 !/docs/requirements/sc8_advisor_slides/SC8_ADVISOR_SLIDES_REQUIREMENTS.md
+
+# Formal SC9 integration contract; other local inputs and metadata stay ignored.
+!/docs/requirements/sc9/
+/docs/requirements/sc9/*
+!/docs/requirements/sc9/SC9_REALWORLD_INTEGRATION_REQUIREMENTS.md
+
+# Local SC8 report exports; retain Markdown sources and presentation deliverables.
+/docs/sc8/SC8_RESULTS.html
+/docs/sc8/SC8_RESULTS.pdf
